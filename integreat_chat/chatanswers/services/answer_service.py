@@ -9,31 +9,42 @@ from langchain_community.llms import Ollama
 from langchain_milvus.vectorstores import Milvus
 import os
 import json
+from django.conf import settings
 
 class AnswerService:
+    _instance = None
+
+    @staticmethod
+    def get_instance(language):
+        if AnswerService._instance is None:
+            AnswerService._instance = AnswerService(language)
+        return AnswerService._instance
+
     def __init__(self, language):
+        print("Initializing Models")
         self.language = language
-        config_path = os.path.join(os.path.dirname(__file__), "config.json")
         
         # Load models
-        self.config = self.load_config(config_path)
-        self.llm_model_name = self.config["model_llm"]
-        self.embedding_model_name = self.config["model_embeddings"]
+        self.llm_model_name = settings.MODEL_LLM
+        self.embedding_model_name = settings.MODEL_EMBEDDINGS
         self.embedding_model = self.load_embeddings(self.embedding_model_name)
-        
-        # Load vdb collection
-        self.vdb_URI = self.config["vdb_URI"]
-        self.vdb_port = self.config["vdb_port"]
-        self.vdb_collection = self.config["vdb_collection"]
+       
+        self.vdb_URI = settings.VDB_URI
+        self.vdb_port = settings.VDB_PORT
+        self.vdb_collection = settings.VDB_COLLECTION
         self.vdb = self.load_vdb(self.vdb_URI, self.vdb_port, self.vdb_collection, self.embedding_model)
+        
+        # Load LLM
+        self.llm = self.load_llm(self.llm_model_name)
     
-    def load_config(self):
-        with open(self.config_path) as f:
+    def load_config(self, config_path):
+        with open(config_path) as f:
             config = json.load(f)
         return config
     
     def load_llm(self, llm_model_name):
-        pass
+        llm = Ollama(model=llm_model_name)
+        return llm
 
     def load_embeddings(self, embedding_model_name):
         embeddings = HuggingFaceEmbeddings(model_name=embedding_model_name, show_progress=True)
@@ -47,5 +58,19 @@ class AnswerService:
         return vdb
 
     def extract_answer(self, question):
+        print("Extracting answer")
+        # Get prompt
+        prompt = hub.pull("rlm/rag-prompt")
+        # Get retriever
+        retriever = self.vdb.as_retriever()
+        # Get answer
         
-        return []
+        rag_chain = (
+            {"context": retriever, "question": RunnablePassthrough()}
+                | prompt
+                | self.llm
+                | StrOutputParser()
+        )
+        print("Invoking rag chain")
+        answer = rag_chain.invoke(question)
+        return answer

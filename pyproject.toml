@@ -30,8 +30,11 @@ dependencies = [
   "langchain-community",
   "transformers @ git+https://github.com/huggingface/transformers",
   "huggingface_hub",
-  "llama-cpp-python",
-  "numpy"
+  #"llama-cpp-python",
+  "numpy",
+  "langchain_milvus",
+  "sentence-transformers",
+  "langchainhub"
 ]
 
 

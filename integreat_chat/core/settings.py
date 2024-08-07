@@ -11,10 +11,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+from integreat_chat.chatanswers.services.answer_service import AnswerService
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -27,6 +27,15 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["127.0.0.1", "igchat-inference.tuerantuer.org"]
 
+# Configuration Variables for answer service
+MODEL_LLM = "wizardlm2:latest"
+MODEL_EMBEDDINGS = "all-MiniLM-L6-v2"
+VDB_URI = "127.0.0.1"
+VDB_PORT = "19530"
+VDB_COLLECTION = "collection_1"
+
+# Create Instance of AnswerService
+ANSWER_SERVICE = AnswerService.get_instance("en")
 
 # Application definition
 

@@ -9,7 +9,7 @@ from langchain_community.llms import Ollama
 
 
 DATA_PATH = "../data/muenchen_en/"
-MODEL = "gemma:latest"
+MODEL = "wizardlm2:latest"
 
 # Load data from directory
 loader = DirectoryLoader(DATA_PATH, show_progress=True)
