@@ -123,6 +123,6 @@ def update_vdb(request):
         pages = update_milvus.fetch_pages_from_cms()
         text_chunks = []
         for page in pages:
-            text_chunks = text_chunks + update_milvus.split_page(page)
-        update_milvus.create_embeddings(text_chunks)
+            documents = text_chunks + update_milvus.split_page(page)
+        update_milvus.create_embeddings(documents)
     return JsonResponse({"status": "collection updated"})
