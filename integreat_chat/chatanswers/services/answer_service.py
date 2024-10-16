@@ -83,11 +83,11 @@ class AnswerService:
                 question, k=settings.RAG_MAX_DOCUMENTS
             ) if result[1] < settings.RAG_DISTANCE_THRESHOLD
         ], key=lambda x: x[1])
-        
-        LOGGER.debug("Number of retrieved documents: %i", results.count())
+
+        LOGGER.debug("Number of retrieved documents: %i", len(results))
         if settings.RAG_RELEVANCE_CHECK:
             results = [result for result in results if self.check_document_relevance(question, result[0].page_content)]
-        LOGGER.debug("Number of documents after relevance check: %i", results.count())
+        LOGGER.debug("Number of documents after relevance check: %i", len(results))
 
         context = RunnableLambda(lambda _: "\n".join(
             [result[0].page_content for result in results]
