@@ -80,7 +80,9 @@ class AnswerService:
         """
         results = sorted([
             result for result in self.vdb.similarity_search_with_score(
-                question, k=settings.RAG_MAX_DOCUMENTS
+                question,
+                k=settings.RAG_MAX_DOCUMENTS,
+                search_params={"nprobe": 300}
             ) if result[1] < settings.RAG_DISTANCE_THRESHOLD
         ], key=lambda x: x[1])
 
