@@ -83,7 +83,7 @@ def extract_answer(request):
     Extract an answer for a user query from Integreat content. Expects a JSON body with message
     and language attributes
     """
-    result = None
+    result = {}
     if request.method in ('POST') and request.META.get('CONTENT_TYPE').lower() == 'application/json':
         data = json.loads(request.body)
         if ("language" not in data or
@@ -102,10 +102,11 @@ def extract_answer(request):
             else:
                 message = data["message"]
             answer_service = AnswerService(data["region"], data["language"])
-            result = {}
             if answer_service.needs_answer(data["message"]):
                 result = answer_service.extract_answer(message)
-            result["status"] = "success"
+                result["status"] = "success"
+            else:
+                result["status"] = "not a question"
     return JsonResponse(result)
 
 @csrf_exempt
@@ -120,8 +121,11 @@ def update_vdb(request):
         language = data["language"]
         update_milvus = UpdateMilvus(region, language)
         pages = update_milvus.fetch_pages_from_cms()
-        text_chunks = []
+        texts = []
+        paths = []
         for page in pages:
-            text_chunks = text_chunks + update_milvus.split_page(page)
-        update_milvus.create_embeddings(text_chunks)
+            add_texts, add_paths = update_milvus.split_page(page)
+            texts = texts + add_texts
+            paths = paths + add_paths
+        update_milvus.create_embeddings(texts, paths)
     return JsonResponse({"status": "collection updated"})
