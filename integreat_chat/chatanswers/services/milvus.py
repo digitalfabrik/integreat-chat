@@ -47,18 +47,18 @@ class UpdateMilvus:
         for doc in documents:
             texts.append(doc.page_content)
             paths.append(page['path'])
-        return {"texts": texts, "paths": paths}
+        return texts, paths
 
-    def create_embeddings(self, documents):
+    def create_embeddings(self, texts, paths):
         """
         create embeddings and save to database
         """
         embeddings = HuggingFaceEmbeddings(model_name=self.embedding_model, show_progress=False)
 
         Milvus.from_texts(
-            documents["texts"],
+            texts,
             embeddings=embeddings,
-            metadatas=documents["paths"],
+            metadatas=paths,
             collection_name=self.milvus_collection,
             connection_args={"host": self.milvus_host, "port": self.milvus_port},
             consistency_level='Session',

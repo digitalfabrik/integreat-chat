@@ -121,8 +121,11 @@ def update_vdb(request):
         language = data["language"]
         update_milvus = UpdateMilvus(region, language)
         pages = update_milvus.fetch_pages_from_cms()
-        text_chunks = []
+        texts = []
+        paths = []
         for page in pages:
-            documents = text_chunks + update_milvus.split_page(page)
-        update_milvus.create_embeddings(documents)
+            add_texts, add_paths = update_milvus.split_page(page)
+            texts = texts + add_texts
+            paths = paths + add_paths
+        update_milvus.create_embeddings(texts, paths)
     return JsonResponse({"status": "collection updated"})
