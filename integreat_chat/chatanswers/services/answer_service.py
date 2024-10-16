@@ -1,6 +1,8 @@
 """
 Retrieving matching documents for question an create summary text
 """
+import logging
+
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_community.llms import Ollama
@@ -15,6 +17,8 @@ from django.conf import settings
 from .language import LanguageService
 from ..static.prompts import Prompts
 from ..static.messages import Messages
+
+LOGGER = logging.getLogger('django')
 
 
 class AnswerService:
@@ -80,8 +84,10 @@ class AnswerService:
             ) if result[1] < settings.RAG_DISTANCE_THRESHOLD
         ], key=lambda x: x[1])
         
+        LOGGER.debug("Number of retrieved documents: %i", results.count())
         if settings.RAG_RELEVANCE_CHECK:
             results = [result for result in results if self.check_document_relevance(question, result[0].page_content)]
+        LOGGER.debug("Number of documents after relevance check: %i", results.count())
 
         context = RunnableLambda(lambda _: "\n".join(
             [result[0].page_content for result in results]
