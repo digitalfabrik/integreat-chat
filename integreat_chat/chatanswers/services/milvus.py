@@ -36,7 +36,7 @@ class UpdateMilvus:
         split pages at headlines
         """
         if page["content"] == "":
-            return []
+            return [], []
         headers_to_split_on = [
             ("h2", "Header 2"),
         ]
