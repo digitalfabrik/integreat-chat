@@ -7,10 +7,17 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_community.llms import Ollama
 from langchain_milvus.vectorstores import Milvus
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from sentence_transformers import SentenceTransformer
 
 #from langchain.runnables.base import RunnableLambda
 from langchain_core.runnables import RunnableLambda
 from langchain_core.prompts import PromptTemplate
+
+from pymilvus import (
+    connections,
+    Collection,
+)
 
 from django.conf import settings
 
@@ -74,25 +81,44 @@ class AnswerService:
         return False
 
 
+    def search_documents(self, question):
+        """
+        Retrieve a list of documents from database
+        """
+        connections.connect("default", host=self.vdb_host, port=self.vdb_port)
+
+        search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
+        embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+        collection = Collection(self.vdb_collection)
+        collection.load()
+
+        sentences = [question]
+        embeddings = embedding_model.encode(sentences)
+        return collection.search(
+            data=embeddings,
+            anns_field="vector",
+            param=search_params,
+            limit=settings.RAG_MAX_DOCUMENTS,
+            expr=None,
+            consistency_level="Strong",
+            output_fields=["source", "text"]
+        )[0]
+
     def extract_answer(self, question):
         """
         Create summary answer for question
         """
-        results = sorted([
-            result for result in self.vdb.similarity_search_with_score(
-                question,
-                k=settings.RAG_MAX_DOCUMENTS,
-                search_params={"nprobe": 300}
-            ) if result[1] < settings.RAG_DISTANCE_THRESHOLD
-        ], key=lambda x: x[1])
+        results = self.search_documents(question)
 
         LOGGER.debug("Number of retrieved documents: %i", len(results))
         if settings.RAG_RELEVANCE_CHECK:
-            results = [result for result in results if self.check_document_relevance(question, result[0].page_content)]
+            results = [result for result in results if self.check_document_relevance(
+                question, result.entity.get('text')
+            )]
         LOGGER.debug("Number of documents after relevance check: %i", len(results))
 
         context = RunnableLambda(lambda _: "\n".join(
-            [result[0].page_content for result in results]
+            [result.entity.get('text') for result in results]
         ))
         if not results:
             language_service = LanguageService()
