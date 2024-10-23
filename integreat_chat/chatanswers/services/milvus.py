@@ -49,7 +49,7 @@ class UpdateMilvus:
         paths = []
         for doc in documents:
             texts.append(doc.page_content)
-            paths.append({"path": page['path']})
+            paths.append({"source": page['path']})
         return texts, paths
 
     def create_embeddings(self, texts, paths):
