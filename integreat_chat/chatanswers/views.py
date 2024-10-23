@@ -32,7 +32,8 @@ def search_documents(request):
         else:
             language_service = LanguageService()
             search_service = SearchService(data["region"], data["language"])
-            if language := language_service.classify_language(data["language"], data["message"]) == data["language"]:
+            classified_language = language_service.classify_language(data["language"], data["message"])
+            if classified_language == data["language"]:
                 result = {
                     "related_documents": search_service.search_documents(data["message"]),
                     "search_term": data["message"],
@@ -40,7 +41,7 @@ def search_documents(request):
                 }
             else:
                 translated_message = language_service.translate_message(
-                    language,
+                    classified_language,
                     data["language"],
                     data["message"]
                 )
