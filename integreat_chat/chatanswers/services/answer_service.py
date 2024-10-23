@@ -7,10 +7,8 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_community.llms import Ollama
 from langchain_milvus.vectorstores import Milvus
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from sentence_transformers import SentenceTransformer
 
-#from langchain.runnables.base import RunnableLambda
 from langchain_core.runnables import RunnableLambda
 from langchain_core.prompts import PromptTemplate
 
