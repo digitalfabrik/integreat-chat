@@ -1,13 +1,11 @@
 """
 A service to search for documents
 """
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.output_parsers import StrOutputParser
-from langchain_community.llms import Ollama
-from langchain_milvus.vectorstores import Milvus
-
-#from langchain.runnables.base import RunnableLambda
-from langchain_core.runnables import RunnableLambda
+from sentence_transformers import SentenceTransformer
+from pymilvus import (
+    connections,
+    Collection,
+)
 
 from django.conf import settings
 
@@ -26,39 +24,52 @@ class SearchService:
 
     def __init__(self, region, language):
         self.language = language
-        self.llm_model_name = settings.RAG_MODEL
-
         self.vdb_host = settings.VDB_HOST
         self.vdb_port = settings.VDB_PORT
         self.vdb_collection = f"collection_ig_{region}_{language}"
-        self.vdb = self.load_vdb(self.vdb_host, self.vdb_port,
-                                 self.vdb_collection, settings.EMBEDDINGS)
 
-    def load_vdb(self, URI, port, collection, embedding_model):
-        vdb = Milvus(
-                embedding_model,
-                connection_args={"host": URI, "port": port},
-                collection_name=collection)
-        return vdb
-
-    def doc_details(self, results):
+    def doc_details(self, results, include_text):
         """
         convert result into sources dict
         """
         sources = []
         for source in results:
-            sources.append({"source": source[0].metadata["source"], "score": source[1]})
+            if include_text:
+                sources.append({
+                    "source": source.entity.get('source'),
+                    "text": source.entity.get('text'),
+                    "score": source.distance
+                })
+            else:
+                sources.append({
+                    "source": source.entity.get('source'),
+                    "score": source.distance
+                })
         return sources
 
-    def search_documents(self, question):
+    def search_documents(self, question, include_text=False):
         """
         Create summary answer for question
         """
-        results = [
-            result for result in self.vdb.similarity_search_with_score(
-                question, k=settings.SEARCH_MAX_DOCUMENTS
-            ) if result[1] < settings.SEARCH_DISTANCE_THRESHOLD
-        ]
+
+        connections.connect("default", host=self.vdb_host, port=self.vdb_port)
+
+        search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
+        embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+        collection = Collection(self.vdb_collection)
+        collection.load()
+
+        sentences = [question]
+        embeddings = embedding_model.encode(sentences)
+        results = collection.search(
+            data=embeddings,
+            anns_field="vector",
+            param=search_params,
+            limit=settings.RAG_MAX_DOCUMENTS,
+            expr=None,
+            consistency_level="Strong",
+            output_fields=(["source", "text"] if include_text else ["source"])
+        )[0]
         return {
-            "documents": self.doc_details(results)
+            "documents": self.doc_details(results, include_text)
         }
