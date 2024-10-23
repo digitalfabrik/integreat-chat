@@ -66,7 +66,7 @@ class AnswerService:
         """
         sources = []
         for source in results:
-            sources.append({"source": source[0].metadata["source"], "score": source[1]})
+            sources.append({"source": source.entity.get('source'), "score": source.distance})
         return sources
 
     def needs_answer(self, message):
@@ -137,7 +137,7 @@ class AnswerService:
         answer = rag_chain.invoke(question)
         return {
             "answer": answer,
-            "sources": list({result[0].metadata["source"] for result in results}),
+            "sources": list({result.entity.get('source') for result in results}),
             "details": self.doc_details(results)
         }
 
