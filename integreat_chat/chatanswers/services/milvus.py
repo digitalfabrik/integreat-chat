@@ -38,9 +38,12 @@ class UpdateMilvus:
         if page["content"] == "":
             return [], []
         headers_to_split_on = [
-            ("h2", "Header 2"),
+            ("h1", "Header 2"),
         ]
-        html_splitter = HTMLHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+        html_splitter = HTMLHeaderTextSplitter(
+            headers_to_split_on=headers_to_split_on,
+            return_each_element=True
+        )
         documents = html_splitter.split_text(page['content'])
         texts = []
         paths = []
