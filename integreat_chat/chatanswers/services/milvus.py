@@ -46,7 +46,7 @@ class UpdateMilvus:
         paths = []
         for doc in documents:
             texts.append(doc.page_content)
-            paths.append(page['path'])
+            paths.append({"path": page['path']})
         return texts, paths
 
     def create_embeddings(self, texts, paths):
@@ -57,7 +57,7 @@ class UpdateMilvus:
 
         Milvus.from_texts(
             texts,
-            embeddings=embeddings,
+            embeddings,
             metadatas=paths,
             collection_name=self.milvus_collection,
             connection_args={"host": self.milvus_host, "port": self.milvus_port},
