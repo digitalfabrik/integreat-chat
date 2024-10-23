@@ -15,27 +15,6 @@ from pathlib import Path
 from langsmith import Client
 from langchain_huggingface import HuggingFaceEmbeddings
 
-# Django logging configuration
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'apache': {
-            'level': 'INFO',  # Set log level as per your needs
-            'class': 'logging.StreamHandler',
-            'stream': 'ext://sys.stderr',  # Logs to Apache's error log
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['apache'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-    },
-}
-
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -46,7 +25,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-u*mc*mu#()r6qdrotm(1=+kuo!2-*76fav*-m*m3e8v+hutfn('
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
+
+# Django logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'apache': {
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://sys.stderr',  # Logs to Apache's error log
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['apache'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': True,
+        },
+    },
+}
 
 ALLOWED_HOSTS = ["127.0.0.1", "igchat-inference.tuerantuer.org"]
 

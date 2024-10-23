@@ -36,20 +36,38 @@ class UpdateMilvus:
         split pages at headlines
         """
         if page["content"] == "":
-            return []
+            return [], []
         headers_to_split_on = [
-            ("h2", "Header 2"),
+            ("h1", "Header 2"),
         ]
-        html_splitter = HTMLHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+        html_splitter = HTMLHeaderTextSplitter(
+            headers_to_split_on=headers_to_split_on,
+            return_each_element=True
+        )
         documents = html_splitter.split_text(page['content'])
+        texts = []
+        paths = []
         for doc in documents:
-            doc.metadata['source'] = page['path']
-        return documents
+            texts.append(doc.page_content)
+            paths.append({"source": page['path']})
+        return texts, paths
 
-    def create_embeddings(self, text_chunks):
+    def create_embeddings(self, texts, paths):
         """
         create embeddings and save to database
         """
         embeddings = HuggingFaceEmbeddings(model_name=self.embedding_model, show_progress=False)
-        Milvus.from_documents(text_chunks, embeddings, collection_name=self.milvus_collection, drop_old=True,
-                              connection_args={"host": self.milvus_host, "port": self.milvus_port})
+
+        Milvus.from_texts(
+            texts,
+            embeddings,
+            metadatas=paths,
+            collection_name=self.milvus_collection,
+            connection_args={"host": self.milvus_host, "port": self.milvus_port},
+            consistency_level='Session',
+            index_params={
+                        "metric_type": "L2",
+                        "index_type": "FLAT",
+                    },
+            drop_old=True
+        )
