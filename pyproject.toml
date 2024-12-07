@@ -34,7 +34,6 @@ dependencies = [
   "numpy",
   "langchain_milvus",
   "sentence-transformers",
-  "langsmith",
   "langchain-huggingface",
   "lxml",
   "transformers",

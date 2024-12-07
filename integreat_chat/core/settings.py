@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 
-from langsmith import Client
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -61,7 +60,6 @@ TRANSLATION_MODEL = "facebook/nllb-200-3.3B"
 RAG_DISTANCE_THRESHOLD = 20
 RAG_MAX_PAGES = 3
 RAG_MODEL = "llama3.3"
-RAG_PROMPT = Client().pull_prompt("rlm/rag-prompt")
 RAG_RELEVANCE_CHECK = True
 RAG_QUERY_OPTIMIZATION = True
 RAG_QUERY_OPTIMIZATION_MODEL = "llama3.3"

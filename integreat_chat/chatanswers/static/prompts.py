@@ -8,16 +8,13 @@ class Prompts:
     Collection of required prompts
     """
 
-    RAG = """You are an assistant for question-answering tasks.
-Use the following pieces of retrieved context to answer the question.
-If you don't know the answer, just say that you don't know.
-Use three sentences maximum and keep the answer concise.
+    RAG = """You are a question-answering assistant for the Integreat app.
+Provide a concise answer based only on the retrieved context below, using no more than three sentences.
+If the context does not contain the answer, return an empty string.
 
 Question: {question}
 
 Context: {context}
-
-Answer:
 """
 
     LANGUAGE_CLASSIFICATION = """
