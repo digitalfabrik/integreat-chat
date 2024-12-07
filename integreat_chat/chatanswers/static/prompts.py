@@ -15,8 +15,6 @@ If the context does not contain the answer, return an empty string.
 Question: {question}
 
 Context: {context}
-
-Answer:
 """
 
     LANGUAGE_CLASSIFICATION = """

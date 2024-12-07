@@ -111,7 +111,7 @@ class AnswerService:
                 | StrOutputParser()
         )
         answer = rag_chain.invoke(question)
-        LOGGER.info("Question: %s\n\nAnswer: %s", question, answer)
+        LOGGER.info("Question: %s\nAnswer: %s", question, answer)
         return {
             "answer": answer,
             "sources": [result['source'] for result in results],
