@@ -91,7 +91,7 @@ class AnswerService:
             results = [result for result in results if self.check_document_relevance(
                 question, result['text']
             )]
-        LOGGER.debug("Number of documents after relevance check: %i", len(results))
+        LOGGER.info("Number of documents after relevance check: %i", len(results))
 
         context = RunnableLambda(lambda _: "\n".join(
             [result['text'] for result in results]
@@ -111,6 +111,7 @@ class AnswerService:
                 | StrOutputParser()
         )
         answer = rag_chain.invoke(question)
+        LOGGER.info("Question: %s\n\nAnswer: %s", question, answer)
         return {
             "answer": answer,
             "sources": [result['source'] for result in results],
