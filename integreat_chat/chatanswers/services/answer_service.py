@@ -106,7 +106,7 @@ class AnswerService:
             }
         rag_chain = (
             {"context": context, "question": RunnablePassthrough()}
-                | settings.RAG_PROMPT
+                | PromptTemplate.from_template(Prompts.RAG)
                 | self.llm
                 | StrOutputParser()
         )
