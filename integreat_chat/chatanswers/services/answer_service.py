@@ -105,7 +105,7 @@ class AnswerService:
                 )
             }
         rag_chain = (
-            {"context": context, "question": RunnablePassthrough()}
+                {"language": self.language, "context": context, "question": RunnablePassthrough()}
                 | settings.RAG_PROMPT
                 | self.llm
                 | StrOutputParser()
