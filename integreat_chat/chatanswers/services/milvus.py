@@ -9,7 +9,6 @@ import urllib
 
 from django.conf import settings
 from langchain_text_splitters import HTMLHeaderTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Milvus
 
 
@@ -19,7 +18,6 @@ class UpdateMilvus:
     """
     Update Milvus vdb
     """
-
     def __init__(self, region="testumgebung", language="en"):
         self.region = region
         self.language = language
