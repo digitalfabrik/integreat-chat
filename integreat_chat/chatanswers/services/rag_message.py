@@ -19,6 +19,11 @@ class RagMessage:
         self.original_message = data["message"]
         self.region = data["region"]
         self.language_service = LanguageService()
+        self.likely_message_language = None
+        self.rag_message = None
+        self.rag_language = None
+        self.answer = None
+        self.sources = []
 
     def detect_message_language(self) -> str:
         """
@@ -28,6 +33,11 @@ class RagMessage:
             self.gui_language, self.original_message
         )
         return self.likely_message_language
+
+    def select_rag_language(self):
+        """
+        Select a language for RAG prompting
+        """
 
     def optimize_query(self) -> bool:
         """
@@ -43,4 +53,14 @@ class RagMessage:
     def translate_language(self) -> str:
         """
         prepare message for RAG prompting. Optimize first, then translate.
+        """
+
+    def generate_answer(self):
+        """
+        Prompt LLM and generate answer
+        """
+
+    def generate_sources(self):
+        """
+        Add sources for citation
         """
