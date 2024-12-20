@@ -22,7 +22,6 @@ def translate_source_path(path: str, wanted_language: str) -> str:
     response = urlopen(encoded_url)
     return json.loads(response.read())[0]["available_languages"][wanted_language]["path"]
 
-
 def generate_answer(data: dict) -> dict:
     """
     Generate answer to message
