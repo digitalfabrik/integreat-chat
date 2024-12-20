@@ -7,11 +7,13 @@ import logging
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 
 from integreat_chat.chatanswers.services.language import LanguageService
 from integreat_chat.chatanswers.services.search import SearchService
 
 from .services.milvus import UpdateMilvus
+from .services.rag_message import RagMessage
 from .utils import generate_answer
 
 LOGGER = logging.getLogger("django")
@@ -92,11 +94,9 @@ def extract_answer(request):
         request.method in ("POST")
         and request.META.get("CONTENT_TYPE").lower() == "application/json"
     ):
-        data = json.loads(request.body)
-        if "language" not in data or "region" not in data or "message" not in data:
-            result = {"status": "error"}
-        else:
-            result = generate_answer(data)
+        rag_message = RagMessage(json.loads(request.body))
+        if settings.RAG_QUERY_OPTIMIZATION:
+            rag_message.optimize_query()
     return JsonResponse(result)
 
 
