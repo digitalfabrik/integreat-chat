@@ -15,7 +15,7 @@ def get_page(document: dict) -> dict:
     cur_language = document["source"].split("/")[2]
     pages_url = (
         f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/{region}/"
-        f"{cur_language}/children/?url={document['path']}&depth=0"
+        f"{cur_language}/children/?url={document['source']}&depth=0"
     )
     encoded_url = quote(pages_url, safe=':/=?&')
     with urlopen(encoded_url) as response:
