@@ -7,14 +7,13 @@ import logging
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
 
 from integreat_chat.chatanswers.services.language import LanguageService
 from integreat_chat.chatanswers.services.search import SearchService
+from integreat_chat.chatanswers.services.answer import AnswerService
 
 from .services.milvus import UpdateMilvus
-from .services.rag_message import RagMessage
-from .utils import generate_answer
+from .utils.rag_request import RagRequest
 
 LOGGER = logging.getLogger("django")
 
@@ -89,15 +88,14 @@ def extract_answer(request):
     Extract an answer for a user query from Integreat content. Expects a JSON body with message
     and language attributes
     """
-    result = {}
     if (
         request.method in ("POST")
         and request.META.get("CONTENT_TYPE").lower() == "application/json"
     ):
-        rag_message = RagMessage(json.loads(request.body))
-        if settings.RAG_QUERY_OPTIMIZATION:
-            rag_message.optimize_query()
-    return JsonResponse(result)
+        rag_request = RagRequest(json.loads(request.body))
+        answer_service = AnswerService(rag_request)
+        rag_response = answer_service.extract_answer()
+    return JsonResponse(rag_response)
 
 
 @csrf_exempt

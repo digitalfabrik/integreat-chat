@@ -3,7 +3,6 @@ Retrieving matching documents for question an create summary text
 """
 import logging
 
-from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableLambda
 from langchain_core.prompts import PromptTemplate
@@ -16,6 +15,8 @@ from .search import SearchService
 from .language import LanguageService
 from ..static.prompts import Prompts
 from ..static.messages import Messages
+from ..utils.rag_response import RagResponse
+from ..utils.rag_request import RagRequest
 
 LOGGER = logging.getLogger('django')
 
@@ -24,13 +25,15 @@ class AnswerService:
     """
     Service for providing summary answers to question-like messages.
     """
-    def __init__(self, region: str, language: str) -> None:
+    def __init__(self, rag_request: RagRequest) -> None:
         """
         param region: Integreat CMS region slug
         param language: Integreat CMS language slug
         """
-        self.language = language
-        self.region = region
+        self.rag_request = rag_request
+        rag_request_dict = dict(rag_request)
+        self.language = rag_request_dict["rag_language"]
+        self.region = rag_request_dict["region"]
         self.llm_model_name = settings.RAG_MODEL
         self.llm = self.load_llm(self.llm_model_name)
 
@@ -65,27 +68,27 @@ class AnswerService:
         return: a dict containing a response and sources
         """
         search = SearchService(self.region, self.language)
-        results = search.search_documents(
+        search_results = search.search_documents(
             question,
             include_text=True,
         )
-        results = search.deduplicate_pages(
-            results,
+        search_results = search.deduplicate_pages(
+            search_results,
             settings.RAG_MAX_PAGES,
             max_score=settings.RAG_DISTANCE_THRESHOLD
         )
 
-        LOGGER.debug("Number of retrieved documents: %i", len(results))
+        LOGGER.debug("Number of retrieved documents: %i", len(search_results))
         if settings.RAG_RELEVANCE_CHECK:
-            results = [result for result in results if self.check_document_relevance(
+            search_results = [result for result in search_results if self.check_document_relevance(
                 question, result['text']
             )]
-        LOGGER.debug("Number of documents after relevance check: %i", len(results))
+        LOGGER.debug("Number of documents after relevance check: %i", len(search_results))
 
         context = RunnableLambda(lambda _: "\n".join(
-            [result['text'] for result in results]
+            [result['text'] for result in search_results]
         )[:settings.RAG_CONTEXT_MAX_LENGTH])
-        if not results:
+        if not search_results:
             language_service = LanguageService()
             return {
                 "answer": language_service.translate_message(
@@ -97,14 +100,8 @@ class AnswerService:
         chain = prompt | self.llm | StrOutputParser()
         answer = chain.invoke({"language": self.language, "context": context, "question": question})
         LOGGER.debug("Question: %s\nAnswer: %s", question, answer)
-        return {
-            "answer": answer,
-            "sources": [result['source'] for result in results],
-            "details": [{
-                "context": result['text'],
-                "score": result['score']
-            } for result in results],
-        }
+        rag_response = RagResponse(self.rag_request, answer, search_results)
+        return rag_response
 
 
     def check_document_relevance(self, question: str, content: str) -> bool:
