@@ -73,7 +73,7 @@ class AnswerService:
         search_results = search.search_documents(
             settings.RAG_MAX_PAGES,
             include_text=True,
-        )
+        ).documents
         search_results = search.deduplicate_pages(
             search_results,
             settings.RAG_MAX_PAGES,
