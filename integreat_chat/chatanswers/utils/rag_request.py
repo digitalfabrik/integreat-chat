@@ -3,7 +3,7 @@ Message for processing a user message / RAG request
 """
 from django.conf import settings
 
-from integreat_chat.chatanswers.services.language import LanguageService
+from integreat_chat.translate.services.language import LanguageService
 from integreat_chat.chatanswers.services.query_transformer import QueryTransformer
 
 class RagRequest:
