@@ -11,7 +11,9 @@ from langchain_community.llms import Ollama
 from django.conf import settings
 
 from integreat_chat.search.services.search import SearchService
+from integreat_chat.search.utils.search_request import SearchRequest
 from integreat_chat.translate.services.language import LanguageService
+
 from ..static.prompts import Prompts
 from ..static.messages import Messages
 from ..utils.rag_response import RagResponse
@@ -62,7 +64,12 @@ class AnswerService:
         """
         Retrieve documents for RAG
         """
-        search = SearchService(self.rag_request, deduplicate_results=False)
+        search_request = SearchRequest({
+            "message": self.rag_request.original_message,
+            "language": self.rag_request.use_language,
+            "region": self.rag_request.region
+        })
+        search = SearchService(search_request, deduplicate_results=False)
         search_results = search.search_documents(
             self.rag_request,
             include_text=True,
