@@ -19,4 +19,6 @@ from django.urls import path, include
 urlpatterns = [
     path('keywords/', include('integreat_chat.keywords.urls')),
     path('chatanswers/', include('integreat_chat.chatanswers.urls')),
+    path('search/', include('integreat_chat.search.urls')),
+    path('translate/', include('integreat_chat.translate.urls')),
 ]

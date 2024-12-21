@@ -2,11 +2,11 @@
 Service to transform/optimize input queries
 """
 
-import logging
 import re
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
+# pylint: disable=no-name-in-module
 from langchain_community.llms import Ollama
 
 from django.conf import settings
@@ -23,7 +23,7 @@ class QueryTransformer:
         self.original_query = original_query
         self.modified_query = ""
         self.llm = self.load_llm(settings.RAG_QUERY_OPTIMIZATION_MODEL)
-        self.LENGTH_THRESHOLD_CHARS = 150
+        self.length_threshold_chars = 150
 
     def load_llm(self, llm_model_name):
         """
@@ -31,7 +31,7 @@ class QueryTransformer:
         """
         return Ollama(model=llm_model_name, base_url=settings.OLLAMA_BASE_PATH)
 
-    def punctuation_thresh_exceeded(self):
+    def punctuation_thresh_exceeded(self) -> bool:
         """
         Identify punctuations(period, comma, question_mark) to identify complexity
         """
@@ -55,19 +55,21 @@ class QueryTransformer:
             or counts["comma"] > max_comma
         ):
             return True
+        return False
 
     def length_thresh_exceeded(self):
         """
         Check if the query exceeds a certain length threshold
         """
-        return len(self.original_query) > self.LENGTH_THRESHOLD_CHARS
+        return len(self.original_query) > self.length_threshold_chars
 
-    def is_transformation_required(self):
+    def is_transformation_required(self) -> bool:
         """
         Check if the query requires transformation
         """
         if self.punctuation_thresh_exceeded() or self.length_thresh_exceeded():
             return True
+        return False
 
     def transform_query(self):
         """

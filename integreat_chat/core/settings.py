@@ -93,6 +93,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'integreat_chat.keywords',
+    'integreat_chat.translate',
+    'integreat_chat.search',
     'integreat_chat.chatanswers',
 ]
 
