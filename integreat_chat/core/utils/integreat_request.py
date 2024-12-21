@@ -19,7 +19,7 @@ class IntegreatRequest:
         self.fallback_language = (
             None if not hasattr(self, "fallback_language") else self.fallback_language
         )
-        if self.supported_languages is None or self.fallback_language:
+        if self.supported_languages is None or self.fallback_language is None:
             raise ValueError("supported_languages or fallback_language has not been set.")
         self.translated_message = self.translate_message()
 
