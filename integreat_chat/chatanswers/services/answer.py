@@ -82,7 +82,7 @@ class AnswerService:
         LOGGER.debug("Number of retrieved documents: %i", len(search_results))
         if settings.RAG_RELEVANCE_CHECK:
             search_results = [result for result in search_results if self.check_document_relevance(
-                str(self.rag_request), result['text']
+                str(self.rag_request), result.content
             )]
         LOGGER.debug("Number of documents after relevance check: %i", len(search_results))
         return search_results
@@ -98,7 +98,7 @@ class AnswerService:
         documents = self.get_documents()
 
         context = "\n".join(
-            [result['text'] for result in documents]
+            [result.content for result in documents]
         )[:settings.RAG_CONTEXT_MAX_LENGTH]
         if not documents:
             language_service = LanguageService()
