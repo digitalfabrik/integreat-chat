@@ -29,7 +29,7 @@ class Document:
         """
         if self.gui_language != self.chunk_source_path.split("/")[2]:
             self.gui_source_path = (
-                get_page(self.chunk_source_path)["available_translations"][self.gui_language]
+                get_page(self.chunk_source_path)["available_languages"][self.gui_language]
             )
         else:
             self.gui_source_path = self.chunk_source_path
@@ -44,10 +44,8 @@ class Document:
         result = {
             "source": self.gui_source_path,
             "score": self.score,
-            "title": self.title,
             "found_chunk": self.chunk,
             "chunk_path": self.chunk_source_path,
-            "text": self.content,
         }
         if self.title is not None:
             result["title"] = self.title

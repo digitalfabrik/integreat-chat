@@ -40,8 +40,6 @@ class SearchService:
         collection.load()
         return collection
 
-    
-
     def search_documents(
             self,
             limit_results: int = settings.SEARCH_MAX_DOCUMENTS,
