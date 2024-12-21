@@ -13,12 +13,12 @@ class IntegreatRequest:
     def __init__(self, data):
         self.parse_arguments(data)
         self.likely_message_language = self.detect_message_language()
-        self.translated_message = self.translate_message()
         self.supported_languages = None
         self.fallback_language = None
         self.prepare()
         if self.supported_languages is None or self.fallback_language:
             raise ValueError("supported_languages or fallback_language has not been set.")
+        self.translated_message = self.translate_message()
 
     def parse_arguments(self, data):
         """
