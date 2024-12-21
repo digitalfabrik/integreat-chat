@@ -30,7 +30,7 @@ class AnswerService:
         param language: Integreat CMS language slug
         """
         self.rag_request = rag_request
-        self.language = rag_request.rag_language
+        self.language = rag_request.use_language
         self.region = rag_request.region
         self.llm_model_name = settings.RAG_MODEL
         self.llm = self.load_llm(self.llm_model_name)
