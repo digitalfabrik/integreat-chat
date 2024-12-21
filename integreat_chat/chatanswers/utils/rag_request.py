@@ -22,10 +22,10 @@ class RagRequest(IntegreatRequest):
         """
         Optimize RAG message if required
         """
-        query_transformer = QueryTransformer(self.original_message)
+        query_transformer = QueryTransformer(self.translated_message)
         if query_transformer.is_transformation_required():
             return query_transformer.transform_query()["modified_query"]
-        return self.translate_message
+        return self.translated_message
 
     def __str__(self) -> str:
         """
@@ -33,7 +33,7 @@ class RagRequest(IntegreatRequest):
         """
         if settings.RAG_QUERY_OPTIMIZATION:
             return self.optimized_message()
-        return self.translate_message
+        return self.translated_message
 
     def as_dict(self) -> dict:
         """
