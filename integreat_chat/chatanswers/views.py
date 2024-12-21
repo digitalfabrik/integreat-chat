@@ -29,4 +29,4 @@ def extract_answer(request):
         rag_request = RagRequest(json.loads(request.body))
         answer_service = AnswerService(rag_request)
         rag_response = answer_service.extract_answer()
-    return JsonResponse(dict(rag_response))
+    return JsonResponse(rag_response.as_dict())

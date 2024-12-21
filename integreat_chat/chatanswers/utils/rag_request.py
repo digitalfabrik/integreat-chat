@@ -68,12 +68,12 @@ class RagRequest:
             return self.optimized_message()
         return self.rag_message
 
-    def __dict__(self) -> dict:
+    def as_dict(self) -> dict:
         """
         Return relevant data for RAG prompting as dictionary
         """
         return {
-            "message": self.__str__(),
+            "message": str(self),
             "rag_language": self.rag_language,
             "gui_language": self.gui_language,
             "region": self.region

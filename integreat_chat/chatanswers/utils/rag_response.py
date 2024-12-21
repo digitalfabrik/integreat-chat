@@ -24,12 +24,12 @@ class RagResponse:
         """
         return self.rag_response
 
-    def __dict__(self):
+    def as_dict(self):
         """
         Response suitable for returning as JSON
         """
         return {
-            "answer": self.__str__(),
+            "answer": str(self),
             "status": "success",
             "message": self.rag_request.rag_request,
             "sources": [document["url"] for document in self.rag_documents],
