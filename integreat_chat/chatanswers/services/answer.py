@@ -62,7 +62,7 @@ class AnswerService:
         """
         Retrieve documents for RAG
         """
-        search = SearchService(self.region, self.language)
+        search = SearchService(self.rag_request, deduplicate_results=False)
         search_results = search.search_documents(
             self.rag_request,
             include_text=True,

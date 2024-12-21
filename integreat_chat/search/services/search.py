@@ -59,8 +59,6 @@ class SearchService:
             output_fields=(["source", "text"] if include_text else ["source"])
         )[0]
         results = sorted(results, key=lambda x: x.distance)
-        if self.deduplicate_results:
-            results = self.deduplicate_pages(results)
         documents = []
         for result in results:
             documents.append(Document(
@@ -70,11 +68,13 @@ class SearchService:
                 include_text,
                 self.search_request.gui_language
             ))
+        if self.deduplicate_results:
+            results = self.deduplicate_pages(results)
         return SearchResponse(self.search_request, documents)
 
     def deduplicate_pages(
             self,
-            sources: list[dict],
+            documents: list[Document],
             max_pages: int = settings.SEARCH_MAX_PAGES,
             max_score: int = settings.SEARCH_DISTANCE_THRESHOLD
         ):
@@ -82,14 +82,14 @@ class SearchService:
         Get N unique pages from the sources retrieved from the retriever
         """
         unique_sources = []
-        for source in sources:
+        for document in documents:
             if (
-                source.entity.get('source') not in [
-                    source.entity.get('source') for source in unique_sources
+                document.chunk_source_path not in [
+                    source.chunk_source_path for source in unique_sources
                 ]
-                and source.distance <= max_score
+                and document.score <= max_score
             ):
-                unique_sources.append(source)
+                unique_sources.append(document)
             if len(unique_sources) == max_pages:
                 break
         return unique_sources
