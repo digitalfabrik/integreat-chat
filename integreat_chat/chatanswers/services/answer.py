@@ -4,7 +4,6 @@ Retrieving matching documents for question an create summary text
 import logging
 
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda
 from langchain_core.prompts import PromptTemplate
 # pylint: disable=no-name-in-module
 from langchain_community.llms import Ollama
@@ -60,12 +59,9 @@ class AnswerService:
             return True
         return False
 
-    def extract_answer(self, question: str) -> dict:
+    def get_documents(self, question: str) -> list:
         """
-        Create summary answer for question
-
-        param question: a question or statement of need
-        return: a dict containing a response and sources
+        Retrieve documents for RAG
         """
         search = SearchService(self.region, self.language)
         search_results = search.search_documents(
@@ -77,32 +73,42 @@ class AnswerService:
             settings.RAG_MAX_PAGES,
             max_score=settings.RAG_DISTANCE_THRESHOLD
         )
-
         LOGGER.debug("Number of retrieved documents: %i", len(search_results))
         if settings.RAG_RELEVANCE_CHECK:
             search_results = [result for result in search_results if self.check_document_relevance(
                 question, result['text']
             )]
         LOGGER.debug("Number of documents after relevance check: %i", len(search_results))
+        return search_results
 
-        context = RunnableLambda(lambda _: "\n".join(
-            [result['text'] for result in search_results]
-        )[:settings.RAG_CONTEXT_MAX_LENGTH])
-        if not search_results:
+    def extract_answer(self) -> RagResponse:
+        """
+        Create summary answer for question
+
+        param question: a question or statement of need
+        return: a dict containing a response and sources
+        """
+        question = self.rag_request.rag_message
+        documents = self.get_documents(question)
+
+        context = "\n".join(
+            [result['text'] for result in documents]
+        )[:settings.RAG_CONTEXT_MAX_LENGTH]
+        if not documents:
             language_service = LanguageService()
-            return {
-                "answer": language_service.translate_message(
+            return RagResponse(
+                self.rag_request,
+                language_service.translate_message(
                     "en", self.language,
                     Messages.NO_ANSWER
-                )
-            }
+                ),
+                documents
+            )
         prompt = PromptTemplate.from_template(Prompts.RAG)
         chain = prompt | self.llm | StrOutputParser()
         answer = chain.invoke({"language": self.language, "context": context, "question": question})
         LOGGER.debug("Question: %s\nAnswer: %s", question, answer)
-        rag_response = RagResponse(self.rag_request, answer, search_results)
-        return rag_response
-
+        return RagResponse(self.rag_request, answer, documents)
 
     def check_document_relevance(self, question: str, content: str) -> bool:
         """
