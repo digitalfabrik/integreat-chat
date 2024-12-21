@@ -34,10 +34,10 @@ class RagResponse:
             "message": self.rag_request.rag_request,
             "sources": [document["url"] for document in self.rag_documents],
             "details": [{
-                "context_path": document['path'],
                 "source": document['source_path'],
+                "score": document['score'],
+                "context_path": document['source'],
                 "context": document['text'],
-                "score": document['score']
             } for document in self.rag_documents],
         }
 
@@ -56,10 +56,11 @@ class RagResponse:
         result = []
         for document in rag_documents:
             if self.rag_request.gui_language == self.rag_request.rag_language:
-                document["source_path"] = document["path"]
+                document["source_path"] = document["source"]
             else:
                 document["source_path"] = (
-                    get_page(document)["available_languages"][self.rag_request.gui_language]["path"]
+                    get_page(document)["available_languages"]
+                    [self.rag_request.gui_language]["source"]
                 )
             result.append(document)
         return result
