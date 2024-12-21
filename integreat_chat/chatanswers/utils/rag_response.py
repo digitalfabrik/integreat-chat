@@ -26,7 +26,7 @@ class RagResponse():
         return {
             "answer": str(self),
             "status": "success",
-            "message": self.request.message,
+            "message": self.request.original_message,
             "sources": [document["url"] for document in self.documents],
             "details": [{
                 "source": document['source_path'],
