@@ -114,7 +114,7 @@ class AnswerService:
         chain = prompt | self.llm | StrOutputParser()
         answer = chain.invoke({"language": self.language, "context": context, "question": question})
         LOGGER.debug("Question: %s\nAnswer: %s", question, answer)
-        return RagResponse(self.rag_request, answer, documents)
+        return RagResponse(documents, self.rag_request, answer)
 
     def check_document_relevance(self, question: str, content: str) -> bool:
         """
