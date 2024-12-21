@@ -40,6 +40,8 @@ class SearchService:
         collection.load()
         return collection
 
+    
+
     def search_documents(
             self,
             limit_results: int = settings.SEARCH_MAX_DOCUMENTS,
@@ -84,8 +86,10 @@ class SearchService:
         unique_sources = []
         for source in sources:
             if (
-                source['source'] not in [source['source'] for source in unique_sources]
-                and source["score"] <= max_score
+                source.entity.get('source') not in [
+                    source.entity.get('source') for source in unique_sources
+                ]
+                and source.entity.get("score") <= max_score
             ):
                 unique_sources.append(source)
             if len(unique_sources) == max_pages:
