@@ -13,9 +13,12 @@ class IntegreatRequest:
     def __init__(self, data):
         self.parse_arguments(data)
         self.likely_message_language = self.detect_message_language()
-        self.supported_languages = None
-        self.fallback_language = None
-        self.prepare()
+        self.supported_languages = (
+            None if not hasattr(self, "supported_languages") else self.supported_languages
+        )
+        self.fallback_language = (
+            None if not hasattr(self, "fallback_language") else self.fallback_language
+        )
         if self.supported_languages is None or self.fallback_language:
             raise ValueError("supported_languages or fallback_language has not been set.")
         self.translated_message = self.translate_message()
@@ -29,15 +32,6 @@ class IntegreatRequest:
         self.original_message = data["message"]
         self.gui_language = data["language"]
         self.region = data["region"]
-
-    def prepare(self):
-        """
-        Classes inheriting from this class need to implement this method and
-        set the following attributes:
-        - self.supported_languages
-        - self.fallback_language
-        """
-        raise NotImplementedError("prepare method has to be implemented.")
 
     def detect_message_language(self) -> str:
         """

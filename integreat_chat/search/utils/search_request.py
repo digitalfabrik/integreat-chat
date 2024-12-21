@@ -11,9 +11,7 @@ class SearchRequest(IntegreatRequest):
     """
     Representation for search request
     """
-    def prepare(self):
-        """
-        Set needed attributes for RAG request
-        """
+    def __init__(self, data):
         self.supported_languages = settings.SEARCH_EMBEDDING_MODEL_SUPPORTED_LANGUAGES
         self.fallback_language = settings.SEARCH_FALLBACK_LANGUAGE
+        super().__init__(data)
