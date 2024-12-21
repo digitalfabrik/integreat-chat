@@ -3,14 +3,15 @@ A service to detect languages and translate messages
 """
 
 from langchain_core.output_parsers import StrOutputParser
+# pylint: disable=no-name-in-module
 from langchain_community.llms import Ollama
 from transformers import pipeline
 
 from langchain.prompts import PromptTemplate
 
 from django.conf import settings
-from ..static.prompts import Prompts
-from ..static.language_code_map import LANGUAGE_MAP
+from integreat_chat.chatanswers.static.prompts import Prompts
+from integreat_chat.translate.static.language_code_map import LANGUAGE_MAP
 
 class LanguageService:
     """
