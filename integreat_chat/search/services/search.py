@@ -69,7 +69,7 @@ class SearchService:
                 self.search_request.gui_language
             ))
         if self.deduplicate_results:
-            results = self.deduplicate_pages(results)
+            results = self.deduplicate_pages(documents)
         return SearchResponse(self.search_request, documents)
 
     def deduplicate_pages(
