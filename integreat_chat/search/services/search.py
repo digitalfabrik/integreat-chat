@@ -89,7 +89,7 @@ class SearchService:
                 source.entity.get('source') not in [
                     source.entity.get('source') for source in unique_sources
                 ]
-                and source.entity.get("score") <= max_score
+                and source.distance <= max_score
             ):
                 unique_sources.append(source)
             if len(unique_sources) == max_pages:
