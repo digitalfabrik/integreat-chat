@@ -1,22 +1,17 @@
 """
 RAG response
 """
-from .rag_request import RagRequest
-from .integreat_cms import get_page
+from integreat_chat.search.utils.search_response import Document
+from integreat_chat.core.utils.integreat_request import IntegreatRequest
 
-class RagResponse:
+class RagResponse():
     """
     Representation of RAG response
     """
-    def __init__(
-            self,
-            rag_request: RagRequest,
-            rag_response: str,
-            rag_documents: list,
-        ):
+    def __init__(self, documents: list[Document], request: IntegreatRequest, rag_response: str):
+        self.documents = documents
+        self.request = request
         self.rag_response = rag_response
-        self.rag_request = rag_request
-        self.rag_documents = self.enrich_rag_documents(rag_documents)
 
     def __str__(self):
         """
@@ -31,45 +26,12 @@ class RagResponse:
         return {
             "answer": str(self),
             "status": "success",
-            "message": self.rag_request.rag_request,
-            "sources": [document["url"] for document in self.rag_documents],
+            "message": self.request.message,
+            "sources": [document["url"] for document in self.documents],
             "details": [{
                 "source": document['source_path'],
                 "score": document['score'],
                 "context_path": document['source'],
                 "context": document['text'],
-            } for document in self.rag_documents],
+            } for document in self.documents],
         }
-
-    def enrich_rag_documents(self, rag_documents: list):
-        """
-        Enrich used documents with GUI langauge URLs and titles
-        """
-        rag_documents = self.add_source_paths(rag_documents)
-        rag_documents = self.add_titles(rag_documents)
-        return rag_documents
-
-    def add_source_paths(self, rag_documents: list) -> str:
-        """
-        Generate list of sources in the GUI language based on the used documents in RAG
-        """
-        result = []
-        for document in rag_documents:
-            if self.rag_request.gui_language == self.rag_request.rag_language:
-                document["source_path"] = document["source"]
-            else:
-                document["source_path"] = (
-                    get_page(document)["available_languages"]
-                    [self.rag_request.gui_language]["source"]
-                )
-            result.append(document)
-        return result
-
-    def add_titles(self, rag_documents):
-        """
-        Get pages from Integreat CMS and add GUI language titles
-        """
-        result = []
-        for document in rag_documents:
-            document["title"] = get_page(document)["title"]
-        return result

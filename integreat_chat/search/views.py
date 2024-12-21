@@ -6,9 +6,9 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from integreat_chat.translate.services.language import LanguageService
 from .services.search import SearchService
 from .services.milvus import UpdateMilvus
+from .utils.search_request import SearchRequest
 
 @csrf_exempt
 def search_documents(request):
@@ -17,31 +17,14 @@ def search_documents(request):
     first translate it to the GUI language. As we are only searching for similar documents,
     this should be fine, even if the translation is not very good.
     """
-    result = None
+    result = {}
     if (
         request.method in ("POST")
         and request.META.get("CONTENT_TYPE").lower() == "application/json"
     ):
-        data = json.loads(request.body)
-        if "language" not in data or "message" not in data:
-            result = {"status": "error"}
-        else:
-            search_service = SearchService(data["region"], data["language"])
-            language_service = LanguageService()
-            search_term = language_service.opportunistic_translate(
-                search_service.language, data["message"]
-            )
-
-            result = {
-                "related_documents": search_service.deduplicate_pages(
-                    search_service.search_documents(
-                        search_term,
-                        include_text="include_text" in data and data["include_text"],
-                    )
-                ),
-                "search_term": search_term,
-                "status": "success",
-            }
+        search_request = SearchRequest(json.loads(request.body))
+        search_service = SearchService(search_request, True)
+        result = search_service.search_documents(include_text=True).as_dict()
     return JsonResponse(result)
 
 

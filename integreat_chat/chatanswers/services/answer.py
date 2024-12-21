@@ -87,7 +87,7 @@ class AnswerService:
         param question: a question or statement of need
         return: a dict containing a response and sources
         """
-        question = self.rag_request.rag_message
+        question = str(self.rag_request)
         documents = self.get_documents(question)
 
         context = "\n".join(
