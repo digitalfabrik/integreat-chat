@@ -6,6 +6,7 @@ import json
 import logging
 
 from django.http import JsonResponse
+from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 
 from integreat_chat.chatanswers.services.answer import AnswerService
@@ -30,3 +31,17 @@ def extract_answer(request):
         answer_service = AnswerService(rag_request)
         rag_response = answer_service.extract_answer()
     return JsonResponse(dict(rag_response))
+
+@csrf_exempt
+def redirect_search(request):
+    """
+    Redirect search request to new URL
+    """
+    return redirect("/search/documents/")
+
+@csrf_exempt
+def redirect_translate(request):
+    """
+    Redirect translate request to new URL
+    """
+    return redirect("/translate/message/")
