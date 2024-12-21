@@ -11,8 +11,8 @@ def get_page(document: dict) -> dict:
     """
     get page object for RAG source
     """
-    region = document["path"].split("/")[1]
-    cur_language = document["path"].split("/")[2]
+    region = document["source"].split("/")[1]
+    cur_language = document["source"].split("/")[2]
     pages_url = (
         f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/{region}/"
         f"{cur_language}/children/?url={document['path']}&depth=0"
