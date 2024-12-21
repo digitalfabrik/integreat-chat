@@ -23,13 +23,13 @@ class Document:
         self.chunk = chunk
         self.enrich(include_details)
 
-    def enrich(self, include_details):
+    def enrich(self, include_details: bool):
         """
         Enrich document with GUI langauge URLs and titles
         """
         if self.gui_language != self.chunk_source_path.split("/")[2]:
             self.gui_source_path = (
-                get_page(self.chunk_source_path)["available_languages"][self.gui_language]
+                get_page(self.chunk_source_path)["available_languages"][self.gui_language]["path"]
             )
         else:
             self.gui_source_path = self.chunk_source_path
