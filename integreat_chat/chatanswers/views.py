@@ -6,7 +6,6 @@ import json
 import logging
 
 from django.http import JsonResponse
-from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 
 from integreat_chat.chatanswers.services.answer import AnswerService
