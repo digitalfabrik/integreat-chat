@@ -58,13 +58,13 @@ class AnswerService:
             return True
         return False
 
-    def get_documents(self, question: str) -> list:
+    def get_documents(self) -> list:
         """
         Retrieve documents for RAG
         """
         search = SearchService(self.region, self.language)
         search_results = search.search_documents(
-            question,
+            self.rag_request,
             include_text=True,
         )
         search_results = search.deduplicate_pages(
@@ -75,7 +75,7 @@ class AnswerService:
         LOGGER.debug("Number of retrieved documents: %i", len(search_results))
         if settings.RAG_RELEVANCE_CHECK:
             search_results = [result for result in search_results if self.check_document_relevance(
-                question, result['text']
+                str(self.rag_request), result['text']
             )]
         LOGGER.debug("Number of documents after relevance check: %i", len(search_results))
         return search_results
@@ -88,7 +88,7 @@ class AnswerService:
         return: a dict containing a response and sources
         """
         question = str(self.rag_request)
-        documents = self.get_documents(question)
+        documents = self.get_documents()
 
         context = "\n".join(
             [result['text'] for result in documents]
