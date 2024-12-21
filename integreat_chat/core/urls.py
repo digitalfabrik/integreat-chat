@@ -16,7 +16,13 @@ Including another URLconf
 """
 from django.urls import path, include
 
+from integreat_chat.chatanswers.views import redirect_search, redirect_translate
+
 urlpatterns = [
+    # Support legacy URLs
+    path("/chatanswers/search_documents/", redirect_search, name="redir_search"),
+    path("/chatanswers/translate_message/", redirect_translate, name="redir_translate"),
+
     path('keywords/', include('integreat_chat.keywords.urls')),
     path('chatanswers/', include('integreat_chat.chatanswers.urls')),
     path('search/', include('integreat_chat.search.urls')),
