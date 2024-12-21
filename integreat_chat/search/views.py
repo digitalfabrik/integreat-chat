@@ -7,9 +7,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from integreat_chat.translate.services.language import LanguageService
-from integreat_chat.search.services.search import SearchService
-
-from integreat_chat.search.services.milvus import UpdateMilvus
+from .services.search import SearchService
+from .services.milvus import UpdateMilvus
 
 @csrf_exempt
 def search_documents(request):

@@ -8,11 +8,8 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from integreat_chat.chatanswers.services.language import LanguageService
-from integreat_chat.search.services.search import SearchService
 from integreat_chat.chatanswers.services.answer import AnswerService
 
-from ..search.services.milvus import UpdateMilvus
 from .utils.rag_request import RagRequest
 
 LOGGER = logging.getLogger("django")

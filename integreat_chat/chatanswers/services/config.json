@@ -1,8 +1,0 @@
-
-{
-  "model_llm": "gemma:latest",
-  "model_embeddings": "all-MiniLM-L6-v2",
-  "vdb_URI": "127.0.0.1",
-  "vdb_port": "19530",
-  "vdb_collection": "collection_1"
-}
