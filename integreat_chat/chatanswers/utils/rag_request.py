@@ -32,6 +32,7 @@ class RagRequest:
             self.gui_language, self.original_message
         )
 
+    @property
     def rag_language(self) -> str:
         """
         Select a language for RAG prompting
@@ -73,7 +74,7 @@ class RagRequest:
         """
         return {
             "message": self.__str__(),
-            "rag_language": self.rag_language(),
+            "rag_language": self.rag_language,
             "gui_language": self.gui_language,
             "region": self.region
         }
