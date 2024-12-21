@@ -1,8 +1,8 @@
 """
 RAG response
 """
-from rag_request import RagRequest
-from integreat_cms import get_page
+from .rag_request import RagRequest
+from .integreat_cms import get_page
 
 class RagResponse:
     """
