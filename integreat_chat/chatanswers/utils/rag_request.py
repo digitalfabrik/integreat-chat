@@ -10,12 +10,13 @@ class RagRequest(IntegreatRequest):
     """
     Class that represents a chat user message
     """
-    def prepare(self):
+    def __init__(self, data):
         """
         Set needed attributes for RAG request
         """
         self.supported_languages = settings.RAG_SUPPORTED_LANGUAGES
         self.fallback_language = settings.RAG_FALLBACK_LANGUAGE
+        super().__init__(data)
 
     def optimized_message(self) -> bool:
         """
