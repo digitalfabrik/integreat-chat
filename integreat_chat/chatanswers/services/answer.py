@@ -71,7 +71,7 @@ class AnswerService:
         })
         search = SearchService(search_request, deduplicate_results=False)
         search_results = search.search_documents(
-            self.rag_request,
+            settings.RAG_MAX_PAGES,
             include_text=True,
         )
         search_results = search.deduplicate_pages(
