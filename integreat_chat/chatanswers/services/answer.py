@@ -10,8 +10,8 @@ from langchain_community.llms import Ollama
 
 from django.conf import settings
 
-from .search import SearchService
-from .language import LanguageService
+from integreat_chat.search.services.search import SearchService
+from integreat_chat.translate.services.language import LanguageService
 from ..static.prompts import Prompts
 from ..static.messages import Messages
 from ..utils.rag_response import RagResponse

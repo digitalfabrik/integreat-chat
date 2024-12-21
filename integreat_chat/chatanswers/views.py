@@ -30,6 +30,3 @@ def extract_answer(request):
         answer_service = AnswerService(rag_request)
         rag_response = answer_service.extract_answer()
     return JsonResponse(dict(rag_response))
-
-
-
