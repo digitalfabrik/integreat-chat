@@ -58,7 +58,7 @@ class SearchService:
             consistency_level="Strong",
             output_fields=(["source", "text"] if include_text else ["source"])
         )[0]
-        results = sorted(results, key=lambda x: x["score"])
+        results = sorted(results, key=lambda x: x.distance)
         if self.deduplicate_results:
             results = self.deduplicate_pages(results)
         documents = []
