@@ -58,7 +58,6 @@ class RagResponse():
             "rag_language": self.request.use_language,
             "rag_message": self.request.translated_message,
             "rag_sources": [document.chunk_source_path for document in self.documents],
-            "sources": [],  # legacy hack to not break the Integreat CMS. Can be removed later.
             "details": [{
                 "source": document.chunk_source_path,
                 "score": document.score,
