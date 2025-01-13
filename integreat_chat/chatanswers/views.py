@@ -28,5 +28,8 @@ def extract_answer(request):
     ):
         rag_request = RagRequest(json.loads(request.body))
         answer_service = AnswerService(rag_request)
-        rag_response = answer_service.extract_answer()
-    return JsonResponse(rag_response.as_dict())
+        if answer_service.detect_human_request():
+            return JsonResponse({"response": "User has requested to talk to human"}) 
+        else:
+            rag_response = answer_service.extract_answer()
+            return JsonResponse(rag_response.as_dict())

@@ -40,3 +40,8 @@ Message: {0}
     OPTIMIZE_MESSAGE = """Please summarize the following text into one terse sentence or question. Only answer with the summary, no text around it.
     
 Text: {0}"""
+
+    HUMAN_REQUEST_CHECK = """You are an assistant trained to classify user intent. Your task is to determine whether the user wants to talk to a human.
+Always respond with "Yes" if the user is asking for human assistance, and "No otherwise"
+
+User query: {0}"""
