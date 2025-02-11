@@ -5,8 +5,10 @@ import logging
 from django.utils.functional import cached_property
 
 from integreat_chat.translate.services.language import LanguageService
+from integreat_chat.translate.static.language_code_map import LANGUAGE_MAP
 
 from ..static.region_language_map import REGION_LANGUAGE_MAP
+
 
 LOGGER = logging.getLogger('django')
 
@@ -60,6 +62,10 @@ class IntegreatRequest:
         If necessary, translate message into GUI language
         """
         if self.likely_message_language not in self.supported_languages:
+            if self.likely_message_language not in LANGUAGE_MAP:
+                raise ValueError(
+                    f"Unsupported translation language: {self.likely_message_language}"
+                )
             return self.language_service.translate_message(
                 self.likely_message_language, self.fallback_language, self.original_message
             )

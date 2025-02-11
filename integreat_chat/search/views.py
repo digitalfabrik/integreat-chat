@@ -23,9 +23,12 @@ def search_documents(request):
         request.method in ("POST")
         and request.META.get("CONTENT_TYPE").lower() == "application/json"
     ):
-        search_request = SearchRequest(json.loads(request.body))
-        search_service = SearchService(search_request, True)
-        result = search_service.search_documents(include_text=True).as_dict()
+        try:
+            search_request = SearchRequest(json.loads(request.body))
+            search_service = SearchService(search_request, True)
+            result = search_service.search_documents(include_text=True).as_dict()
+        except ValueError as exc:
+            result = {"status": "error", "message": str(exc)}
     return JsonResponse(result)
 
 @csrf_exempt
@@ -41,5 +44,8 @@ def search_opensearch(request, region_slug, language_slug):
         and request.META.get("CONTENT_TYPE").lower() == "application/json"
     ):
         opensearch = OpenSearch(password=settings.OPENSEARCH_PASSWORD)
-        result = opensearch.search_api(f"{region_slug}_{language_slug}", json.loads(request.body))
+        result = opensearch.search_api(
+            f"{region_slug}_{language_slug}",
+            json.loads(request.body)
+        )
     return JsonResponse(result)
