@@ -2,6 +2,7 @@
 base request class
 """
 import logging
+from django.conf import settings
 from django.utils.functional import cached_property
 
 from integreat_chat.translate.services.language import LanguageService
@@ -39,6 +40,8 @@ class IntegreatRequest:
         if "language" not in data or "region" not in data or "message" not in data:
             raise ValueError("Missing language, region or message attribute")
         self.original_message = data["message"]
+        if data["region"] not in settings.INTEGREAT_REGIONS:
+            raise ValueError("Integreat region not enabled")
         self.region = data["region"]
         self.gui_language = (
             REGION_LANGUAGE_MAP[self.region][data["language"]]
