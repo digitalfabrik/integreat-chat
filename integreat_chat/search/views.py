@@ -5,6 +5,7 @@ import json
 
 from django.conf import settings
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
 from .services.search import SearchService
@@ -49,3 +50,17 @@ def search_opensearch(request, region_slug, language_slug):
             json.loads(request.body)
         )
     return JsonResponse(result)
+
+
+def search(request):
+    """
+    Simple HTML form for searching regions
+    """
+    return render(
+        request,
+        "search.html",
+        {
+            "regions": settings.INTEGREAT_REGIONS,
+            "languages": settings.SEARCH_EMBEDDING_MODEL_SUPPORTED_LANGUAGES
+        }
+    )
