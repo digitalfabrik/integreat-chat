@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Search</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        label { display: block; margin-bottom: 10px; }
+        select, input[type="text"] { padding: 8px; margin-bottom: 20px; }
+        button { padding: 10px; }
+        #results { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>Search Documents</h2>
+    <form id="searchForm">
+        <label for="message">Search Text:</label>
+        <input type="text" id="message" name="message" required>
+
+        <label for="region">Region:</label>
+        <select id="region" name="region">
+            {% for region in regions %}
+                <option value="{{ region }}">{{ region }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="language">Language:</label>
+        <select id="language" name="language">
+            {% for language in languages %}
+                <option value="{{ language }}">{{ language }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Search</button>
+    </form>
+    <div id="results"></div>
+
+    <script>
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const message = document.getElementById('message').value;
+            const region = document.getElementById('region').value;
+            const language = document.getElementById('language').value;
+
+            const searchData = {
+                "message": message,
+                "language": language,
+                "region": region,
+                "include_text": true
+            };
+
+            fetch('/search/documents/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(searchData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = '';
+                const resultHeadline = document.createElement('h2');
+                resultHeadline.textContent = "Search Results";
+                resultsDiv.appendChild(resultHeadline);
+                if (data.related_documents && data.related_documents.length > 0) {
+                    data.related_documents.forEach(result => {
+                        const url = result.source;
+                        const score = result.score;
+                        const title = result.title;
+                        const para = document.createElement('p');
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.textContent = title+" ["+Math.round(score * 100) / 100+"]";
+                        para.appendChild(link);
+                        resultsDiv.appendChild(para);
+                    });
+                } else {
+                    const para = document.createElement('p');
+                    para.textContent = 'No related documents found.';
+                    resultsDiv.appendChild(para);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>
