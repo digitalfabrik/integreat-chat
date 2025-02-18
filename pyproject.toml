@@ -25,12 +25,12 @@ classifiers = [
 ]
 
 dependencies = [
+  "celery",
   "django",
+  "django-celery",
   "huggingface_hub",
   "langchain",
   "langchain-community",
-  "langchain-ollama",
-  "langchain_milvus",
   "langchain-huggingface",
   "lxml",
   "numpy",
