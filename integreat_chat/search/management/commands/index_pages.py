@@ -2,9 +2,9 @@
 Index pages for region & language
 """
 
-from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from integreat_chat.search.services.opensearch import OpenSearchSetup
+
+from ...tasks import update_index
 
 class Command(BaseCommand):
     """
@@ -21,8 +21,7 @@ class Command(BaseCommand):
             raise CommandError('missing region or language argument')
         region_slug = options["region"]
         language_slug = options["language"]
-        oss = OpenSearchSetup(password=settings.OPENSEARCH_PASSWORD)
-        print(f"Indexing pages for region {options['region']} and language {options['language']}")
-        print(oss.delete_index(f"{region_slug}_{language_slug}"))
-        print(oss.create_index(f"{region_slug}_{language_slug}"))
-        oss.index_pages(region_slug, language_slug)
+        update_index.apply_async([region_slug, language_slug])
+        self.stdout.write(self.style.SUCCESS(  # pylint: disable=no-member
+            f"Queued indexing pages for region {region_slug} and language {language_slug}"
+        ))

@@ -230,3 +230,21 @@ if not DEBUG:
             "TIMEOUT": 3600 * 24 * 7,
         }
     }
+
+##########
+# CELERY #
+##########
+
+CELERY_TIMEZONE = "UTC"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 60 * 60 * 1
+CELERY_BROKER_URL = (
+        config["DEFAULT"]["CELERY_REDIS_URL"] if
+        "CELERY_REDIS_URL" in config["DEFAULT"]
+        else "redis://localhost:6379/0"
+)
+CELERY_RESULT_BACKEND = (
+        config["DEFAULT"]["CELERY_RESULT_BACKEND"] if
+        "CELERY_RESULT_BACKEND" in config["DEFAULT"]
+        else "redis://localhost:6379/0"
+)
