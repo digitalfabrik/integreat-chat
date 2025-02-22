@@ -48,7 +48,7 @@ class AnswerService:
             message = Messages.TALK_TO_HUMAN
         else:
             answer = self.llm_api.simple_prompt(Prompts.CHECK_QUESTION.format(message))
-            if answer.startswith("Yes"):
+            if answer.startswith("Accept"):
                 LOGGER.debug("Message requires response.")
                 return None
             message = Messages.NOT_QUESTION

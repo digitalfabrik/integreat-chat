@@ -33,8 +33,28 @@ User question: {0}
 Retrieved document: {1}
 """
 
-    CHECK_QUESTION = """Does the following message express a question or indicate a need? Respond with only "yes" or "no".
-
+    CHECK_QUESTION = """**Task:** You are a message filtering system that determines whether a message requires an answer. Your goal is to only allow messages that are either:
+1.  A **clear and concise question**, OR
+2.  A **statement indicating a specific need** that is actionable.
+    
+**Reject messages that:**
+*   Are too vague or generic (e.g., "I need help" or "I need an appointment").
+*   Lack a clear request or context for a response.
+    
+**Examples:**
+✅ Accept:
+*   "How can I learn German?"
+*   "Where can I find a doctor?"
+*   "Which language level is required to find a job?"
+    
+❌ Reject:
+*   "I need help."
+*   "I want to ask something."
+*   "Can you assist me?"
+*   "Appointment."
+    
+Respond with **"Accept"** if the message meets the criteria and **"Reject"** if it does not. Do not provide any explanations.  
+  
 Message: {0}
 """
 
