@@ -6,6 +6,7 @@ import time
 import requests
 from django.conf import settings
 from langchain_text_splitters import HTMLHeaderTextSplitter
+from integreat_chat.core.utils.integreat_cms import get_pages
 
 class OpenSearch:
     """
@@ -418,7 +419,7 @@ class OpenSearchSetup(OpenSearch):
         Fill index with pages from region
         """
         known_hashes = []
-        for page in self.fetch_pages_from_cms(region_slug, language_slug):
+        for page in get_pages(region_slug, language_slug):
             texts, paths = self.split_page(page)  # pylint: disable=W0612
             for chunk in texts:
                 chunk_hash = hashlib.md5(chunk.encode(encoding="utf-8")).digest()
@@ -453,12 +454,3 @@ class OpenSearchSetup(OpenSearch):
             texts.append(doc.page_content)
             paths.append({"source": page['path']})
         return texts, paths
-
-    def fetch_pages_from_cms(self, region_slug: str, language_slug: str):
-        """
-        get data from Integreat cms
-        """
-        pages_url = (
-            f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/{region_slug}/{language_slug}/pages"
-        )
-        return requests.get(pages_url, timeout=30).json()

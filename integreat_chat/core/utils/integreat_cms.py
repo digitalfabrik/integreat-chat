@@ -33,3 +33,13 @@ def get_page(path: str) -> dict:
     )
     encoded_url = quote(pages_url, safe=':/=?&')
     return requests.get(encoded_url, timeout=15, headers=headers).json()[0]
+
+def get_pages(region_slug: str, language_slug: str) -> list[dict]:
+    """
+    get data from Integreat cms
+    """
+    headers = {"X-Integreat-Development": "true"}
+    pages_url = (
+        f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/{region_slug}/{language_slug}/pages"
+    )
+    return requests.get(pages_url, timeout=30, headers=headers).json()
