@@ -68,7 +68,7 @@ class AnswerService:
         """
         search_request = SearchRequest(
             {
-                "message": self.rag_request.translated_message,
+                "message": str(self.rag_request),
                 "language": self.rag_request.use_language,
                 "region": self.rag_request.region
             },

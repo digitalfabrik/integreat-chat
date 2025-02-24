@@ -103,7 +103,7 @@ class OpenSearch:
         """
         result = []
         found_urls = []
-        if "hits" not in response["hits"]:
+        if "hits" not in response:
             raise ValueError("Missing hits in result")
         for document in response["hits"]["hits"]:
             if (

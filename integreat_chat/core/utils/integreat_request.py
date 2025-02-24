@@ -6,9 +6,9 @@ from django.conf import settings
 from django.utils.functional import cached_property
 
 from integreat_chat.translate.services.language import LanguageService
-from integreat_chat.translate.static.language_code_map import LANGUAGE_MAP
 
 from ..static.region_language_map import REGION_LANGUAGE_MAP
+from .chat_message import ChatMessage
 
 
 LOGGER = logging.getLogger('django')
@@ -21,7 +21,7 @@ class IntegreatRequest:
     used models and a fallback language.
     """
     def __init__(self, data: dict, skip_language_detection: bool = False) -> None:
-        self.parse_arguments(data)
+        self.parse_meta_information(data)
         self.language_service = LanguageService()
         self.skip_language_detection = skip_language_detection
         self.supported_languages = (
@@ -32,14 +32,15 @@ class IntegreatRequest:
         )
         if self.supported_languages is None or self.fallback_language is None:
             raise ValueError("supported_languages or fallback_language has not been set.")
+        self.parse_messages(data)
+        self.most_important_message_first = True
 
-    def parse_arguments(self, data: dict) -> None:
+    def parse_meta_information(self, data: dict) -> None:
         """
-        Parse arguments from HTTP request body
+        Parse meta information from HTTP request body
         """
-        if "language" not in data or "region" not in data or "message" not in data:
-            raise ValueError("Missing language, region or message attribute")
-        self.original_message = data["message"]
+        if "language" not in data or "region" not in data:
+            raise ValueError("Missing language or region attribute")
         if data["region"] not in settings.INTEGREAT_REGIONS:
             raise ValueError("Integreat region not enabled")
         self.region = data["region"]
@@ -50,35 +51,48 @@ class IntegreatRequest:
             else data["language"]
         )
 
-    @cached_property
-    def likely_message_language(self) -> str:
+    def parse_messages(self, data: dict) -> None:
         """
-        Detect language and decide which language to use for RAG
+        Parse message(s) from HTTP request body
         """
-        if self.skip_language_detection:
-            return self.gui_language
-        return self.language_service.classify_language(self.original_message)
+        if "messages" not in data and "message" not in data:
+            raise ValueError("No messages in request body")
+        if "message" in data:
+            messages = [{"content": data["message"], "role": "user"}]
+        else:
+            messages = data["messages"]
+        self.messages = [
+            ChatMessage(
+                message,
+                self.language_service,
+                self.skip_language_detection,
+                self.gui_language,
+                self.supported_languages,
+                self.fallback_language
+            ) for message in messages
+            if message["role"] != "system"
+        ]
 
     @cached_property
     def translated_message(self) -> str:
         """
-        If necessary, translate message into GUI language
+        Get translated last message
         """
-        if self.likely_message_language not in self.supported_languages:
-            if self.likely_message_language not in LANGUAGE_MAP:
-                raise ValueError(
-                    f"Unsupported translation language: {self.likely_message_language}"
-                )
-            return self.language_service.translate_message(
-                self.likely_message_language, self.fallback_language, self.original_message
-            )
-        return self.original_message
+        if self.most_important_message_first:
+            return self.messages[0].translated_message
+        return self.messages[-1].translated_message
 
     @property
     def use_language(self) -> str:
         """
-        Select a language for RAG prompting
+        Get language to be used
         """
-        if self.likely_message_language not in self.supported_languages:
-            return self.fallback_language
-        return self.likely_message_language
+        if self.most_important_message_first:
+            return self.messages[0].use_language
+        return self.messages[-1].use_language
+
+    @property
+    def original_message(self) -> str:
+        if self.most_important_message_first:
+            return self.messages[0].original_message
+        return self.messages[-1].original_message

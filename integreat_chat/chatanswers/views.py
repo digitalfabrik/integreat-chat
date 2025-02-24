@@ -16,7 +16,7 @@ LOGGER = logging.getLogger("django")
 
 
 @csrf_exempt
-def extract_answer(request):
+def chat(request):
     """
     Extract an answer for a user query from Integreat content. Expects a JSON body with message
     and language attributes
