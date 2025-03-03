@@ -1,11 +1,13 @@
 """
 base request class
 """
+
+from typing import TYPE_CHECKING
+
 from django.utils.functional import cached_property
-
 from integreat_chat.translate.static.language_code_map import LANGUAGE_MAP
-
-from .integreat_request import IntegreatRequest
+if TYPE_CHECKING:
+    from .integreat_request import IntegreatRequest
 
 class ChatMessage:
     """
@@ -14,7 +16,7 @@ class ChatMessage:
     def __init__(  # pylint: disable=too-many-arguments
             self,
             message: dict,
-            integreat_request: IntegreatRequest,
+            integreat_request: "IntegreatRequest",
         ):
         self.original_message = message["content"]
         self.role = message["role"]
