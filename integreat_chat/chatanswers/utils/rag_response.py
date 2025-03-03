@@ -2,10 +2,8 @@
 RAG response
 """
 
-from django.conf import settings
-
 from integreat_chat.search.utils.search_response import Document
-from integreat_chat.core.utils.integreat_request import IntegreatRequest
+from .rag_request import RagRequest
 
 
 class RagResponse:
@@ -16,7 +14,7 @@ class RagResponse:
     def __init__(
         self,
         documents: list[Document],
-        request: IntegreatRequest,
+        request: RagRequest,
         rag_response: str,
         automatic_answers: bool = True,
     ):
