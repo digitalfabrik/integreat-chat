@@ -62,15 +62,7 @@ class IntegreatRequest:
         else:
             messages = data["messages"]
         self.messages = [
-            ChatMessage(
-                message,
-                self.language_service,
-                self.skip_language_detection,
-                self.gui_language,
-                self.supported_languages,
-                self.fallback_language
-            ) for message in messages
-            if message["role"] != "system"
+            ChatMessage(message, self) for message in messages if message["role"] != "system"
         ]
 
     @cached_property
@@ -93,6 +85,9 @@ class IntegreatRequest:
 
     @property
     def original_message(self) -> str:
+        """
+        Return the original message as entered by the user
+        """
         if self.most_important_message_first:
             return self.messages[0].original_message
         return self.messages[-1].original_message
