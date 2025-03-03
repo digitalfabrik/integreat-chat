@@ -13,9 +13,6 @@ class SearchService:
     """
     def __init__(self, search_request: SearchRequest, deduplicate_results: bool) -> None:
         self.search_request = search_request
-        self.language = search_request.use_language
-        self.original_language = search_request.gui_language
-        self.region = search_request.region
         self.os = OpenSearch(password=settings.OPENSEARCH_PASSWORD)
         self.deduplicate_results = deduplicate_results
 
@@ -34,8 +31,8 @@ class SearchService:
         """
         results = self.os.reduce_search_result(
             response = self.os.search(
-                self.region,
-                self.language,
+                self.search_request.region,
+                self.search_request.use_language,
                 self.search_request.translated_message
             ),
             deduplicate = self.deduplicate_results,

@@ -24,6 +24,7 @@ class RagRequest(IntegreatRequest):
         self.supported_languages = settings.RAG_SUPPORTED_LANGUAGES
         self.fallback_language = settings.RAG_FALLBACK_LANGUAGE
         super().__init__(data, skip_language_detection)
+        self.most_important_message_first = False
 
     @cached_property
     def optimized_message(self) -> bool:
