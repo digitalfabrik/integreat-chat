@@ -35,7 +35,7 @@ class OpenSearch:
         self.model_id = settings.SEARCH_OPENSEARCH_MODEL_ID
         self.model_group_id = settings.SEARCH_OPENSEARCH_MODEL_GROUP_ID
 
-    def request(self, path: str, payload: dict, method: str = "GET"):
+    def request(self, path: str, payload: dict, method: str = "GET") -> dict:
         """
         Wrapper around Requests to OpenSearch server
 
@@ -51,7 +51,7 @@ class OpenSearch:
                 auth=(self.user, self.password),
                 json=payload,
                 timeout=30,
-                verify=False,
+                verify="/etc/opensearch/root-ca.pem",
                 headers=headers,
             ).json()
         if method == "PUT":
@@ -60,7 +60,7 @@ class OpenSearch:
                 auth=(self.user, self.password),
                 json=payload,
                 timeout=30,
-                verify=False,
+                verify="/etc/opensearch/root-ca.pem",
                 headers=headers,
             ).json()
         if method == "POST":
@@ -69,7 +69,7 @@ class OpenSearch:
                 auth=(self.user, self.password),
                 json=payload,
                 timeout=30,
-                verify=False,
+                verify="/etc/opensearch/root-ca.pem",
                 headers=headers,
             ).json()
         if method == "DELETE":
@@ -78,7 +78,7 @@ class OpenSearch:
                 auth=(self.user, self.password),
                 json=payload,
                 timeout=30,
-                verify=False,
+                verify="/etc/opensearch/root-ca.pem",
                 headers=headers,
             ).json()
         if response:
