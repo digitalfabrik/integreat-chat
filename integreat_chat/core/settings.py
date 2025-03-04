@@ -15,6 +15,7 @@ import os
 
 from pathlib import Path
 
+from celery.schedules import crontab
 from langchain_huggingface import HuggingFaceEmbeddings
 
 config = configparser.ConfigParser()
@@ -248,3 +249,9 @@ CELERY_RESULT_BACKEND = (
         "CELERY_RESULT_BACKEND" in config["DEFAULT"]
         else "redis://localhost:6379/0"
 )
+CELERY_BEAT_SCHEDULE = {
+      'update-indexes': {
+        'task': 'search.tasks.update_search_indexes',
+        'schedule': crontab(hour=2,minute=30),
+    },
+}
