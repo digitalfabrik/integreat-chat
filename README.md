@@ -49,6 +49,7 @@ To integrate Zammad, the following configuration has to be set:
 * Ticket attributes (Admin -> Objects -> Ticket):
   * Name: `automatic_answers`, Display: `Automatic Chatbot Answers`, Format: `Boolean Field`, True as default value
   * Name: `initial_response_sent`, Display: `Initial response sent`, Format: `Boolean field`, False as default value
+  * Name: `evaluation_consent`, Display: `User agrees to chat evaluation`, Format: `Boolean field`, False as default value
 * Create an access token for the Integreat CMS user with permission `Agent tickets`
 * Trigger for webhook:
   * Conditions: `Action is updated`, `Subject contains not "automatically generated message"`
