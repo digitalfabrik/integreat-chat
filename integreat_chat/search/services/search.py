@@ -45,6 +45,8 @@ class SearchService:
                 result["url"],
                 result["chunk_text"],
                 result["score"],
+                result["title"],
+                result["parent_titles"],
                 include_text,
                 self.search_request.gui_language
             ))
