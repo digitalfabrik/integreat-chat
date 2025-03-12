@@ -114,6 +114,7 @@ class OpenSearch:
             result.append({
                 "url": document["_source"]["url"],
                 "title": document["_source"]["title"],
+                "parent_titles": document["_source"]["parent_titles"],
                 "score": document["_score"],
                 "chunk_text": document["_source"]["chunk_text"],
             })

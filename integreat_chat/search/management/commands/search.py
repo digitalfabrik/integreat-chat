@@ -26,4 +26,4 @@ class Command(BaseCommand):
             deduplicate=True
         )
         for document in documents:
-            print(f"* {document['score']:.2f} [{document['title']}]({document['url']})")
+            print(f"* {document['score']:.2f} [{document['title']}] [{document['parent_titles']}] ({document['url']})")
