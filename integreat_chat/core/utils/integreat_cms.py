@@ -43,3 +43,13 @@ def get_pages(region_slug: str, language_slug: str) -> list[dict]:
         f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/{region_slug}/{language_slug}/pages"
     )
     return requests.get(pages_url, timeout=30, headers=headers).json()
+
+def get_parent_page_titles(region_slug: str, language_slug: str, path: str):
+    """
+    get parent page titles for a given path
+    """
+    headers = {"X-Integreat-Development": "true"}
+    parents_url = (
+        f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/{region_slug}/{language_slug}/parents/?url={path}"
+    )
+    return requests.get(parents_url, timeout=30, headers=headers).json()
