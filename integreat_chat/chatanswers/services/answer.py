@@ -111,7 +111,7 @@ class AnswerService:
             ]
         )[: settings.RAG_CONTEXT_MAX_LENGTH]
 
-        LOGGER.debug("Context: \n", context)
+        LOGGER.debug("CONTEXT: \n%s", repr(context))
 
         if not documents:
             return RagResponse(
