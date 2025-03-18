@@ -20,6 +20,7 @@ class Document:
             source_path: str,
             chunk: str,
             score: float,
+            parent_titles: list[str],
             include_details: bool,
             gui_language: str
         ):
@@ -27,6 +28,7 @@ class Document:
         self.gui_language = gui_language
         self.score = score
         self.chunk = chunk
+        self.parent_titles = parent_titles
         self.enrich(include_details)
 
     def enrich(self, include_details: bool):

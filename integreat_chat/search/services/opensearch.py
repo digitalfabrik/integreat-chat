@@ -6,7 +6,7 @@ import time
 import requests
 from django.conf import settings
 from langchain_text_splitters import HTMLHeaderTextSplitter
-from integreat_chat.core.utils.integreat_cms import get_pages
+from integreat_chat.core.utils.integreat_cms import get_pages, get_parent_page_titles
 
 class OpenSearch:
     """
@@ -114,6 +114,7 @@ class OpenSearch:
             result.append({
                 "url": document["_source"]["url"],
                 "title": document["_source"]["title"],
+                "parent_titles": document["_source"]["parent_titles"],
                 "score": document["_score"],
                 "chunk_text": document["_source"]["chunk_text"],
             })
@@ -430,6 +431,7 @@ class OpenSearchSetup(OpenSearch):
                     "chunk_text": chunk,
                     "id": page["id"],
                     "title": page["title"],
+                    "parent_titles": self.get_parent_titles(region_slug, language_slug, page),
                     "url": f"https://{settings.INTEGREAT_APP_DOMAIN}{page['path']}",
                 }
                 self.request(f"/{region_slug}_{language_slug}/_doc/{page['id']}", payload, "PUT")
@@ -454,3 +456,14 @@ class OpenSearchSetup(OpenSearch):
             texts.append(doc.page_content)
             paths.append({"source": page['path']})
         return texts, paths
+    
+    def get_parent_titles(self, region_slug: str, language_slug: str, page: dict):
+        """
+        Get parent headlines of a page and append them
+        """
+        page_path = page["path"]
+        parent_titles = []
+        for parent in get_parent_page_titles(region_slug, language_slug, page_path):
+            parent_titles.append(parent["title"])
+        
+        return parent_titles

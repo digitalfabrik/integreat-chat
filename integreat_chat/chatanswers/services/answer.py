@@ -104,9 +104,13 @@ class AnswerService:
         documents = self.get_documents()
         LOGGER.debug("Retrieved %s documents.", len(documents))
 
-        context = "\n".join([result.content for result in documents])[
-            : settings.RAG_CONTEXT_MAX_LENGTH
-        ]
+        context = "\n---\n".join(
+            [
+                f"# {' > '.join(result.parent_titles + [result.title])}\n{result.content}"
+                for result in documents
+            ]
+        )[: settings.RAG_CONTEXT_MAX_LENGTH]
+        
         if not documents:
             return RagResponse(
                 documents,

@@ -45,7 +45,8 @@ class SearchService:
                 result["url"],
                 result["chunk_text"],
                 result["score"],
+                result["parent_titles"],
                 include_text,
-                self.search_request.gui_language
+                self.search_request.gui_language,
             ))
         return SearchResponse(self.search_request, documents)
