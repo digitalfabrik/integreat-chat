@@ -14,10 +14,17 @@ class Command(BaseCommand):
     """
     help = "Index pages for all configured regions"
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--full",
+            action="store_true",
+            help="Re-create full index",
+        )
+
     def handle(self, *args, **options):
         for region_slug in settings.INTEGREAT_REGIONS:
             for language_slug in get_region_languages(region_slug):
-                update_index.apply_async([region_slug, language_slug])
+                update_index.apply_async([region_slug, language_slug, not options["full"]])
                 self.stdout.write(self.style.SUCCESS(  # pylint: disable=no-member
                     f"Queued indexing pages for region {region_slug} and language {language_slug}"
                 ))
