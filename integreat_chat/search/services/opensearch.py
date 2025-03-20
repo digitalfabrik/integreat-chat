@@ -1,8 +1,11 @@
 """
 Setup and use of OpenSearch
 """
+
 import hashlib
 import time
+from datetime import timedelta, datetime
+
 import requests
 from django.conf import settings
 from langchain_text_splitters import HTMLHeaderTextSplitter
@@ -43,47 +46,16 @@ class OpenSearch:
         param payload: a OpenSearch request payload
         param method: a HTTP method
         """
-        response = None
         headers = {'Content-type': 'application/json'}
-        if method == "GET":
-            response = requests.get(
-                f'{self.base_url}{path}',
-                auth=(self.user, self.password),
-                json=payload,
-                timeout=30,
-                verify="/etc/opensearch/root-ca.pem",
-                headers=headers,
-            ).json()
-        if method == "PUT":
-            response = requests.put(
-                f'{self.base_url}{path}',
-                auth=(self.user, self.password),
-                json=payload,
-                timeout=30,
-                verify="/etc/opensearch/root-ca.pem",
-                headers=headers,
-            ).json()
-        if method == "POST":
-            response = requests.post(
-                f'{self.base_url}{path}',
-                auth=(self.user, self.password),
-                json=payload,
-                timeout=30,
-                verify="/etc/opensearch/root-ca.pem",
-                headers=headers,
-            ).json()
-        if method == "DELETE":
-            response = requests.delete(
-                f'{self.base_url}{path}',
-                auth=(self.user, self.password),
-                json=payload,
-                timeout=30,
-                verify="/etc/opensearch/root-ca.pem",
-                headers=headers,
-            ).json()
-        if response:
-            return response
-        raise NotImplementedError("HTTP Method not implemented")
+        return requests.request(
+            method=method,
+            url=f'{self.base_url}{path}',
+            auth=(self.user, self.password),
+            json=payload,
+            timeout=30,
+            verify="/etc/opensearch/root-ca.pem",
+            headers=headers,
+        ).json()
 
     def reduce_search_result(
             self,
@@ -188,6 +160,150 @@ class OpenSearch:
         return self.request(
             f"/{index}/_search?search_pipeline={self.search_pipeline_name}", payload, "GET"
         )
+
+    def get_indexed_page_ids(self, index: str) -> list:
+        """
+        Get all page IDs currently indexed
+
+        :param index: index name/slug
+        :return: a list of page IDs
+        """
+        payload = {"query": {"match_all": {}}}
+        result = self.request(f"/{index}/_search?_source=id&size=10000", payload, "GET")
+        return [page["_source"]["id"] for page in result["hits"]["hits"]]
+
+    def delete_document(self, index: str, page_id: int) -> int:
+        """
+        Delete all chunks from index for given Integreat CMS page ID.
+        
+        :param index: name of the OpenSearch index
+        :param page_id: Integreat CMS page ID
+        :return: number of deleted documents
+        """
+        payload = {
+            "query": {
+                "match": {
+                    "md5sum": page_id
+                }
+            }
+        }
+        return self.request(f"/{index}/_delete_by_query", payload, "POST")["deleted"]
+
+    def index_chunk(self, index: str, chunk: str, page: dict, parent_title: str) -> None:
+        """
+        Index page chunk
+        """
+        chunk_hash = hashlib.md5(chunk.encode(encoding="utf-8")).hexdigest()
+        if self.hash_in_index(index, chunk_hash):
+            return
+        payload = {
+            "chunk_text": chunk,
+            "id": page["id"],
+            "title": page["title"],
+            "parent_titles": parent_title,
+            "url": f"https://{settings.INTEGREAT_APP_DOMAIN}{page['path']}",
+            "md5sum": chunk_hash,
+        }
+        self.request(f"/{index}/_doc", payload, "POST")
+
+    def hash_in_index(self, index: str, chunk_hash: str) -> bool:
+        """
+        Check if hash is already in index
+        """
+        payload = {
+            "query": {
+                "match": {
+                    "md5sum": chunk_hash
+                }
+            }
+        }
+        return bool(self.request(f"/{index}/_search?_source=id", payload, "POST")["hits"]["hits"])
+
+    def remove_deleted_pages(self, index: str, current_page_ids: list) -> None:
+        """
+        Remove all pages from index that no longer exist in the Integreat content
+        """
+        removal_counter = 0
+        for indexed_page_id in self.get_indexed_page_ids(index):
+            if indexed_page_id not in current_page_ids:
+                removal_counter = removal_counter + 1
+                self.delete_document(index, indexed_page_id)
+        print(f"Removed {removal_counter} pages.")
+
+    def update_or_insert_page_chunks(
+            self,
+            region_slug: str,
+            language_slug: str,
+            cms_pages: list,
+            differential: bool,
+        ) -> None:
+        """
+        Insert page text chunks into index. If the document changed, remove the chunks associated
+        with the page and insert the new ones.
+
+        :param region_slug: Slug of Integreat CMS region
+        :param language_slug: Slug of Integreat CMS language
+        :param cms_pages: Reponse of Integreat CMS pages endpoint
+        :param differential: recreate index if false
+        """
+        update_counter = 0
+        for page in cms_pages:
+            updated = datetime.fromisoformat(page["last_updated"])
+            if datetime.now(updated.tzinfo) - updated < timedelta(days=7) or not differential:
+                update_counter = update_counter + 1
+                self.delete_document(f"{region_slug}_{language_slug}", page["id"])
+                texts, paths = self.split_page(page)  # pylint: disable=W0612
+                parent_title = self.get_parent_titles(region_slug, language_slug, page)
+                for chunk in texts:
+                    self.index_chunk(f"{region_slug}_{language_slug}", chunk, page, parent_title)
+        print(f"Updated {update_counter} pages.")
+
+    def index_pages(self, region_slug: str, language_slug: str, differential: bool = True) -> None:
+        """
+        Update or fill index of region.
+
+        :param region_slug: Integreat CMS region slug
+        :param language_slug: Integreat CMS language slug
+        :param differential: recreate (fill) index if false, update if true
+        """
+        cms_pages = get_pages(region_slug, language_slug)
+        if differential:
+            self.remove_deleted_pages(
+                f"{region_slug}_{language_slug}",
+                [page["id"] for page in cms_pages]
+            )
+        self.update_or_insert_page_chunks(region_slug, language_slug, cms_pages, differential)
+
+    def split_page(self, page: dict):
+        """
+        split pages at headlines
+        """
+        if page["content"] == "":
+            return [], []
+        headers_to_split_on = [
+            ("h1", "headline"),
+            ("h2", "headline"),
+        ]
+        html_splitter = HTMLHeaderTextSplitter(
+            headers_to_split_on=headers_to_split_on,
+        )
+        documents = html_splitter.split_text(page['content'])
+        texts = []
+        paths = []
+        for doc in documents:
+            texts.append(doc.page_content)
+            paths.append({"source": page['path']})
+        return texts, paths
+
+    def get_parent_titles(self, region_slug: str, language_slug: str, page: dict):
+        """
+        Get parent headlines of a page and append them
+        """
+        page_path = page["path"]
+        parent_titles = []
+        for parent in get_parent_page_titles(region_slug, language_slug, page_path):
+            parent_titles.append(parent["title"])
+        return parent_titles
 
 class OpenSearchSetup(OpenSearch):
     """
@@ -414,56 +530,3 @@ class OpenSearchSetup(OpenSearch):
             }
         }
         return self.request(f"/{index_slug}", payload, "PUT")
-
-    def index_pages(self, region_slug: str, language_slug: str):
-        """
-        Fill index with pages from region
-        """
-        known_hashes = []
-        for page in get_pages(region_slug, language_slug):
-            texts, paths = self.split_page(page)  # pylint: disable=W0612
-            for chunk in texts:
-                chunk_hash = hashlib.md5(chunk.encode(encoding="utf-8")).digest()
-                if chunk_hash in known_hashes:
-                    continue
-                known_hashes.append(chunk_hash)
-                payload = {
-                    "chunk_text": chunk,
-                    "id": page["id"],
-                    "title": page["title"],
-                    "parent_titles": self.get_parent_titles(region_slug, language_slug, page),
-                    "url": f"https://{settings.INTEGREAT_APP_DOMAIN}{page['path']}",
-                }
-                self.request(f"/{region_slug}_{language_slug}/_doc/{page['id']}", payload, "PUT")
-
-    def split_page(self, page):
-        """
-        split pages at headlines
-        """
-        if page["content"] == "":
-            return [], []
-        headers_to_split_on = [
-            ("h1", "headline"),
-            ("h2", "headline"),
-        ]
-        html_splitter = HTMLHeaderTextSplitter(
-            headers_to_split_on=headers_to_split_on,
-        )
-        documents = html_splitter.split_text(page['content'])
-        texts = []
-        paths = []
-        for doc in documents:
-            texts.append(doc.page_content)
-            paths.append({"source": page['path']})
-        return texts, paths
-    
-    def get_parent_titles(self, region_slug: str, language_slug: str, page: dict):
-        """
-        Get parent headlines of a page and append them
-        """
-        page_path = page["path"]
-        parent_titles = []
-        for parent in get_parent_page_titles(region_slug, language_slug, page_path):
-            parent_titles.append(parent["title"])
-        
-        return parent_titles
