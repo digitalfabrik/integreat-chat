@@ -5,8 +5,10 @@ A service to detect languages and translate messages
 import logging
 import hashlib
 import re
+
 import asyncio
 import spacy
+from bs4 import BeautifulSoup
 
 # pylint: disable=no-name-in-module
 from transformers import pipeline
@@ -32,6 +34,8 @@ class LanguageService:
     def __init__(self):
         """ """
         self.llm_api = LlmApiClient()
+        self.message = None
+        self.placeholders = {}
 
     def parse_language(self, response: dict) -> str:
         """
@@ -107,17 +111,39 @@ class LanguageService:
         """
         Translate text in chunks (required for NLLB)
         """
-        pipe = pipeline("translation", model=settings.TRANSLATION_MODEL)
+        max_length=400
+        pipe = pipeline("translation", model=settings.TRANSLATION_MODEL, max_length=max_length)
         return " ".join(
             [
                 result["translation_text"]
                 for result in pipe(
-                    self.split_text(message),
+                    self.split_text(text=message, max_length=max_length),
                     tgt_lang=LANGUAGE_MAP[target_language],
                     src_lang=LANGUAGE_MAP[source_language],
                 )
             ]
         )
+
+    def sanitize_message(self) -> None:
+        """
+        Sanitize text. Remove HTML and replace links.
+        """
+        soup = BeautifulSoup(self.message)
+        self.message = soup.get_text()
+        urls = re.findall(r"(https?://[^\s]+)", self.message)
+        self.placeholders = {}
+        for url in urls:
+            placeholder = f"_STR_URL_{len(self.placeholders)}_"
+            self.message = self.message.replace(url, placeholder)
+            self.placeholders[placeholder] = url
+
+    def restore_links(self, translated_message: str) -> str:
+        """
+        Replace placeholders back to URLs
+        """
+        for placeholder, url in self.placeholders.items():
+            translated_message = translated_message.replace(placeholder, url)
+        return translated_message
 
     def translate_message(
         self, source_language: str, target_language: str, message: str
@@ -125,6 +151,7 @@ class LanguageService:
         """
         Translate a message from source to target language
         """
+        self.message = message
         if not self.translation_required(source_language, target_language, message):
             return message
         cache_key, translated_message = self.check_cache(
@@ -132,12 +159,13 @@ class LanguageService:
         )
         if translated_message is not None:
             return translated_message
+        self.sanitize_message()
         try:
             LOGGER.debug(
                 "Starting translation from %s to %s", source_language, target_language
             )
             translated_message = self.chunked_translation_pipeline(
-                source_language, target_language, message
+                source_language, target_language, self.message
             )
             LOGGER.debug(
                 "Finished translation from %s to %s", source_language, target_language
@@ -147,6 +175,7 @@ class LanguageService:
                 f"Language pair ({source_language}, {target_language})"
                 f" not supported by translation model"
             ) from exc
+        translated_message = self.restore_links(translated_message)
         cache.set(cache_key, translated_message)
         return translated_message
 
@@ -161,7 +190,7 @@ class LanguageService:
             else self.translate_message(classified_language, expected_language, message)
         )
 
-    def split_text(self, text, max_length=200, lang="xx"):
+    def split_text(self, text, max_length=400, lang="xx"):
         """
         Chunk text into max_length char chunks while keeping complete sentences.
         Supports multi-lingual splitting using spacy's multi-lingual model,
