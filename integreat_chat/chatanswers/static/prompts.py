@@ -8,10 +8,9 @@ class Prompts:
     Collection of required prompts
     """
 
-    RAG_SYSTEM_PROMPT = "You are a helpful assistant in the Integreat App. You counsel migrants based on content that exists in the app."
-
     RAG = """You are an AI assistant specializing in question-answering.
-Use the retrieved context below to provide a concise and accurate response.
+Use the retrieved context below to provide a concise and accurate response to the last user message.
+Use the previous user messages as context, if this is required to understand the last message.
 
 * If the answer is not in the context, state that you don’t know.
 * If asked about appointments, clarify that you cannot facilitate them. However, if the provided documents contain relevant information on scheduling appointments, include those details.
@@ -36,30 +35,49 @@ User question: {0}
 Retrieved document: {1}
 """
 
-    CHECK_QUESTION = """**Task:** You are a message filtering system that determines whether a message requires an answer. Your goal is to only allow messages that are either:
-1.  A **clear and concise question**, OR
-2.  A **statement indicating a specific need** that is actionable.
-    
-**Reject messages that:**
-*   Are too vague or generic (e.g., "I need help" or "I need an appointment").
-*   Lack a clear request or context for a response.
-    
-**Examples:**
-✅ Accept:
-*   "How can I learn German?"
-*   "Where can I find a doctor?"
-*   "Which language level is required to find a job?"
-    
-❌ Reject:
-*   "I need help."
-*   "I want to ask something."
-*   "Can you assist me?"
-*   "Appointment."
-    
-Respond with **"Accept"** if the message meets the criteria and **"Reject"** if it does not. Do not provide any explanations.  
-  
-Message: {0}
+    CHECK_QUESTION = """### Task
+You are part of a retrieval-augmented generation system. Determine whether the **last message in a conversation** requires a response. You will be given up to 3 messages, the final message is the most important. Prior messages may provide context but should only be used if they clarify the intent.
+
+### Acceptance Criteria
+Accept messages that:
+- Are a **clear and concise question**, OR
+- Are a **specific, actionable statement** that indicates a need.
+Reject messages that:
+- Are too vague or generic (e.g., "I need help," "I have a question").
+- Lack a clear request or actionable intent.
+
+### Processing Steps
+1. Determine if the last message is actionable.
+2. If needed, use previous messages for context, but do not introduce new information.
+3. Extract and summarize the core need or question from the last message and the previous message as context.
+
+### Output Format
+Respond with a JSON object:
+
+{
+  "accept_message": (true/false),
+  "summarized_user_question": "keyword or empty string",
+}
+```
 """
+
+    CHECK_QUESTION_SCHEMA = {
+        "name": "user_question_classification",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "accept_message": {
+                    "type": "boolean"
+                },
+                "summarized_user_question": {
+                    "type": "string"
+                }
+            },
+            "required": ["accept_message", "summarized_user_question"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    }
 
     OPTIMIZE_MESSAGE = """Please summarize the following text into one terse sentence or question. Only answer with the summary, no text around it.
     

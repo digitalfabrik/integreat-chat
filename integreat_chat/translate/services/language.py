@@ -57,7 +57,7 @@ class LanguageService:
         return: language slug of the detected language
         """
         prompt = LlmPrompt(
-            settings.LANGUAGE_CLASSIFICATIONH_MODEL,
+            settings.LANGUAGE_CLASSIFICATION_MODEL,
             [
                 LlmMessage(Prompts.LANGUAGE_CLASSIFICATION, role="system"),
                 LlmMessage(message, role="user")

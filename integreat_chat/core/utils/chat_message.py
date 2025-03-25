@@ -56,3 +56,9 @@ class ChatMessage:
         if self.likely_message_language not in self.integreat_request.supported_languages:
             return self.integreat_request.fallback_language
         return self.likely_message_language
+
+    def as_dict(self) -> dict:
+        return {
+            "content": self.original_message,
+            "role": self.role
+        }

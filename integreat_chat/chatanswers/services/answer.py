@@ -2,8 +2,9 @@
 Retrieving matching documents for question an create summary text
 """
 
-import logging
 import asyncio
+import json
+import logging
 import aiohttp
 
 from django.conf import settings
@@ -37,20 +38,28 @@ class AnswerService:
         self.llm_model_name = settings.RAG_MODEL
         self.llm_api = LlmApiClient()
 
-    def skip_rag_answer(self, message: str, language_service: LanguageService) -> bool:
+    def skip_rag_answer(self, language_service: LanguageService) -> str|bool:
         """
         Check if a chat message is a question
 
-        param message: a user message
-        return: indication if the message needs an answer
+        :param message: a user message
+        :return: answer message if no further processing is required, else False
         """
         if self.detect_request_human():
             message = Messages.TALK_TO_HUMAN
         else:
-            answer = self.llm_api.simple_prompt(Prompts.CHECK_QUESTION.format(message))
-            if answer.startswith("Accept"):
+            prompt = LlmPrompt(
+                settings.LANGUAGE_CLASSIFICATION_MODEL,
+                [LlmMessage(Prompts.CHECK_QUESTION, role="system")] + self.rag_request.messages,
+                json_schema = Prompts.CHECK_QUESTION_SCHEMA
+            )
+            response = json.loads(asyncio.run(
+                self.llm_api.chat_prompt_session_wrapper(prompt)
+            )["choices"][0]["message"]["content"])
+            if response["accept_message"]:
+                self.rag_request.search_term = response["summarized_user_question"]
                 LOGGER.debug("Message requires response.")
-                return None
+                return False
             message = Messages.NOT_QUESTION
             LOGGER.debug("Message does not require response.")
         return RagResponse(
@@ -68,7 +77,7 @@ class AnswerService:
         """
         search_request = SearchRequest(
             {
-                "message": str(self.rag_request),
+                "message": str(self.rag_request.search_term),
                 "language": self.rag_request.use_language,
                 "region": self.rag_request.region
             },
@@ -94,10 +103,9 @@ class AnswerService:
 
         return: a dict containing a response and sources
         """
-        question = str(self.rag_request)
         language_service = LanguageService()
 
-        if response := self.skip_rag_answer(question, language_service):
+        if response := self.skip_rag_answer(language_service):
             return response
 
         LOGGER.debug("Retrieving documents.")
@@ -110,7 +118,7 @@ class AnswerService:
                 for result in documents
             ]
         )[: settings.RAG_CONTEXT_MAX_LENGTH]
-        
+
         if not documents:
             return RagResponse(
                 documents,
@@ -121,10 +129,10 @@ class AnswerService:
             )
         LOGGER.debug("Generating answer.")
         answer = self.llm_api.simple_prompt(
-            Prompts.RAG.format(self.language, question, context)
+            Prompts.RAG.format(self.language, self.rag_request.search_term, context)
         )
         LOGGER.debug(
-            "Finished generating answer. Question: %s\nAnswer: %s", question, answer
+            "Finished generating answer. Question: %s\nAnswer: %s", self.rag_request.search_term, answer
         )
         return RagResponse(documents, self.rag_request, answer)
 
