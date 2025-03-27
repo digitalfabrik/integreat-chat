@@ -25,3 +25,5 @@ class Prompts:
         },
         "strict": True,
     }
+
+    TRANSLATE_PROMPT = "Translate the user message from {0} into {1}. Return nothing else than the translation itself."

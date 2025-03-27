@@ -53,12 +53,12 @@ def translate_message(request):
             force_src_lang = "force_source_language" in data and data["force_source_language"]
             try:
                 result = {
-                    "translation": language_service.translate_message(
+                    "translation": str(language_service.translate_message(
                         data["source_language"] if force_src_lang
                             else language_service.classify_language(data["message"]),
                         data["target_language"],
                         data["message"]
-                    ),
+                    )),
                     "target_language": data["target_language"],
                     "status": "success",
                 }

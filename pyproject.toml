@@ -40,9 +40,6 @@ dependencies = [
   "transformers @ git+https://github.com/huggingface/transformers",
   "transformers",
   "torch",
-  "spacy",
-  "xx_sent_ud_sm @ https://github.com/explosion/spacy-models/releases/download/xx_sent_ud_sm-3.8.0/xx_sent_ud_sm-3.8.0-py3-none-any.whl",
-  "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
 ]
 
 

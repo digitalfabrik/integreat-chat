@@ -7,11 +7,9 @@ import hashlib
 import re
 
 import asyncio
-import spacy
 from bs4 import BeautifulSoup
 
 # pylint: disable=no-name-in-module
-from transformers import pipeline
 
 from django.conf import settings
 from django.core.cache import cache
@@ -20,7 +18,6 @@ from integreat_chat.chatanswers.services.llmapi import (
 )
 
 from ..static.prompts import Prompts
-from ..static.language_code_map import LANGUAGE_MAP
 from ..static.language_classification_map import LANGUAGE_CLASSIFICATION_MAP
 
 LOGGER = logging.getLogger("django")
@@ -56,17 +53,24 @@ class LanguageService:
         param message: the message of which the language should be detected
         return: language slug of the detected language
         """
-        prompt = LlmPrompt(
-            settings.LANGUAGE_CLASSIFICATION_MODEL,
-            [
-                LlmMessage(Prompts.LANGUAGE_CLASSIFICATION, role="system"),
-                LlmMessage(message, role="user")
-            ],
-            json_schema = Prompts.LANGUAGE_CLASSIFICATION_SCHEMA
-        )
-        LOGGER.debug("Detecting message language")
-        response = LlmResponse(asyncio.run(self.llm_api.chat_prompt_session_wrapper(prompt)))
-        return self.parse_language(response.as_dict())
+        cache_key = hashlib.sha256(
+            f"language-classification-{message}".encode("utf-8")
+        ).hexdigest()
+        classified_language = cache.get(cache_key, None)
+        if classified_language is None:
+            prompt = LlmPrompt(
+                settings.LANGUAGE_CLASSIFICATION_MODEL,
+                [
+                    LlmMessage(Prompts.LANGUAGE_CLASSIFICATION, role="system"),
+                    LlmMessage(message, role="user")
+                ],
+                json_schema = Prompts.LANGUAGE_CLASSIFICATION_SCHEMA
+            )
+            LOGGER.debug("Detecting message language")
+            response = LlmResponse(asyncio.run(self.llm_api.chat_prompt_session_wrapper(prompt)))
+            classified_language = self.parse_language(response.as_dict())
+            cache.set(cache_key, classified_language)
+        return classified_language
 
     def is_numerical(self, message: str) -> bool:
         """
@@ -86,9 +90,7 @@ class LanguageService:
         cache_key = hashlib.sha256(
             f"{source_language}-{target_language}-{message}".encode("utf-8")
         ).hexdigest()
-        if translated_message := cache.get(cache_key):
-            return cache_key, translated_message
-        return cache_key, None
+        return cache_key, cache.get(cache_key, None)
 
     def translation_required(
         self, source_language: str, target_language: str, message: str
@@ -104,25 +106,6 @@ class LanguageService:
         if self.is_numerical(message):
             return False
         return True
-
-    def chunked_translation_pipeline(
-        self, source_language: str, target_language: str, message: str
-    ) -> str:
-        """
-        Translate text in chunks (required for NLLB)
-        """
-        max_length=400
-        pipe = pipeline("translation", model=settings.TRANSLATION_MODEL, max_length=max_length)
-        return " ".join(
-            [
-                result["translation_text"]
-                for result in pipe(
-                    self.split_text(text=message, max_length=max_length),
-                    tgt_lang=LANGUAGE_MAP[target_language],
-                    src_lang=LANGUAGE_MAP[source_language],
-                )
-            ]
-        )
 
     def sanitize_message(self) -> None:
         """
@@ -145,11 +128,39 @@ class LanguageService:
             translated_message = translated_message.replace(placeholder, url)
         return translated_message
 
+    def translate_string(
+        self, source_language: str, target_language: str, message: str
+    ) -> str:
+        """
+        Translate a string from source to target language
+        """
+        LOGGER.debug(
+            "Starting translation from %s to %s", source_language, target_language
+        )
+        prompt = LlmPrompt(
+            settings.TRANSLATION_MODEL,
+            [
+                LlmMessage(Prompts.TRANSLATE_PROMPT.format(
+                    source_language,
+                    target_language
+                ), role="system"),
+                LlmMessage(message, role="user")
+            ],
+        )
+        translated_message = str(LlmResponse(
+            asyncio.run(self.llm_api.chat_prompt_session_wrapper(prompt))
+        ))
+        LOGGER.debug(
+            "Finished translation from %s to %s", source_language, target_language
+        )
+        return translated_message
+
     def translate_message(
         self, source_language: str, target_language: str, message: str
     ) -> str:
         """
-        Translate a message from source to target language
+        Check if message is in translation cache. If not, translate. To prevent
+        problems with URLs, replace them with placeholders.
         """
         self.message = message
         if not self.translation_required(source_language, target_language, message):
@@ -161,15 +172,7 @@ class LanguageService:
             return translated_message
         self.sanitize_message()
         try:
-            LOGGER.debug(
-                "Starting translation from %s to %s", source_language, target_language
-            )
-            translated_message = self.chunked_translation_pipeline(
-                source_language, target_language, self.message
-            )
-            LOGGER.debug(
-                "Finished translation from %s to %s", source_language, target_language
-            )
+            translated_message = self.translate_string(source_language, target_language, message)
         except KeyError as exc:
             raise KeyError(
                 f"Language pair ({source_language}, {target_language})"
@@ -189,33 +192,3 @@ class LanguageService:
             if classified_language == expected_language
             else self.translate_message(classified_language, expected_language, message)
         )
-
-    def split_text(self, text, max_length=400, lang="xx"):
-        """
-        Chunk text into max_length char chunks while keeping complete sentences.
-        Supports multi-lingual splitting using spacy's multi-lingual model,
-        see - https://spacy.io/models/xx
-        """
-        try:
-            nlp = spacy.load(lang)
-        except:
-            nlp = spacy.load("xx_sent_ud_sm")
-
-        doc = nlp(text)
-        sentences = [sent.text for sent in doc.sents]
-
-        chunks = []
-        current_chunk = ""
-
-        for sentence in sentences:
-            if len(current_chunk) + len(sentence) <= max_length:
-                current_chunk += " " + sentence if current_chunk else sentence
-            else:
-                chunks.append(current_chunk)
-                current_chunk = sentence
-
-        if current_chunk:
-            chunks.append(current_chunk)
-
-        LOGGER.debug("Translation chunks:\n - %s", "\n - ".join(chunks))
-        return chunks
