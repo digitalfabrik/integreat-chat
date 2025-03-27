@@ -65,9 +65,9 @@ class RagResponse:
         return {
             "answer": str(self),
             "status": "success",
-            "message": self.request.original_message,
+            "messages": [message.as_dict() for message in self.request.messages],
+            "rag_message": self.request.search_term,
             "rag_language": self.request.use_language,
-            "rag_message": self.request.translated_message,
             "rag_sources": [document.chunk_source_path for document in self.documents],
             "automatic_answers": self.automatic_answers,
             "details": [

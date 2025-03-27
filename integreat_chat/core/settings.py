@@ -66,7 +66,7 @@ INTEGREAT_REGIONS = [region.strip() for region in config["DEFAULT"]["INTEGREAT_R
 # Configuration Variables for answer service
 QUESTION_CLASSIFICATION_MODEL = "llama3.3"
 
-LANGUAGE_CLASSIFICATIONH_MODEL = "llama3.3"
+LANGUAGE_CLASSIFICATION_MODEL = "llama3.3"
 
 TRANSLATION_MODEL = "facebook/nllb-200-3.3B"
 
