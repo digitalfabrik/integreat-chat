@@ -183,7 +183,7 @@ class OpenSearch:
         payload = {
             "query": {
                 "match": {
-                    "md5sum": page_id
+                    "id": page_id
                 }
             }
         }
