@@ -2,6 +2,7 @@
 base request class
 """
 
+import hashlib
 from typing import TYPE_CHECKING
 
 from django.utils.functional import cached_property
@@ -21,8 +22,10 @@ class ChatMessage:
         self.original_message = message["content"]
         self.role = message["role"]
         self.integreat_request = integreat_request
+        self.hash = hashlib.sha256(self.original_message.encode("utf-8")).hexdigest()
+        warm_cache = self.translated_message  # pylint: disable=unused-variable
 
-    @cached_property
+    @property
     def likely_message_language(self) -> str:
         """
         Detect language and decide which language to use for RAG
@@ -59,6 +62,6 @@ class ChatMessage:
 
     def as_dict(self) -> dict:
         return {
-            "content": self.original_message,
+            "content": self.translated_message,
             "role": self.role
         }
