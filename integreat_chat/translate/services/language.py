@@ -45,6 +45,25 @@ class LanguageService:
         LOGGER.debug("Finished message language detection: %s", stripped_language)
         return stripped_language
 
+    def detect_language_of_string(self, message: str) -> str:
+        """
+        Detect language for string
+
+        :param message: a message string of unknown language
+        :return: a BCP-47 tag
+        """
+        prompt = LlmPrompt(
+            settings.LANGUAGE_CLASSIFICATION_MODEL,
+            [
+                LlmMessage(Prompts.LANGUAGE_CLASSIFICATION, role="system"),
+                LlmMessage(message, role="user")
+            ],
+            json_schema = Prompts.LANGUAGE_CLASSIFICATION_SCHEMA
+        )
+        LOGGER.debug("Detecting message language")
+        response = LlmResponse(asyncio.run(self.llm_api.chat_prompt_session_wrapper(prompt)))
+        return self.parse_language(response.as_dict())
+
     def classify_language(self, message: str) -> str:
         """
         Check if a message fits the estimated language.
@@ -58,17 +77,14 @@ class LanguageService:
         ).hexdigest()
         classified_language = cache.get(cache_key, None)
         if classified_language is None:
-            prompt = LlmPrompt(
-                settings.LANGUAGE_CLASSIFICATION_MODEL,
-                [
-                    LlmMessage(Prompts.LANGUAGE_CLASSIFICATION, role="system"),
-                    LlmMessage(message, role="user")
-                ],
-                json_schema = Prompts.LANGUAGE_CLASSIFICATION_SCHEMA
-            )
-            LOGGER.debug("Detecting message language")
-            response = LlmResponse(asyncio.run(self.llm_api.chat_prompt_session_wrapper(prompt)))
-            classified_language = self.parse_language(response.as_dict())
+            classified_language = self.detect_language_of_string(message)
+            if classified_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES:
+                # try again once to avoid errors (some temperature exists)
+                classified_language = self.detect_language_of_string(message)
+                if classified_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES:
+                    error_msg = f"Did not detect a supported language: {classified_language}"
+                    LOGGER.error(error_msg)
+                    raise ValueError(error_msg)
             cache.set(cache_key, classified_language)
         return classified_language
 
@@ -174,10 +190,12 @@ class LanguageService:
         try:
             translated_message = self.translate_string(source_language, target_language, message)
         except KeyError as exc:
-            raise KeyError(
+            error_msg = (
                 f"Language pair ({source_language}, {target_language})"
                 f" not supported by translation model"
-            ) from exc
+            )
+            LOGGER.error(error_msg)
+            raise KeyError(error_msg) from exc
         translated_message = self.restore_links(translated_message)
         cache.set(cache_key, translated_message)
         return translated_message
