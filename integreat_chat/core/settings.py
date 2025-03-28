@@ -64,11 +64,16 @@ INTEGREAT_APP_DOMAIN = config["DEFAULT"]["INTEGREAT_APP_DOMAIN"]
 INTEGREAT_REGIONS = [region.strip() for region in config["DEFAULT"]["INTEGREAT_REGIONS"].split(",")]
 
 # Configuration Variables for answer service
-QUESTION_CLASSIFICATION_MODEL = "llama3.3"
-
 LANGUAGE_CLASSIFICATION_MODEL = "llama3.3"
 
 TRANSLATION_MODEL = "gemma3:27b"
+TRANSLATION_MODEL_SUPPORTED_LANGUAGES = [
+    'af','am','ar','az','be','bg','bn','bs','ca','cs','cy','da','de','el','en','es','et','eu',
+    'fa','fi','fr','ga','gl','gu','he','hi','hr','hu','hy','id','is','it','ja','jv','ka','kk',
+    'km','kmr','kn','ko','ky','lo','lt','lv','mk','ml','mn','mr','ms','my','ne','nl','no','pa',
+    'pl','pt','ro','ru','si','sk','sl','sq','sr','sv','sw','ta','te','th','tr','uk','ur','uz',
+    'vi','xh','yi','zh','zu'
+]
 
 RAG_SCORE_THRESHOLD = 0.2
 RAG_MAX_PAGES = 3
