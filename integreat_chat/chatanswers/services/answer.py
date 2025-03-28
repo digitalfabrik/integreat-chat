@@ -108,7 +108,7 @@ class AnswerService:
         if response := self.skip_rag_answer(language_service):
             return response
 
-        LOGGER.debug("Retrieving documents.")
+        LOGGER.debug("Retrieving documents for %s.", self.rag_request.search_term)
         documents = self.get_documents()
         LOGGER.debug("Retrieved %s documents.", len(documents))
 

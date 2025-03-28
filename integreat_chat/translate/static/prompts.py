@@ -7,9 +7,11 @@ class Prompts:
     Static prompts
     """
 
-    SYSTEM_PROMPT = "You are an internal assistant in an application without user interaction."
-
-    LANGUAGE_CLASSIFICATION = "Identify the BCP47 language tag of the provided message. Make sure to only return existing BCP-47 tags."
+    LANGUAGE_CLASSIFICATION = """Identify the BCP47 language tag of the provided message.
+Make sure to only return valid BCP-47 tags.
+If languages are mixed, return the language that has more stop words in the message.
+If a few German nouns are mixed into the message, ignore them.
+"""
 
     LANGUAGE_CLASSIFICATION_SCHEMA = {
         "name": "language",
