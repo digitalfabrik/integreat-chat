@@ -6,7 +6,6 @@ import hashlib
 from typing import TYPE_CHECKING
 
 from django.utils.functional import cached_property
-from integreat_chat.translate.static.language_code_map import LANGUAGE_MAP
 if TYPE_CHECKING:
     from .integreat_request import IntegreatRequest
 
@@ -37,13 +36,10 @@ class ChatMessage:
     @cached_property
     def translated_message(self) -> str:
         """
-        If necessary, translate message into GUI language
+        If necessary, translate message into a message supported by the used
+        Search- or Answer-Services.
         """
         if self.likely_message_language not in self.integreat_request.supported_languages:
-            if self.likely_message_language not in LANGUAGE_MAP:
-                raise ValueError(
-                    f"Unsupported translation language: {self.likely_message_language}"
-                )
             return self.integreat_request.language_service.translate_message(
                 self.likely_message_language,
                 self.integreat_request.fallback_language,
@@ -61,6 +57,9 @@ class ChatMessage:
         return self.likely_message_language
 
     def as_dict(self) -> dict:
+        """
+        Return dict usable for API responses
+        """
         return {
             "content": self.translated_message,
             "role": self.role

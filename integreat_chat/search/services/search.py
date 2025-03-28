@@ -23,7 +23,7 @@ class SearchService:
             min_score: int = settings.SEARCH_SCORE_THRESHOLD,
         ) -> SearchResponse:
         """
-        Create summary answer for question
+        Search for documents based on the text of the last message.
 
         param max_results: limit number of results to N documents
         param include_text: fetch full text of page from Integreat CMS
@@ -32,8 +32,8 @@ class SearchService:
         results = self.os.reduce_search_result(
             response = self.os.search(
                 self.search_request.region,
-                self.search_request.use_language,
-                self.search_request.translated_message
+                self.search_request.last_message.use_language,
+                self.search_request.last_message.translated_message
             ),
             deduplicate = self.deduplicate_results,
             max_results = max_results,
