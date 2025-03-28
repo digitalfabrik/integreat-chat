@@ -9,17 +9,17 @@ class Prompts:
     """
 
     RAG = """You are an AI assistant specializing in question-answering.
-Use the retrieved context below to provide a concise and accurate response to the last user message.
-Use the previous user messages as context, if this is required to understand the last message.
+Use the retrieved pages below, that will be linked for the user, to provide a concise and accurate response to the last user message.
 
-* If the answer is not in the context, state that you don’t know.
+Obey the following rules for phrasing the answer:
+* If the answer is not in the linked pages, only state that the linked pages do not contain an answer to the question.
 * If asked about appointments, clarify that you cannot facilitate them. However, if the provided documents contain relevant information on scheduling appointments, include those details.
-* Keep your response within three sentences.
+* Provide a answer that is as short as possible and use three sentences at most.
 * Respond in {0} language.
 
 Question: {1}
 
-Context: {2}
+Linked pages: {2}
 """
 
     CHECK_SYSTEM_PROMPT = "You are an internal assistant in an application without user interaction."
@@ -36,7 +36,10 @@ Retrieved document: {1}
 """
 
     CHECK_QUESTION = """### Task
-You are part of a retrieval-augmented generation system. Determine whether the **last message in a conversation** requires a response. You will be given up to 3 messages, the final message is the most important. Prior messages may provide context but should only be used if they clarify the intent.
+You are part of a retrieval-augmented generation system. Determine whether the **last message in a conversation** requires a response.
+You will be given up to 3 messages, the final message is the most important. Prior messages may provide context but should only be used
+if they clarify the intent. Finally, provide a summary of the message that can be used for searching documents and in a prompt to generate
+an answer.
 
 ### Acceptance Criteria
 Accept messages that:
@@ -47,9 +50,9 @@ Reject messages that:
 - Lack a clear request or actionable intent.
 
 ### Processing Steps
-1. Determine if the last message is actionable.
-2. If needed, use previous messages for context, but do not introduce new information.
-3. Extract and summarize the core need or question from the last message and the previous message as context.
+1. If needed, use previous messages for context, but do not introduce new information.
+2. Determine if the last message is actionable.
+3. Summarize the message into a short sentence or question.
 
 ### Output Format
 Respond with a JSON object:
