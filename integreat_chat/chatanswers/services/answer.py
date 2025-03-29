@@ -33,7 +33,7 @@ class AnswerService:
         param language: Integreat CMS language slug
         """
         self.rag_request = rag_request
-        self.language = rag_request.use_language
+        self.language = rag_request.first_message.use_language
         self.region = rag_request.region
         self.llm_model_name = settings.RAG_MODEL
         self.llm_api = LlmApiClient()
@@ -78,7 +78,7 @@ class AnswerService:
         search_request = SearchRequest(
             {
                 "message": str(self.rag_request.search_term),
-                "language": self.rag_request.use_language,
+                "language": self.rag_request.last_message.use_language,
                 "region": self.rag_request.region
             },
             True
@@ -108,7 +108,7 @@ class AnswerService:
         if response := self.skip_rag_answer(language_service):
             return response
 
-        LOGGER.debug("Retrieving documents for %s.", self.rag_request.search_term)
+        LOGGER.debug("Retrieving documents for: %s.", self.rag_request.search_term)
         documents = self.get_documents()
         LOGGER.debug("Retrieved %s documents.", len(documents))
 
@@ -132,7 +132,9 @@ class AnswerService:
             Prompts.RAG.format(self.language, self.rag_request.search_term, context)
         )
         LOGGER.debug(
-            "Finished generating answer. Question: %s\nAnswer: %s", self.rag_request.search_term, answer
+            "Finished generating answer. Question: %s\nAnswer: %s",
+            self.rag_request.search_term,
+            answer
         )
         return RagResponse(documents, self.rag_request, answer)
 

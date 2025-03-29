@@ -3,7 +3,6 @@ base request class
 """
 import logging
 from django.conf import settings
-from django.utils.functional import cached_property
 
 from integreat_chat.translate.services.language import LanguageService
 
@@ -62,32 +61,19 @@ class IntegreatRequest:
         else:
             messages = data["messages"]
         self.messages = [
-            ChatMessage(message, self) for message in messages if message["role"] != "system"
-        ]
-
-    @cached_property
-    def translated_message(self) -> str:
-        """
-        Get translated last message
-        """
-        if self.most_important_message_first:
-            return self.messages[0].translated_message
-        return self.messages[-1].translated_message
+            ChatMessage(message, self) for message in messages if message["role"] == "user"
+        ][-3:]
 
     @property
-    def use_language(self) -> str:
+    def first_message(self):
         """
-        Get language to be used
+        Return first message from associated messages list
         """
-        if self.most_important_message_first:
-            return self.messages[0].use_language
-        return self.messages[-1].use_language
+        return self.messages[0]
 
     @property
-    def original_message(self) -> str:
+    def last_message(self):
         """
-        Return the original message as entered by the user
+        Return first message from associated messages list
         """
-        if self.most_important_message_first:
-            return self.messages[0].original_message
-        return self.messages[-1].original_message
+        return self.messages[-1]

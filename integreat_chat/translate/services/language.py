@@ -144,11 +144,11 @@ class LanguageService:
             translated_message = translated_message.replace(placeholder, url)
         return translated_message
 
-    def translate_string(
+    def translate_message_llm_wrapper(
         self, source_language: str, target_language: str, message: str
     ) -> str:
         """
-        Translate a string from source to target language
+        Translate a string from source to target language (without sanity checks).
         """
         LOGGER.debug(
             "Starting translation from %s to %s", source_language, target_language
@@ -171,13 +171,28 @@ class LanguageService:
         )
         return translated_message
 
+    def check_language_support(self, source_language: str, target_language: str) -> None:
+        """
+        Check if source and target languages are supported. Raise error if not.
+        """
+        if source_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES:
+            raise ValueError(
+                f"Unsupported source translation language: {source_language}"
+            )
+        if target_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES:
+            raise ValueError(
+                f"Unsupported target translation language: {target_language}"
+            )
+
     def translate_message(
         self, source_language: str, target_language: str, message: str
     ) -> str:
         """
         Check if message is in translation cache. If not, translate. To prevent
         problems with URLs, replace them with placeholders.
+        Do some sanity checks before translating.
         """
+        self.check_language_support(source_language, target_language)
         self.message = message
         if not self.translation_required(source_language, target_language, message):
             return message
@@ -187,15 +202,11 @@ class LanguageService:
         if translated_message is not None:
             return translated_message
         self.sanitize_message()
-        try:
-            translated_message = self.translate_string(source_language, target_language, message)
-        except KeyError as exc:
-            error_msg = (
-                f"Language pair ({source_language}, {target_language})"
-                f" not supported by translation model"
-            )
-            LOGGER.error(error_msg)
-            raise KeyError(error_msg) from exc
+        translated_message = self.translate_message_llm_wrapper(
+            source_language,
+            target_language,
+            message
+        )
         translated_message = self.restore_links(translated_message)
         cache.set(cache_key, translated_message)
         return translated_message
