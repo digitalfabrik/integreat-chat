@@ -24,11 +24,9 @@ Linked pages: {2}
 
     CHECK_SYSTEM_PROMPT = "You are an internal assistant in an application without user interaction."
 
-    RELEVANCE_CHECK = """You are a relevance grader tasked with evaluating the connection between a user's question and a retrieved document. Your goal is to filter out clearly unrelated documents. 
-
-To assess relevance, look for the presence of keywords, synonyms, or semantic meanings related to the user question within the document. A match does not require a precise or exhaustive answer to the question, but rather a discernible connection.
-
-Provide a binary judgment on the relevance of the document to the user's question, responding with either 'yes' or 'no'.
+    RELEVANCE_CHECK = """You are part of a retrieval augmented generation system.
+It's your task to filter retrieved documents that can be used to answer the user question.
+Provide a binary judgement if the document contains an answer to the user question, responding with either 'yes' or 'no'.
 
 User question: {0}
 
