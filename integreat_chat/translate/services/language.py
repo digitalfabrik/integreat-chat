@@ -127,7 +127,7 @@ class LanguageService:
         """
         Sanitize text. Remove HTML and replace links.
         """
-        soup = BeautifulSoup(self.message)
+        soup = BeautifulSoup(self.message, "lxml")
         self.message = soup.get_text()
         urls = re.findall(r"(https?://[^\s]+)", self.message)
         self.placeholders = {}
