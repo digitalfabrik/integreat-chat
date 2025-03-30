@@ -172,8 +172,9 @@ class AnswerService:
         Check if the user requests to talk to a human counselor or is asking a question
         return: bool that indicates if the user requests a human or not
         """
-        query = str(self.rag_request)
         LOGGER.debug("Checking if user requests human intervention")
-        response = self.llm_api.simple_prompt(Prompts.HUMAN_REQUEST_CHECK.format(query))
+        response = self.llm_api.simple_prompt(Prompts.HUMAN_REQUEST_CHECK.format(
+            self.rag_request.last_message.translated_message
+        ))
         LOGGER.debug("Finished checking if user requests human. Response: %s", response)
         return response.lower().startswith("yes")
