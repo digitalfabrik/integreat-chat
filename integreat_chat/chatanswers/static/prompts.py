@@ -29,7 +29,8 @@ Provide a binary judgement if the document contains an answer to the user questi
 
 User question: {0}
 
-Retrieved document: {1}
+Retrieved document:
+{1}
 """
 
     CHECK_QUESTION = """### Task

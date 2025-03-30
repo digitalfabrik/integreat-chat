@@ -152,7 +152,10 @@ class AnswerService:
         tasks = []
         async with aiohttp.ClientSession() as session:
             for document in search_results:
-                message = LlmMessage(Prompts.RELEVANCE_CHECK.format(question, document.content))
+                message = LlmMessage(Prompts.RELEVANCE_CHECK.format(
+                    question,
+                    f"# {document.parent_titles}\n\n{document.content}"
+                ))
                 tasks.append(
                     asyncio.create_task(self.llm_api.chat_prompt(
                         session,
