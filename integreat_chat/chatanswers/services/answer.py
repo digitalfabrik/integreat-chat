@@ -45,7 +45,9 @@ class AnswerService:
         :param message: a user message
         :return: answer message if no further processing is required, else False
         """
+        automatic_answer = True
         if self.detect_request_human():
+            automatic_answer = False
             message = Messages.TALK_TO_HUMAN
         else:
             prompt = LlmPrompt(
@@ -68,7 +70,7 @@ class AnswerService:
             language_service.translate_message(
                 "en", self.language, message
             ),
-            False,
+            automatic_answer,
         )
 
     def get_documents(self) -> list:
