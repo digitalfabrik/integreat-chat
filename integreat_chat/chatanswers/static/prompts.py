@@ -21,17 +21,23 @@ User message: {1}
 Linked pages: {2}
 """
 
-    CHECK_SYSTEM_PROMPT = "You are an internal assistant in an application without user interaction."
+    CHECK_SYSTEM_PROMPT = """# Task
+You are part of a retrieval-augmented generation (RAG) system. Your task is to evaluate whether a retrieved document definitely contains a direct answer to the user’s message.
+Evaluation Criteria:
 
-    RELEVANCE_CHECK = """You are part of a retrieval augmented generation system.
-It's your task to filter retrieved documents that can be used to answer the user question.
-Provide a binary judgement if the document contains an answer to the user question, responding with either 'yes' or 'no'.
+* The document must explicitly address the user’s question or request.
+* General relevance is not enough — it must contain specific and authoritative information.
+* If the document only provides related background information but does not directly answer the question, answer "no".
+* If the document contains the exact answer or directly relevant information, answer "yes".
 
-User question: {0}
+Response Format:
 
-Retrieved document:
-{1}
-"""
+* Answer only with "yes" or "no"—no explanations or additional text.
+
+# Retrieved document:
+
+{0}"""
+
 
     CHECK_QUESTION = """### Task
 You are part of a retrieval-augmented generation system. Determine whether the **last message in a conversation** requires a response.
