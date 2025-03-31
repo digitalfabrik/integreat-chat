@@ -94,7 +94,7 @@ class AnswerService:
         LOGGER.debug("Number of retrieved documents: %i", len(search_results))
         if settings.RAG_RELEVANCE_CHECK:
             search_results = asyncio.run(self.check_documents_relevance(
-                str(self.rag_request), search_results)
+                str(self.rag_request.search_term), search_results)
             )
             LOGGER.debug("Number of documents after relevance check: %i", len(search_results))
         return search_results[:settings.RAG_MAX_PAGES]
@@ -121,14 +121,16 @@ class AnswerService:
             ]
         )[: settings.RAG_CONTEXT_MAX_LENGTH]
 
-        if not documents:
-            return RagResponse(
+        no_answer = RagResponse(
                 documents,
                 self.rag_request,
                 language_service.translate_message(
                     "en", self.language, Messages.NO_ANSWER
                 ),
             )
+
+        if not documents:
+            return no_answer
         LOGGER.debug("Generating answer.")
         answer = self.llm_api.simple_prompt(
             Prompts.RAG.format(self.language, self.rag_request.search_term, context)
@@ -138,6 +140,8 @@ class AnswerService:
             self.rag_request.search_term,
             answer
         )
+        if answer == "":
+            return no_answer
         return RagResponse(documents, self.rag_request, answer)
 
     async def check_documents_relevance(self, question: str, search_results: list) -> bool:
@@ -148,18 +152,18 @@ class AnswerService:
         param content: a page content that could be relevant for answering the question
         return: bool that indicates if the page is relevant for the question
         """
-        sys_message = LlmMessage(Prompts.CHECK_SYSTEM_PROMPT, "system")
         tasks = []
         async with aiohttp.ClientSession() as session:
             for document in search_results:
-                message = LlmMessage(Prompts.RELEVANCE_CHECK.format(
-                    question,
-                    f"# {document.parent_titles}\n\n{document.content}"
-                ))
                 tasks.append(
                     asyncio.create_task(self.llm_api.chat_prompt(
                         session,
-                        LlmPrompt(settings.RAG_RELEVANCE_CHECK_MODEL, [sys_message, message])
+                        LlmPrompt(settings.RAG_RELEVANCE_CHECK_MODEL, [
+                            LlmMessage(Prompts.CHECK_SYSTEM_PROMPT.format(
+                                f"## {document.parent_titles}\n\n{document.content}"
+                            ), "system"),
+                            LlmMessage(question)]
+                        )
                     )
                 ))
             llmresponses = await asyncio.gather(*tasks)
