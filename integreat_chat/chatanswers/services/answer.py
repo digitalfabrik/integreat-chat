@@ -94,7 +94,7 @@ class AnswerService:
         LOGGER.debug("Number of retrieved documents: %i", len(search_results))
         if settings.RAG_RELEVANCE_CHECK:
             search_results = asyncio.run(self.check_documents_relevance(
-                str(self.rag_request), search_results)
+                str(self.rag_request.search_term), search_results)
             )
             LOGGER.debug("Number of documents after relevance check: %i", len(search_results))
         return search_results[:settings.RAG_MAX_PAGES]
