@@ -170,6 +170,8 @@ class OpenSearch:
         """
         payload = {"query": {"match_all": {}}}
         result = self.request(f"/{index}/_search?_source=id&size=10000", payload, "GET")
+        if not ["hits"] in result:
+            return []
         return [page["_source"]["id"] for page in result["hits"]["hits"]]
 
     def delete_document(self, index: str, page_id: int) -> int:
