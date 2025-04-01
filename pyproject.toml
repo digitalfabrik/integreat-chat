@@ -25,6 +25,7 @@ classifiers = [
 ]
 
 dependencies = [
+  "accelerate",
   "beautifulsoup4",
   "celery",
   "django",
