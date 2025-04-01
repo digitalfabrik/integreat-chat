@@ -60,7 +60,7 @@ To integrate Zammad, the following configuration has to be set:
     * Example message: `Welcome to Integreat Chat $REGION_NAME in $LANGUAGE. Our team responds on weekdays, while our chatbot provides summary answers from linked articles, which you should use to verify important information.`
 * Scheduler to delete old tickets:
   * Run once a week
-  * Conditions: `state is closed`, `Last contact before (relative) 6 months`
+  * Conditions: `state is closed`, `Closing time before (relative) 3 months`
   * Action: delete
   * Disable Notifications: yes
 
