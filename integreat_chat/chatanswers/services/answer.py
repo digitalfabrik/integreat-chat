@@ -92,14 +92,21 @@ class AnswerService:
             include_text=True,
             min_score=settings.RAG_SCORE_THRESHOLD,
         ).documents
-        LOGGER.debug("Number of retrieved documents: %i", len(search_results))
-        if settings.RAG_RELEVANCE_CHECK:
-            search_results = asyncio.run(self.check_documents_relevance(
-                str(self.rag_request.search_term), search_results)
-            )
-            LOGGER.debug("Number of documents after relevance check: %i", len(search_results))
-        documents = search_results[:settings.RAG_MAX_PAGES]
+        documents = self.filter_documents(search_results)[:settings.RAG_MAX_PAGES]
         LOGGER.debug("Retrieved %s documents.", len(documents))
+        return documents
+
+    def filter_documents(self, documents: list) -> list:
+        """
+        Filter documents by checking for relevance
+
+        :param search_results: results/hits coming from search index
+        :return: filtered list of documents
+        """
+        if settings.RAG_RELEVANCE_CHECK:
+            documents = asyncio.run(self.check_documents_relevance(
+                str(self.rag_request.search_term), documents)
+            )
         return documents
 
     def format_context(self, documents: list) -> str:
