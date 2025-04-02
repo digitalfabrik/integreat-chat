@@ -77,6 +77,7 @@ class AnswerService:
         """
         Retrieve documents for RAG
         """
+        LOGGER.debug("Retrieving documents for: %s.", self.rag_request.search_term)
         search_request = SearchRequest(
             {
                 "message": str(self.rag_request.search_term),
@@ -97,7 +98,50 @@ class AnswerService:
                 str(self.rag_request.search_term), search_results)
             )
             LOGGER.debug("Number of documents after relevance check: %i", len(search_results))
-        return search_results[:settings.RAG_MAX_PAGES]
+        documents = search_results[:settings.RAG_MAX_PAGES]
+        LOGGER.debug("Retrieved %s documents.", len(documents))
+        return documents
+
+    def format_context(self, documents: list) -> str:
+        """
+        Format retrieved documents into context string.
+
+        :param documents: list of documents
+        :return: Mardown formatted text for RAG context
+        """
+        return "\n---\n".join(
+            [
+                f"# {' > '.join(result.parent_titles + [result.title])}\n{result.content}"
+                for result in documents
+            ]
+        )[: settings.RAG_CONTEXT_MAX_LENGTH]
+
+    def get_no_answer_response(
+            self,
+            language_service: LanguageService,
+            documents: list
+        ) -> RagResponse:
+        """
+        Generate response that no answer has been found
+        """
+        return RagResponse(
+                documents,
+                self.rag_request,
+                language_service.translate_message(
+                    "en", self.language, Messages.NO_ANSWER
+                ),
+            )
+
+    def format_rag_prompt(self, documents):
+        """
+        Generate RAG prompt
+        """
+        return Prompts.RAG.format(
+            settings.INTEGREAT_REGION_NAMES[self.region],
+            self.language,
+            self.rag_request.search_term,
+            self.format_context(documents)
+        )
 
     def extract_answer(self) -> RagResponse:
         """
@@ -109,39 +153,20 @@ class AnswerService:
 
         if response := self.skip_rag_answer(language_service):
             return response
-
-        LOGGER.debug("Retrieving documents for: %s.", self.rag_request.search_term)
         documents = self.get_documents()
-        LOGGER.debug("Retrieved %s documents.", len(documents))
-
-        context = "\n---\n".join(
-            [
-                f"# {' > '.join(result.parent_titles + [result.title])}\n{result.content}"
-                for result in documents
-            ]
-        )[: settings.RAG_CONTEXT_MAX_LENGTH]
-
-        no_answer = RagResponse(
-                documents,
-                self.rag_request,
-                language_service.translate_message(
-                    "en", self.language, Messages.NO_ANSWER
-                ),
-            )
-
+        no_answer_response = self.get_no_answer_response(language_service, documents)
         if not documents:
-            return no_answer
+            return no_answer_response
+
         LOGGER.debug("Generating answer.")
-        answer = self.llm_api.simple_prompt(
-            Prompts.RAG.format(self.language, self.rag_request.search_term, context)
-        )
+        answer = self.llm_api.simple_prompt(self.format_rag_prompt(documents))
         LOGGER.debug(
             "Finished generating answer. Question: %s\nAnswer: %s",
             self.rag_request.search_term,
             answer
         )
         if answer == "":
-            return no_answer
+            return no_answer_response
         return RagResponse(documents, self.rag_request, answer)
 
     async def check_documents_relevance(self, question: str, search_results: list) -> bool:

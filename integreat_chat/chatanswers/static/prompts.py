@@ -8,17 +8,17 @@ class Prompts:
     Collection of required prompts
     """
 
-    RAG = """You are tasked with answering user message based on retrieved pages from a content management system. The user will get links to all retrieved pages.
+    RAG = """You are tasked with answering user message based on retrieved pages from a content management system for {0} in Germany. The user will get links to all retrieved pages.
 
 Obey the following rules for phrasing the answer:
 * If the answer is not in the linked pages, only state that the linked pages do not contain an answer to the question.
 * If asked about appointments, clarify that you cannot facilitate them. However, if the provided pages contain relevant information on scheduling appointments, include those details.
 * Provide an answer that is as short as possible and use three sentences at most.
-* Respond in the language with the BCP-47 tag "{0}".
+* Respond in the language with the BCP-47 tag "{1}".
 
-User message: {1}
+User message: {2}
 
-Linked pages: {2}
+Linked pages: {3}
 """
 
     CHECK_SYSTEM_PROMPT = """# Task
