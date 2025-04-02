@@ -61,7 +61,8 @@ ALLOWED_HOSTS = ["127.0.0.1", "igchat-inference.tuerantuer.org", "igchat-test.tu
 INTEGREAT_CMS_DOMAIN = config["DEFAULT"]["INTEGREAT_CMS_DOMAIN"]
 INTEGREAT_APP_DOMAIN = config["DEFAULT"]["INTEGREAT_APP_DOMAIN"]
 
-INTEGREAT_REGIONS = [region.strip() for region in config["DEFAULT"]["INTEGREAT_REGIONS"].split(",")]
+INTEGREAT_REGIONS = [region.strip() for region in config["REGIONS"].keys()]
+INTEGREAT_REGION_NAMES = {region:config["REGIONS"][region] for region in config["REGIONS"].keys()}
 
 # Configuration Variables for answer service
 LANGUAGE_CLASSIFICATION_MODEL = "llama3.3"
