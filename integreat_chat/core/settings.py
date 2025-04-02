@@ -101,6 +101,9 @@ SEARCH_MAX_DOCUMENTS = 15
 SEARCH_SCORE_THRESHOLD = 0.1
 SEARCH_MAX_PAGES = 10
 SEARCH_EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+OPENSEARCH_CROSSENCODER_MODEL_NAME = (
+    "huggingface/cross-encoders/ms-marco-MiniLM-L-6-v2"
+)
 OPENSEARCH_EMBEDDING_MODEL_NAME = (
     "huggingface/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 )

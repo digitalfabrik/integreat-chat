@@ -325,13 +325,15 @@ class OpenSearchSetup(OpenSearch):
         group_id = self.create_model_group()
         if not group_id:
             raise ValueError("Unexpected OpenSearch response while creating model group")
-        model_id = self.register_embedding_model(group_id)
-        if not model_id:
+        model_id_embedding = self.register_embedding_model(group_id)
+        model_id_crossencoder = self.register_crossencoder_model(group_id)
+        if not model_id_embedding or not model_id_crossencoder:
             raise ValueError("Unexpected OpenSearch response while registering model")
-        self.deploy_model(model_id)
-        self.create_ingestion_pipeline(model_id)
+        self.deploy_model(model_id_embedding)
+        self.deploy_model(model_id_crossencoder)
+        self.create_ingestion_pipeline(model_id_embedding)
         self.create_search_pipeline()
-        return group_id, model_id
+        return group_id, model_id_embedding, model_id_crossencoder
 
     def delete_model_group(self):
         """
@@ -375,6 +377,28 @@ class OpenSearchSetup(OpenSearch):
         response = self.request("/_plugins/_ml/model_groups/_register", payload, "POST")
         if "model_group_id" in response:
             return response["model_group_id"]
+        return False
+    
+    def register_crossencoder_model(self, model_group_id: str) -> str:
+        """
+        Register crossencoder model
+        """
+        payload = {
+            "name": settings.OPENSEARCH_CROSSENCODER_MODEL_NAME,
+            "version": "1.0.2",
+            "model_group_id": model_group_id,
+            "model_format": "TORCH_SCRIPT"
+        }
+        register_response = self.request(
+            "/_plugins/_ml/models/_register", payload, "POST"
+        )
+        if "task_id" in register_response:
+            for n in range(0, 10):
+                time.sleep(5)
+                if "model_id" in (task_response := self.request(
+                    f"/_plugins/_ml/tasks/{register_response['task_id']}", {}, "GET"
+                )):
+                    return task_response["model_id"]
         return False
 
     def register_embedding_model(self, model_group_id: str) -> str:
