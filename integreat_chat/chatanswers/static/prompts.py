@@ -87,17 +87,21 @@ Respond with a JSON object:
     }
 
     OPTIMIZE_MESSAGE = """Please summarize the following text into one terse sentence or question. Only answer with the summary, no text around it.
-    
+
 Text: {0}"""
 
-    HUMAN_REQUEST_CHECK = """You are an assistant trained to classify user intent. Your task is to determine whether the user explicitly wants to talk to a human counselor.
+    HUMAN_REQUEST_CHECK = """Your task is to determine if the user explicitly requests to speak with a human counselor or expresses severe psychological distress, such as suicidal intent or thoughts of self-harm. If either condition is met, respond with "Yes."; otherwise, respond with "No."
 
-Respond with "Yes" only if the user is explicitly requesting a human, like in these cases:
-- "I want to talk to a human"
-- "Can I speak with a counselor?"
-- "I need human support"
+Respond with "Yes" only if the user:
+* Clearly asks to speak with a human counselor. Examples include:
+    * "I want to talk to a human."
+    * "Can I speak with a counselor?"
+    * "I need human support."
+* Expresses severe psychological distress, including suicidal intent or self-harm. Examples include:
+    * "I want to commit suicide."
+    * "I’m thinking about hurting myself."
 
-Otherwise, respond with "No," even if the user is asking about general topics.
+For all other messages, including general inquiries or indirect mentions of counseling, respond with "No."
 
-User query: {0}
+User message: {0}
 """
