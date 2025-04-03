@@ -139,9 +139,9 @@ class AnswerService:
                 ),
             )
 
-    def format_rag_prompt(self, documents):
+    def format_rag_prompt(self, documents: list) -> str:
         """
-        Generate RAG prompt
+        Generate RAG prompt including context
         """
         return Prompts.RAG.format(
             settings.INTEGREAT_REGION_NAMES[self.region],
@@ -152,7 +152,8 @@ class AnswerService:
 
     def extract_answer(self) -> RagResponse:
         """
-        Create summary answer for question
+        Search for pages that are related to the question and create
+        answer that summarizes the content of found pages.
 
         return: a dict containing a response and sources
         """
@@ -164,8 +165,6 @@ class AnswerService:
         no_answer_response = self.get_no_answer_response(language_service, documents)
         if not documents:
             return no_answer_response
-
-        LOGGER.debug("Generating answer.")
         answer = self.llm_api.simple_prompt(self.format_rag_prompt(documents))
         LOGGER.debug(
             "Finished generating answer. Question: %s\nAnswer: %s",
