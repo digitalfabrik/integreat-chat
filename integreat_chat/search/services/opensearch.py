@@ -485,6 +485,20 @@ class OpenSearchSetup(OpenSearch):
                         }
                     }
                 }
+            ],
+              "response_processors": [
+                {
+                    "rerank": {
+                        "ml_opensearch": {
+                        "model_id": "CFEa95UBuqG3mdqtTmwA"
+                        },
+                        "context": {
+                        "document_fields": [
+                            "passage_text"
+                        ]
+                        }
+                    }
+                }
             ]
         }
         self.request(f"/_search/pipeline/{self.search_pipeline_name}", payload, "PUT")
