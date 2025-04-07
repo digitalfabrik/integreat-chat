@@ -60,9 +60,14 @@ class IntegreatRequest:
             messages = [{"content": data["message"], "role": "user"}]
         else:
             messages = data["messages"]
-        self.messages = [
-            ChatMessage(message, self) for message in messages if message["role"] == "user"
-        ][-3:]
+        self.messages = []
+        for message in messages:
+            if message["role"] != "user":
+                continue
+            try:
+                self.messages.append(ChatMessage(message, self))
+            except ValueError:
+                LOGGER.error("Skipping message because language could not be classified.")
 
     @property
     def first_message(self):
