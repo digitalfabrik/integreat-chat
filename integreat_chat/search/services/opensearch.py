@@ -144,6 +144,13 @@ class OpenSearch:
                         }
                     ]
                 }
+            },
+            "ext": {
+                "rerank": {
+                "query_context": {
+                    "query_text": message
+                }
+                }
             }
         }
         return self.request(
@@ -494,7 +501,7 @@ class OpenSearchSetup(OpenSearch):
                         },
                         "context": {
                         "document_fields": [
-                            "passage_text"
+                            "chunk_text"
                         ]
                         }
                     }
