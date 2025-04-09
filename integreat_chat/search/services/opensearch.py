@@ -36,6 +36,7 @@ class OpenSearch:
         self.user = user
         self.password = password
         self.model_id = settings.SEARCH_OPENSEARCH_MODEL_ID
+        self.model_id_reranker = settings.SEARCH_OPENSEARCH_MODEL_ID_RERANKER
         self.model_group_id = settings.SEARCH_OPENSEARCH_MODEL_GROUP_ID
 
     def request(self, path: str, payload: dict, method: str = "GET") -> dict:
@@ -348,6 +349,8 @@ class OpenSearchSetup(OpenSearch):
         """
         self.request(f"/_plugins/_ml/models/{self.model_id}/_undeploy", {}, "POST")
         self.request(f"/_plugins/_ml/models/{self.model_id}", {}, "DELETE")
+        self.request(f"/_plugins/_ml/models/{self.model_id_reranker}/_undeploy", {}, "POST")
+        self.request(f"/_plugins/_ml/models/{self.model_id_reranker}", {}, "DELETE")
         self.request(f"/_plugins/_ml/model_groups/{self.model_group_id}", {}, "DELETE")
 
     def prepare_index(self, region_slug: str = "", language_slug: str = ""):
