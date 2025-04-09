@@ -500,7 +500,7 @@ class OpenSearchSetup(OpenSearch):
                 {
                     "rerank": {
                         "ml_opensearch": {
-                        "model_id": "CFEa95UBuqG3mdqtTmwA"
+                        "model_id": self.model_id_reranker
                         },
                         "context": {
                         "document_fields": [
