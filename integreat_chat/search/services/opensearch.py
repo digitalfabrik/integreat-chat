@@ -450,9 +450,9 @@ class OpenSearchSetup(OpenSearch):
                             "parameters": {
                                 "weights": [
                                     0.15,  # title match
-                                    0.2,   # content match
+                                    0.35,  # content match
                                     0.15,  # title embedding
-                                    0.5    # content embedding
+                                    0.35   # content embedding
                                 ]
                             }
                         }
