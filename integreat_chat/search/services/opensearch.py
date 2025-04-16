@@ -491,7 +491,7 @@ class OpenSearchSetup(OpenSearch):
                         "rerank": {
                             "by_field": {
                             "target_field": "chunk_text",
-                            "keep_previous_score" : true
+                            "keep_previous_score" : True
                             }
                     }
                 }
