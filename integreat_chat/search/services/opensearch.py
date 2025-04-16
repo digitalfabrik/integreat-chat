@@ -146,13 +146,6 @@ class OpenSearch:
                     ]
                 }
             },
-            "ext": {
-                "rerank": {
-                "query_context": {
-                    "query_text": message
-                }
-                }
-            }
         }
         return self.request(
             f"/{region_slug}_{language_slug}/_search?"
@@ -498,15 +491,11 @@ class OpenSearchSetup(OpenSearch):
             ],
               "response_processors": [
                 {
-                    "rerank": {
-                        "ml_opensearch": {
-                        "model_id": self.model_id_reranker
-                        },
-                        "context": {
-                        "document_fields": [
-                            "chunk_text"
-                        ]
-                        }
+                        "rerank": {
+                            "by_field": {
+                            "target_field": "chunk_text",
+                            "keep_previous_score" : true
+                            }
                     }
                 }
             ]
