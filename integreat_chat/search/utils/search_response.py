@@ -21,7 +21,7 @@ class Document:
             chunk: str,
             score: float,
             parent_titles: list[str],
-            include_details: bool,
+            page: dict|None,
             gui_language: str
         ):
         self.chunk_source_path = source_path
@@ -29,9 +29,9 @@ class Document:
         self.score = score
         self.chunk = chunk
         self.parent_titles = parent_titles
-        self.enrich(include_details)
+        self.enrich(page)
 
-    def enrich(self, include_details: bool):
+    def enrich(self, page: dict|None):
         """
         Enrich document with GUI langauge URLs and titles
         """
@@ -42,19 +42,22 @@ class Document:
                 .replace(f"https://{settings.INTEGREAT_CMS_DOMAIN}", "")
                 .split("/")[2]
             ):
-                LOGGER.debug("Fetching details from Integreat CMS for %s", self.chunk_source_path)
+                LOGGER.debug(
+                    "Fetching details from Integreat CMS for %s",
+                    self.chunk_source_path
+                )
                 self.gui_source_path = self.get_source_for_language(self.gui_language)[0]
             else:
                 self.gui_source_path = self.chunk_source_path
             LOGGER.debug("Fetching details from Integreat CMS for %s", self.gui_source_path)
-            page = get_page(self.gui_source_path)
+            page = get_page(self.gui_source_path) if page is None else page
         except urllib.error.HTTPError:
             LOGGER.warning("Could not find document for source path %s", self.chunk_source_path)
             self.title = None
             self.content = None
             return
-        self.title = page["title"] if include_details else None
-        self.content = page["excerpt"] if include_details else None
+        self.title = page["title"]
+        self.content = page["excerpt"]
 
     def get_source_for_language(self, language: str) -> tuple[str, str]:
         """

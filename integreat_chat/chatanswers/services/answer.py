@@ -89,7 +89,6 @@ class AnswerService:
         search = SearchService(search_request, deduplicate_results=True)
         search_results = search.search_documents(
             settings.RAG_MAX_PAGES * 2,
-            include_text=True,
             min_score=settings.RAG_SCORE_THRESHOLD,
         ).documents
         documents = self.filter_documents(search_results)[:settings.RAG_MAX_PAGES]

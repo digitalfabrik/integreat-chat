@@ -3,6 +3,8 @@ A service to search for documents
 """
 from django.conf import settings
 
+from core.utils.integreat_cms import get_pages
+
 from .opensearch import OpenSearch
 from ..utils.search_request import SearchRequest
 from ..utils.search_response import SearchResponse, Document
@@ -19,14 +21,12 @@ class SearchService:
     def search_documents(
             self,
             max_results: int = settings.SEARCH_MAX_DOCUMENTS,
-            include_text: bool = False,
             min_score: int = settings.SEARCH_SCORE_THRESHOLD,
         ) -> SearchResponse:
         """
         Search for documents based on the text of the last message.
 
         param max_results: limit number of results to N documents
-        param include_text: fetch full text of page from Integreat CMS
         param min_score: Minimum required score for a hit to be included in the result
         """
         results = self.os.reduce_search_result(
@@ -39,14 +39,15 @@ class SearchService:
             max_results = max_results,
             min_score = min_score,
         )
+        pages = get_pages([result["url"] for result in results])
         documents = []
-        for result in results:
+        for item_num, result in enumerate(results):
             documents.append(Document(
                 result["url"],
                 result["chunk_text"],
                 result["score"],
                 result["parent_titles"],
-                include_text,
+                pages[item_num],
                 self.search_request.gui_language,
             ))
         return SearchResponse(self.search_request, documents)
