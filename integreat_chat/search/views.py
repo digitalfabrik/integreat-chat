@@ -27,7 +27,7 @@ def search_documents(request):
         try:
             search_request = SearchRequest(json.loads(request.body))
             search_service = SearchService(search_request, True)
-            result = search_service.search_documents(include_text=True).as_dict()
+            result = search_service.search_documents().as_dict()
         except ValueError as exc:
             result = {"status": "error", "message": str(exc)}
     return JsonResponse(result)

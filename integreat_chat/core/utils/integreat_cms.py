@@ -1,8 +1,10 @@
 """
 Integreat CMS helper functions
 """
+import asyncio
 from urllib.parse import quote
 
+import aiohttp
 import requests
 from django.conf import settings
 
@@ -34,7 +36,42 @@ def get_page(path: str) -> dict:
     encoded_url = quote(pages_url, safe=':/=?&')
     return requests.get(encoded_url, timeout=15, headers=headers).json()[0]
 
-def get_pages(region_slug: str, language_slug: str) -> list[dict]:
+async def async_get_page(session: aiohttp.ClientSession, path: str) -> dict:
+    """
+    Fetch a single page object asynchronously.
+    """
+    path = (
+        path
+        .replace(f"https://{settings.INTEGREAT_APP_DOMAIN}", "")
+        .replace(f"https://{settings.INTEGREAT_CMS_DOMAIN}", "")
+    )
+    region = path.split("/")[1]
+    cur_language = path.split("/")[2]
+    headers = {"X-Integreat-Development": "true"}
+    pages_url = (
+        f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/{region}/"
+        f"{cur_language}/children/?url={path}&depth=0"
+    )
+    encoded_url = quote(pages_url, safe=':/=?&')
+
+    async with session.get(encoded_url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as response:
+        return (await response.json())[0]
+
+async def cms_requests_session_wrapper(paths: list[str]) -> list[dict]:
+    """
+    Create an aiohttp session, send requests and gather responses
+    """
+    async with aiohttp.ClientSession() as session:
+        tasks = [async_get_page(session, path) for path in paths]
+        return await asyncio.gather(*tasks)
+
+def get_pages(paths: list[str]) -> list[dict]:
+    """
+    Get content for multiple pages
+    """
+    return asyncio.run(cms_requests_session_wrapper(paths))
+
+def get_all_pages(region_slug: str, language_slug: str) -> list[dict]:
     """
     get data from Integreat cms
     """

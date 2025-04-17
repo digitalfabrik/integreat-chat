@@ -9,7 +9,7 @@ from datetime import timedelta, datetime
 import requests
 from django.conf import settings
 from langchain_text_splitters import HTMLHeaderTextSplitter
-from integreat_chat.core.utils.integreat_cms import get_pages, get_parent_page_titles
+from integreat_chat.core.utils.integreat_cms import get_all_pages, get_parent_page_titles
 
 class OpenSearch:
     """
@@ -268,7 +268,7 @@ class OpenSearch:
         :param language_slug: Integreat CMS language slug
         :param differential: recreate (fill) index if false, update if true
         """
-        cms_pages = get_pages(region_slug, language_slug)
+        cms_pages = get_all_pages(region_slug, language_slug)
         if differential:
             self.remove_deleted_pages(
                 f"{region_slug}_{language_slug}",
