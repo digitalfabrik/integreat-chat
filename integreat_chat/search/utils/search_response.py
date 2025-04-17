@@ -1,6 +1,7 @@
 """
 responses to search request and document class
 """
+import asyncio
 import logging
 import urllib
 
@@ -21,7 +22,6 @@ class Document:
             chunk: str,
             score: float,
             parent_titles: list[str],
-            include_details: bool,
             gui_language: str
         ):
         self.chunk_source_path = source_path
@@ -29,9 +29,22 @@ class Document:
         self.score = score
         self.chunk = chunk
         self.parent_titles = parent_titles
-        self.enrich(include_details)
+        self.gui_source_path = None
+        self.title = None
+        self.content = None
 
-    def enrich(self, include_details: bool):
+    async def create_with_details(self,
+            source_path: str,
+            chunk: str,
+            score: float,
+            parent_titles: list[str],
+            gui_language: str,
+            aiohttp_client
+        ):
+        self.__init__(source_path, chunk, score, parent_titles, gui_language)
+        asyncio.run(self.enrich(True))
+    
+    async def enrich(self, include_details: bool):
         """
         Enrich document with GUI langauge URLs and titles
         """

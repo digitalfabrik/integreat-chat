@@ -1,6 +1,7 @@
 """
 A service to search for documents
 """
+import aiohttp
 from django.conf import settings
 
 from .opensearch import OpenSearch
@@ -40,13 +41,15 @@ class SearchService:
             min_score = min_score,
         )
         documents = []
-        for result in results:
-            documents.append(Document(
-                result["url"],
-                result["chunk_text"],
-                result["score"],
-                result["parent_titles"],
-                include_text,
-                self.search_request.gui_language,
-            ))
+        async with aiohttp.ClientSession() as session:
+            for result in results:
+                documents.append(Document.create(
+                    result["url"],
+                    result["chunk_text"],
+                    result["score"],
+                    result["parent_titles"],
+                    include_text,
+                    self.search_request.gui_language,
+                    session
+                ))
         return SearchResponse(self.search_request, documents)
