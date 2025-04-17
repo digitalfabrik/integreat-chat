@@ -80,12 +80,13 @@ class LanguageService:
             classified_language = self.detect_language_of_string(message)
             if classified_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES:
                 # try again once to avoid errors (some temperature exists)
+                # Cache result nonetheless, we don't need to retry this again and again
                 classified_language = self.detect_language_of_string(message)
-                if classified_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES:
-                    error_msg = f"Did not detect a supported language: {classified_language}"
-                    LOGGER.error(error_msg)
-                    raise ValueError(error_msg)
             cache.set(cache_key, classified_language)
+        if classified_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES:
+            error_msg = f"Did not detect a supported language: {classified_language}"
+            LOGGER.error(error_msg)
+            raise ValueError(error_msg)
         return classified_language
 
     def is_numerical(self, message: str) -> bool:
