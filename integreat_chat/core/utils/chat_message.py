@@ -3,11 +3,15 @@ base request class
 """
 
 import hashlib
+import logging
 from typing import TYPE_CHECKING
 
 from django.utils.functional import cached_property
 if TYPE_CHECKING:
     from .integreat_request import IntegreatRequest
+
+LOGGER = logging.getLogger('django')
+
 
 class ChatMessage:
     """
@@ -31,7 +35,11 @@ class ChatMessage:
         """
         if self.integreat_request.skip_language_detection:
             return self.integreat_request.gui_language
-        return self.integreat_request.language_service.classify_language(self.original_message)
+        try:
+            return self.integreat_request.language_service.classify_language(self.original_message)
+        except ValueError:
+            LOGGER.info("Assuming GUI language")
+            return self.integreat_request.gui_language
 
     @cached_property
     def translated_message(self) -> str:
