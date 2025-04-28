@@ -25,6 +25,7 @@ Linked pages: {3}
 You are part of a retrieval-augmented generation (RAG) system. Your task is to evaluate whether a retrieved document definitely contains a direct answer to the user’s message.
 Evaluation Criteria:
 
+* Generally assume that documents are not relevant and only deem them relevant if there are good reasons.
 * The document must explicitly address the user’s question or request.
 * General relevance is not enough — it must contain specific and authoritative information.
 * If the document only provides related background information but does not directly answer the question, answer "no".
@@ -32,11 +33,16 @@ Evaluation Criteria:
 
 Response Format:
 
-* Answer only with "yes" or "no"—no explanations or additional text.
+* Start the answer with "yes" or "no" and add a very brief reason.
 
-# Retrieved document:
+# Retrieved document
 
-{0}"""
+---
+
+{0}
+
+---
+"""
 
 
     CHECK_QUESTION = """### Task

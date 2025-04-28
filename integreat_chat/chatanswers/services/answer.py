@@ -165,7 +165,7 @@ class AnswerService:
         if not documents:
             return no_answer_response
         answer = self.llm_api.simple_prompt(self.format_rag_prompt(documents))
-        LOGGER.debug(
+        LOGGER.info(
             "Finished generating answer. Question: %s\nAnswer: %s",
             self.rag_request.search_term,
             answer
@@ -200,6 +200,11 @@ class AnswerService:
         kept_documents = []
         for i, response in enumerate(llmresponses):
             llm_response = LlmResponse(response)
+            LOGGER.info(
+                "Using %s: %s",
+                search_results[i].gui_source_path,
+                str(llm_response)
+            )
             if str(llm_response).lower().startswith("yes"):
                 kept_documents.append(search_results[i])
         return kept_documents
