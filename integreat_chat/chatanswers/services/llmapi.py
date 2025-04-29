@@ -109,7 +109,7 @@ class LlmApiClient:
         Get RAG answer
         """
         async with session.post(self.api_url,
-                                json=prompt.as_dict(),
+                                json={**prompt.as_dict(), "temperature": 0},
                                 timeout=120,
                                 headers={
                                     'Authorization': f'Bearer {settings.LLM_API_KEY}',
