@@ -146,6 +146,13 @@ class OpenSearch:
                     ]
                 }
             },
+            "ext": {
+                "rerank": {
+                "query_context": {
+                    "query_text": message
+                }
+                }
+            }
         }
         return self.request(
             f"/{region_slug}_{language_slug}/_search?"
@@ -489,16 +496,19 @@ class OpenSearchSetup(OpenSearch):
                     }
                 }
             ],
-              "response_processors": [
-                {
-                        "rerank": {
-                            "by_field": {
-                            "target_field": "chunk_text",
-                            "keep_previous_score" : True
-                            }
+            "response_processors": [
+            {
+                "rerank": {
+                    "ml_opensearch": {
+                        "model_id": self.model_id_reranker
+                    },
+                    "context": {
+                    "document_fields": [
+                        "chunk_text"
+                    ]
                     }
                 }
-            ]
+            }]
         }
         self.request(f"/_search/pipeline/{self.search_pipeline_name}", payload, "PUT")
 
@@ -533,6 +543,7 @@ class OpenSearchSetup(OpenSearch):
             "settings": {
                 "index.knn": True,
                 "default_pipeline": self.ingest_pipeline_name,
+                "index.search.default_pipeline": self.search_pipeline_name,
             },
             "mappings": {
                 "properties": {
