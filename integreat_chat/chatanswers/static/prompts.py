@@ -21,7 +21,7 @@ User message: {2}
 Linked pages: {3}
 """
 
-    CHECK_SYSTEM_PROMPT = """# Task
+    CHECK_DOCUMENT = """# Task
 You are part of a retrieval-augmented generation (RAG) system. Your task is to evaluate whether a retrieved document definitely contains a direct answer to the user’s message.
 Evaluation Criteria:
 
@@ -112,7 +112,7 @@ For all other messages, including general inquiries or indirect mentions of coun
 User message: {0}
 """
 
-    SHALLOW_SEARCH_PROMPT = """# Task
+    SHALLOW_SEARCH = """# Task
 You are part of a retrieval-augmented generation (RAG) system. In a previous search no relevant pages were found for a search term. We now want to run a more abstract search. Extract the general topic (one or two words) for a new search. Only return the best search term without any additional text.
 ## Examples
 - "Finding a job as a medical doctor" to "Finding jobs"
