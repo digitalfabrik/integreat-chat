@@ -163,6 +163,7 @@ class AnswerService:
         documents = self.get_documents()
         no_answer_response = self.get_no_answer_response(language_service, documents)
         if not documents:
+            LOGGER.info("No documents found for : %s", self.rag_request.search_term)
             return no_answer_response
         answer = self.llm_api.simple_prompt(self.format_rag_prompt(documents))
         LOGGER.info(
