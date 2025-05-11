@@ -96,7 +96,7 @@ class AnswerService:
         documents = self.filter_documents(search_results)[:settings.RAG_MAX_PAGES]
         if not documents and not shallow_search:
             self.rag_request.search_term = self.llm_api.simple_prompt(
-                Prompts.SHALLOW_SEARCH_PROMPT.format(self.rag_request.search_term)
+                Prompts.SHALLOW_SEARCH.format(self.rag_request.search_term)
             )
             LOGGER.debug(
                 "No documents found, trying shallow search: %s.",
@@ -201,7 +201,7 @@ class AnswerService:
                     asyncio.create_task(self.llm_api.chat_prompt(
                         session,
                         LlmPrompt(settings.RAG_RELEVANCE_CHECK_MODEL, [
-                            LlmMessage(Prompts.CHECK_SYSTEM_PROMPT.format(
+                            LlmMessage(Prompts.CHECK_DOCUMENT.format(
                                 f"## {document.parent_titles}\n\n{document.content}"
                             ), "system"),
                             LlmMessage(question)]

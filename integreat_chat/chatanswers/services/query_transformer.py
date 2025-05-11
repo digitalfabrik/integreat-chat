@@ -70,7 +70,7 @@ class QueryTransformer:
         prompt = LlmPrompt(
             settings.RAG_QUERY_OPTIMIZATION_MODEL,
             [
-                LlmMessage(Prompts.CHECK_SYSTEM_PROMPT, role="system"),
+                LlmMessage(Prompts.CHECK_DOCUMENT, role="system"),
                 LlmMessage(Prompts.OPTIMIZE_MESSAGE.format(self.original_query))
             ]
         )
