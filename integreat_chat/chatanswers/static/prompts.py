@@ -49,7 +49,8 @@ Response Format:
 You are part of a retrieval-augmented generation system. Determine whether the **last message in a conversation** requires a response.
 You will be given up to 3 messages, the final message is the most important. Prior messages may provide context but should only be used
 if they clarify the intent. Finally, provide a summary of the message that can be used for searching documents and in a prompt to generate
-an answer.
+an answer. For the summary, leave out too specific personal details and only include generic information that can be found in a knowledge
+base.
 
 ### Acceptance Criteria
 Accept messages that:
@@ -109,4 +110,16 @@ For all other messages, including general inquiries or indirect mentions of coun
     * "I’m thinking about hurting myself."
 
 User message: {0}
+"""
+
+    SHALLOW_SEARCH_PROMPT = """# Task
+You are part of a retrieval-augmented generation (RAG) system. In a previous search no relevant pages were found for a search term. We now want to run a more abstract search. Extract the general topic (one or two words) for a new search. Only return the best search term without any additional text.
+## Examples
+- "Finding a job as a medical doctor" to "Finding jobs"
+- "medical treatment for flu" to "medical consultation"
+- "Bus from city hall to arena" to "public transport"  
+- "asylum request was denied after 2 years" to "asylum process"
+- "Homeschooling in Germany" to "schooling"
+## Search Term
+{0}
 """
