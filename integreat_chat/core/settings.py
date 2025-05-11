@@ -56,7 +56,9 @@ LOGGING = {
     },
 }
 
-ALLOWED_HOSTS = ["127.0.0.1", "igchat-inference.tuerantuer.org", "igchat-test.tuerantuer.org"]
+ALLOWED_HOSTS = (
+    config["DEFAULT"]["ALLOWED_HOSTS"].split(",") if "ALLOWED_HOSTS" in config["DEFAULT"] else ["127.0.0.1"]
+)
 
 INTEGREAT_CMS_DOMAIN = config["DEFAULT"]["INTEGREAT_CMS_DOMAIN"]
 INTEGREAT_APP_DOMAIN = config["DEFAULT"]["INTEGREAT_APP_DOMAIN"]
