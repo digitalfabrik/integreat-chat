@@ -73,9 +73,11 @@ class AnswerService:
             automatic_answer,
         )
 
-    def get_documents(self) -> list:
+    def get_documents(self, shallow_search: bool = False) -> list:
         """
         Retrieve documents for RAG
+
+        :param shallow_search: indicates that this is a shallow search.
         """
         LOGGER.debug("Retrieving documents for: %s.", self.rag_request.search_term)
         search_request = SearchRequest(
@@ -92,6 +94,15 @@ class AnswerService:
             min_score=settings.RAG_SCORE_THRESHOLD,
         ).documents
         documents = self.filter_documents(search_results)[:settings.RAG_MAX_PAGES]
+        if not documents and not shallow_search:
+            self.rag_request.search_term = self.llm_api.simple_prompt(
+                Prompts.SHALLOW_SEARCH_PROMPT.format(self.rag_request.search_term)
+            )
+            LOGGER.debug(
+                "No documents found, trying shallow search: %s.",
+                self.rag_request.search_term
+            )
+            return self.get_documents(shallow_search=True)
         LOGGER.debug("Retrieved %s documents.", len(documents))
         return documents
 
