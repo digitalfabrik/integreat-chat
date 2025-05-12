@@ -13,7 +13,7 @@ def update_index(region_slug: str, language_slug: str, differential: bool = True
     param language_slug: slug of the language (BCP47 tag) that should be updated
     """
     oss = OpenSearchSetup(password=settings.OPENSEARCH_PASSWORD)
-    print(f"Indexing pages for region {region_slug} and language {language_slug}")
+    print(f"Indexing pages for region {region_slug} and language {language_slug}. Differential {differential}.")
     if not differential:
         print(oss.delete_index(f"{region_slug}_{language_slug}"))
         print(oss.create_index(f"{region_slug}_{language_slug}"))
