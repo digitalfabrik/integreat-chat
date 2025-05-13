@@ -36,9 +36,14 @@ def get_page(path: str) -> dict:
     encoded_url = quote(pages_url, safe=':/=?&')
     return requests.get(encoded_url, timeout=15, headers=headers).json()[0]
 
-async def async_get_page(session: aiohttp.ClientSession, path: str) -> dict:
+async def async_get_page(session: aiohttp.ClientSession, path: str, retry: int = 0) -> dict:
     """
     Fetch a single page object asynchronously.
+
+    :param session: aiohttp session used for the Integreat CMS request
+    :param path: path of the page to be requested
+    :param retry: retry count to break recursion on failed requests
+    :return: Integreat CMS page data
     """
     path = (
         path
@@ -54,8 +59,15 @@ async def async_get_page(session: aiohttp.ClientSession, path: str) -> dict:
     )
     encoded_url = quote(pages_url, safe=':/=?&')
 
-    async with session.get(encoded_url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as response:
-        return (await response.json())[0]
+    async with session.get(
+        encoded_url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)
+    ) as response:
+        try:
+            return (await response.json())[0]
+        except KeyError as exc:
+            if retry < 3:
+                return async_get_page(session, path, retry=retry+1)
+            raise ValueError(f"Could not fetch data for {path}") from exc
 
 async def cms_requests_session_wrapper(paths: list[str]) -> list[dict]:
     """
