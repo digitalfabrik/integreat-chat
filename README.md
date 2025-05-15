@@ -57,7 +57,7 @@ To integrate Zammad, the following configuration has to be set:
 * Auto response for new tickets in each language, exmple is `EN`
   * Conditions: `State is new`, `Action is updated`, `Subject contains not "automatically generated message"`, `Title contains [EN]`, `Initial response is no`
   * Execute: `Note`, `visibility public`, `Subject "automatically generated message"`, `Initial response sent yes`, add a suitable message in the body.
-    * Example message: `Welcome to [Integreat Chat](https://integreat.example.com/welcome/integreat-chat) $REGION_NAME in $LANGUAGE. Our team responds on weekdays, while our chatbot provides summary answers from linked articles, which you should use to verify important information. This chat cannot help in [emergencies](https://webnext.integreat.app/testumgebung-e2e/en/health/emergency-numbers-sos).` A template for the info page can be found in the [info page template](INFO_TEMPLATE.md)
+    * Example message: `Welcome to the [Chat](https://integreat.app/testumgebung-e2e/en/welcome/welcome-to-stadt/the-integreat-chat) of [Integreat $REGION_NAME](https://integreat.app/testumgebung-e2e/en/welcome/welcome-to-stadt/about-integreat). Our team responds on weekdays, while our chatbot provides summary answers from linked articles, which you should use to verify important information. This chat cannot help in [emergencies](https://webnext.integreat.app/testumgebung-e2e/en/health/emergency-numbers-sos).` A template for the info page can be found in the [info page template](INFO_TEMPLATE.md)
 * Scheduler to delete old tickets:
   * Run once a week
   * Conditions: `state is closed`, `Closing time before (relative) 3 months`
