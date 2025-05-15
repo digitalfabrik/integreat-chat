@@ -16,7 +16,7 @@ Please note that our chatbot only answers questions about the test environment c
 
 ## Language support
 
-Our chatbot will answer your questions in the language you choose. If you want to change the language, you must close the chat, change the language, and restart the chat.
+Our chatbot will answer your questions in the language you choose. If you want to receive responses in a different language, choose your preferred language in the menu.
 
 ## Your feedback is important to us
 
