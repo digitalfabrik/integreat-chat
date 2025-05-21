@@ -304,7 +304,10 @@ class OpenSearch:
         page_path = page["path"]
         parent_titles = []
         for parent in get_parent_page_titles(region_slug, language_slug, page_path):
-            parent_titles.append(parent["title"])
+            try:
+                parent_titles.append(parent["title"])
+            except TypeError:
+                pass
         return parent_titles
 
 class OpenSearchSetup(OpenSearch):
