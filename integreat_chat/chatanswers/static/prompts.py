@@ -56,7 +56,7 @@ base.
 Accept messages that:
 - Are a **clear and concise question**, OR
 - Are a **specific, actionable statement** that indicates a need, OR
-- Indicate a psychological or medical emergency.
+- Indicate a psychological or medical emergency, for example thoughts of suicide.
 Reject messages that:
 - Are too vague or generic (e.g., "I need help," "I have a question").
 - Lack a clear request or actionable intent.
