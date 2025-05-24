@@ -1,10 +1,10 @@
 # The Integreat Chat
 
-Our chatbot helps you find Integreat content and answer questions based on the content.
+Our chatbot helps you find Integreat content and answer questions based on the content. It is currently only available on the website https://integreat.app. It is not available in the apps installed via the Google Play Store or Apple App Store.
 
 ## How it works
 
-The Integreat chat can be opened on the website by clicking on the chat icon at the bottom. If you ask a question, you'll receive a direct response from our chatbot. However, if you need more personalized assistance, a representative will answer your question as quickly as possible. Please note that this may take some time.
+The Integreat chat can be opened on the website by clicking on the chat icon at the bottom. If you ask a question, you'll receive a direct response from our chatbot. However, if you need more personalized assistance, a representative will answer your question as quickly as possible. Please note that this may take some time. If you ask to talk to a person, the chat bot will stop answering.
 
 ## What questions can you ask?
 
@@ -20,4 +20,4 @@ Our chatbot will answer your questions in the language you choose. If you want t
 
 ## Your feedback is important to us
 
-We're constantly working to improve our chatbot and our platform. You can leave us feedback in the chat at any time. We'll consider your suggestions as best we can.
+We're constantly working to improve our chatbot and our platform. We will use anonymized chat messages to improve automatic chat responses in the future. You can leave us feedback in the chat at any time. We'll consider your suggestions as best we can.
