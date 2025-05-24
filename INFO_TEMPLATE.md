@@ -4,13 +4,11 @@ Our chatbot helps you find Integreat content and answer questions based on the c
 
 ## How the Chatbot works
 
-The Integreat chat can be opened on the website by clicking on the chat icon at the bottom. If you ask a question, you'll receive a direct response from our chatbot. However, if you need more personalized assistance, a representative will answer your question as quickly as possible. Please note that this may take some time. If you ask to talk to a person, the chat bot will stop answering.
+The Integreat chat can be opened on the website by clicking on the chat icon at the bottom. If you ask a question, you'll receive a response from our chatbot. However, if you need more personalized assistance, a representative will answer your question as quickly as possible. Please note that this may take some time. If you ask to talk to a person, the chat bot will stop answering.
 
-Our chatbot can only answer questions covered by the content on our platform. If you have a question that's not related to our content, we can't answer it.
+Our chatbot can only answer questions covered by the content of the currently selected region. If you have a question that's not related to our content, we can't answer it.
 
-## Region-specific answers
-
-Please note that our chatbot only answers questions about the test environment content. If you need information about a different region, please select that region first and then ask your question. The chatbot is not available in all regions.
+If you need information from a different region, please select that region first and then ask your question. The chatbot is not available in all regions.
 
 ## Language support
 
