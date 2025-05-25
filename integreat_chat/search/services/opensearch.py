@@ -36,6 +36,7 @@ class OpenSearch:
         self.user = user
         self.password = password
         self.model_id = settings.SEARCH_OPENSEARCH_MODEL_ID
+        self.model_id_reranker = settings.SEARCH_OPENSEARCH_MODEL_ID_RERANKER
         self.model_group_id = settings.SEARCH_OPENSEARCH_MODEL_GROUP_ID
 
     def request(self, path: str, payload: dict, method: str = "GET") -> dict:
@@ -143,6 +144,13 @@ class OpenSearch:
                         }
                         }
                     ]
+                }
+            },
+            "ext": {
+                "rerank": {
+                "query_context": {
+                    "query_text": message
+                }
                 }
             }
         }
@@ -325,13 +333,15 @@ class OpenSearchSetup(OpenSearch):
         group_id = self.create_model_group()
         if not group_id:
             raise ValueError("Unexpected OpenSearch response while creating model group")
-        model_id = self.register_embedding_model(group_id)
-        if not model_id:
+        model_id_embedding = self.register_embedding_model(group_id)
+        model_id_crossencoder = self.register_crossencoder_model(group_id)
+        if not model_id_embedding or not model_id_crossencoder:
             raise ValueError("Unexpected OpenSearch response while registering model")
-        self.deploy_model(model_id)
-        self.create_ingestion_pipeline(model_id)
+        self.deploy_model(model_id_embedding)
+        self.deploy_model(model_id_crossencoder)
+        self.create_ingestion_pipeline(model_id_embedding)
         self.create_search_pipeline()
-        return group_id, model_id
+        return group_id, model_id_embedding, model_id_crossencoder
 
     def delete_model_group(self):
         """
@@ -339,6 +349,8 @@ class OpenSearchSetup(OpenSearch):
         """
         self.request(f"/_plugins/_ml/models/{self.model_id}/_undeploy", {}, "POST")
         self.request(f"/_plugins/_ml/models/{self.model_id}", {}, "DELETE")
+        self.request(f"/_plugins/_ml/models/{self.model_id_reranker}/_undeploy", {}, "POST")
+        self.request(f"/_plugins/_ml/models/{self.model_id_reranker}", {}, "DELETE")
         self.request(f"/_plugins/_ml/model_groups/{self.model_group_id}", {}, "DELETE")
 
     def prepare_index(self, region_slug: str = "", language_slug: str = ""):
@@ -375,6 +387,28 @@ class OpenSearchSetup(OpenSearch):
         response = self.request("/_plugins/_ml/model_groups/_register", payload, "POST")
         if "model_group_id" in response:
             return response["model_group_id"]
+        return False
+    
+    def register_crossencoder_model(self, model_group_id: str) -> str:
+        """
+        Register crossencoder model
+        """
+        payload = {
+            "name": settings.OPENSEARCH_CROSSENCODER_MODEL_NAME,
+            "version": "1.0.2",
+            "model_group_id": model_group_id,
+            "model_format": "TORCH_SCRIPT"
+        }
+        register_response = self.request(
+            "/_plugins/_ml/models/_register", payload, "POST"
+        )
+        if "task_id" in register_response:
+            for n in range(0, 10):
+                time.sleep(5)
+                if "model_id" in (task_response := self.request(
+                    f"/_plugins/_ml/tasks/{register_response['task_id']}", {}, "GET"
+                )):
+                    return task_response["model_id"]
         return False
 
     def register_embedding_model(self, model_group_id: str) -> str:
@@ -461,7 +495,20 @@ class OpenSearchSetup(OpenSearch):
                         }
                     }
                 }
-            ]
+            ],
+            "response_processors": [
+            {
+                "rerank": {
+                    "ml_opensearch": {
+                        "model_id": self.model_id_reranker
+                    },
+                    "context": {
+                    "document_fields": [
+                        "chunk_text"
+                    ]
+                    }
+                }
+            }]
         }
         self.request(f"/_search/pipeline/{self.search_pipeline_name}", payload, "PUT")
 
@@ -496,6 +543,7 @@ class OpenSearchSetup(OpenSearch):
             "settings": {
                 "index.knn": True,
                 "default_pipeline": self.ingest_pipeline_name,
+                "index.search.default_pipeline": self.search_pipeline_name,
             },
             "mappings": {
                 "properties": {
