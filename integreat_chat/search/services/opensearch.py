@@ -325,13 +325,21 @@ class OpenSearchSetup(OpenSearch):
         group_id = self.create_model_group()
         if not group_id:
             raise ValueError("Unexpected OpenSearch response while creating model group")
-        model_id = self.register_embedding_model(group_id)
-        if not model_id:
+        embedding_model_id = self.register_embedding_model(group_id)
+        if not embedding_model_id:
             raise ValueError("Unexpected OpenSearch response while registering model")
-        self.deploy_model(model_id)
-        self.create_ingestion_pipeline(model_id)
+        self.deploy_model(embedding_model_id)
+        reranking_model_id = self.register_reranking_model(group_id)
+        if not reranking_model_id:
+            raise ValueError("Unexpected OpenSearch response while registering model")
+        self.deploy_model(reranking_model_id)
+        self.create_ingestion_pipeline(embedding_model_id)
         self.create_search_pipeline()
-        return group_id, model_id
+        return {
+            "group_id": group_id,
+            "embedding_model_id": embedding_model_id,
+            "reranking_model_id": reranking_model_id,
+        }
 
     def delete_model_group(self):
         """
@@ -409,6 +417,38 @@ class OpenSearchSetup(OpenSearch):
             return response["task_id"]
         return False
 
+    def register_reranking_model(self, model_group_id: str) -> str:
+        """
+        Register reranking model
+        """
+        payload = {
+            "name": settings.OPENSEARCH_RERANKING_MODEL_NAME,
+            "version": "1.0.1",
+            "model_group_id": model_group_id,
+            "model_format": "TORCH_SCRIPT"
+        }
+        register_response = self.request(
+            "/_plugins/_ml/models/_register", payload, "POST"
+        )
+        if "task_id" in register_response:
+            for n in range(0, 10):  # pylint: disable=W0612
+                time.sleep(5)
+                if "model_id" in (task_response := self.request(
+                    f"/_plugins/_ml/tasks/{register_response['task_id']}", {}, "GET"
+                )):
+                    return task_response["model_id"]
+        return False
+
+    def deploy_reranking_model(self, model_id: str):
+        """
+        Register reranking model
+        """
+        if "task_id" in (response := self.request(
+            f"/_plugins/_ml/models/{model_id}/_deploy", {}, "POST"
+        )):
+            return response["task_id"]
+        return False
+
     def create_ingestion_pipeline(self, model_id: str):
         """
         Create ingestion pipeline
@@ -458,6 +498,20 @@ class OpenSearchSetup(OpenSearch):
                                     0.35   # content embedding
                                 ]
                             }
+                        }
+                    }
+                }
+            ],
+            "response_processors": [
+                {
+                    "rerank": {
+                        "ml_opensearch": {
+                            "model_id": settings.SEARCH_OPENSEARCH_RERANKING_MODEL_ID,
+                        },
+                        "context": {
+                            "document_fields": [
+                                "chunk_text"
+                            ]
                         }
                     }
                 }

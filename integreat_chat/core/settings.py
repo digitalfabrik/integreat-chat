@@ -104,6 +104,8 @@ SEARCH_EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-Min
 OPENSEARCH_EMBEDDING_MODEL_NAME = (
     "huggingface/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 )
+OPENSEARCH_RERANKING_MODEL_NAME = "huggingface/cross-encoders/ms-marco-MiniLM-L-12-v2"
+
 SEARCH_EMBEDDING_MODEL = HuggingFaceEmbeddings(
     model_name=SEARCH_EMBEDDING_MODEL_NAME, show_progress=False
 )
@@ -115,6 +117,7 @@ SEARCH_EMBEDDING_MODEL_SUPPORTED_LANGUAGES = [
 SEARCH_DENSE_WEIGHT = 0.7
 SEARCH_FALLBACK_LANGUAGE = "en"
 SEARCH_OPENSEARCH_MODEL_ID = config["OPENSEARCH"]["MODEL_ID"]
+SEARCH_OPENSEARCH_RERANKING_MODEL_ID = config["OPENSEARCH"]["RERANKING_MODEL_ID"]
 SEARCH_OPENSEARCH_MODEL_GROUP_ID = config["OPENSEARCH"]["MODEL_GROUP_ID"]
 OPENSEARCH_USER = (
     config["OPENSEARCH"]["USER"]
