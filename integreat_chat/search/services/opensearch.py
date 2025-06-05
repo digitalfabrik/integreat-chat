@@ -335,8 +335,10 @@ class OpenSearchSetup(OpenSearch):
             raise ValueError("Unexpected OpenSearch response while creating model group")
         model_id_embedding = self.register_embedding_model(group_id)
         model_id_crossencoder = self.register_crossencoder_model(group_id)
-        if not model_id_embedding or not model_id_crossencoder:
-            raise ValueError("Unexpected OpenSearch response while registering model")
+        if not model_id_embedding:
+            raise ValueError("Unexpected OpenSearch response while registering embedding model")
+        elif not model_id_crossencoder:
+            raise ValueError("Unexpected OpenSearch response while registering crossencoder model")
         self.deploy_model(model_id_embedding)
         self.deploy_model(model_id_crossencoder)
         self.create_ingestion_pipeline(model_id_embedding)
