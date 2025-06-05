@@ -383,8 +383,8 @@ class OpenSearchSetup(OpenSearch):
         Create model group
         """
         payload = {
-            "name": "integreat-chat-2025-01-31",
-            "description": "Integreat Chat embedding models"
+            "name": "integreat-chat-2025-06-05",
+            "description": "Integreat Chat model group"
         }
         response = self.request("/_plugins/_ml/model_groups/_register", payload, "POST")
         if "model_group_id" in response:
