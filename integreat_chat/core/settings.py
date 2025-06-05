@@ -103,7 +103,7 @@ SEARCH_MAX_PAGES = 10
 SEARCH_EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 OPENSEARCH_CROSSENCODER_MODEL_NAME = (
     #"huggingface/cross-encoders/ms-marco-MiniLM-L-6-v2"
-    "jinaai/jina-reranker-v2-base-multilingual"
+    "huggingface/jinaai/jina-reranker-v2-base-multilingual"
 )
 OPENSEARCH_EMBEDDING_MODEL_NAME = (
     "huggingface/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
