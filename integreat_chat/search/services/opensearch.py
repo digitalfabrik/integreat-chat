@@ -2,6 +2,7 @@
 Setup and use of OpenSearch
 """
 
+import logging
 import hashlib
 import time
 from datetime import timedelta, datetime
@@ -10,6 +11,8 @@ import requests
 from django.conf import settings
 from langchain_text_splitters import HTMLHeaderTextSplitter
 from integreat_chat.core.utils.integreat_cms import get_all_pages, get_parent_page_titles
+
+LOGGER = logging.getLogger("django")
 
 class OpenSearch:
     """
@@ -387,6 +390,7 @@ class OpenSearchSetup(OpenSearch):
             "description": "Integreat Chat model group"
         }
         response = self.request("/_plugins/_ml/model_groups/_register", payload, "POST")
+        logging.info(f"Model group response: {response}")
         if "model_group_id" in response:
             return response["model_group_id"]
         return False
