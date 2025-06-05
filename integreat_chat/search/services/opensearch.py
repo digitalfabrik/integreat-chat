@@ -390,7 +390,7 @@ class OpenSearchSetup(OpenSearch):
             "description": "Integreat Chat model group"
         }
         response = self.request("/_plugins/_ml/model_groups/_register", payload, "POST")
-        logging.info(f"Model group response: {response}")
+        print(f"Model group response: {response}")
         if "model_group_id" in response:
             return response["model_group_id"]
         return False
