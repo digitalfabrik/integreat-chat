@@ -6,6 +6,7 @@ import logging
 import hashlib
 import time
 from datetime import timedelta, datetime
+import math
 
 import requests
 from django.conf import settings
@@ -79,6 +80,7 @@ class OpenSearch:
         """
         result = []
         found_urls = []
+        sigmoid = lambda x: 1 / (1 + math.exp(-x))
         if "hits" not in response:
             raise ValueError("Missing hits in result")
         for document in response["hits"]["hits"]:
@@ -91,7 +93,7 @@ class OpenSearch:
                 "url": document["_source"]["url"],
                 "title": document["_source"]["title"],
                 "parent_titles": document["_source"]["parent_titles"],
-                "score": document["_score"],
+                "score": str(sigmoid(int(document["_score"]))),
                 "chunk_text": document["_source"]["chunk_text"],
             })
             found_urls.append(document["_source"]["url"])
