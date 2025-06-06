@@ -408,6 +408,7 @@ class OpenSearchSetup(OpenSearch):
         register_response = self.request(
             "/_plugins/_ml/models/_register", payload, "POST"
         )
+        LOGGER.debug(f"Embedding model response: {register_response}")
         if "task_id" in register_response:
             for n in range(0, 10):
                 time.sleep(5)
@@ -430,6 +431,7 @@ class OpenSearchSetup(OpenSearch):
         register_response = self.request(
             "/_plugins/_ml/models/_register", payload, "POST"
         )
+        LOGGER.debug(f"Cross Encoder model response: {register_response}")
         if "task_id" in register_response:
             for n in range(0, 10):  # pylint: disable=W0612
                 time.sleep(5)
