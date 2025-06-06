@@ -93,7 +93,7 @@ class OpenSearch:
                 "url": document["_source"]["url"],
                 "title": document["_source"]["title"],
                 "parent_titles": document["_source"]["parent_titles"],
-                "score": str(sigmoid(int(document["_score"]))),
+                "score": sigmoid(document["_score"]),
                 "chunk_text": document["_source"]["chunk_text"],
             })
             found_urls.append(document["_source"]["url"])
