@@ -135,7 +135,7 @@ class OpenSearch:
                             "title_embedding": {
                                 "query_text": message,
                                 "model_id": self.model_id,
-                                "k": 25
+                                "k": 30
                             }
                         }
                         },
@@ -144,7 +144,7 @@ class OpenSearch:
                             "chunk_embedding": {
                                 "query_text": message,
                                 "model_id": self.model_id,
-                                "k": 25
+                                "k": 30
                             }
                         }
                         }
