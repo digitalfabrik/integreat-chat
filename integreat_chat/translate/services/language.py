@@ -151,6 +151,8 @@ class LanguageService:
         available_languages = list(translations.keys())
         if target_language in available_languages:
             translated_path = translations[target_language]["path"]
+            LOGGER.debug("Target language - %s", target_language)
+            LOGGER.debug("Translated path - %s", translated_path)
             translated_link = f"https://{settings.INTEGREAT_APP_DOMAIN}{translated_path}"
         else:
             LOGGER.debug(
