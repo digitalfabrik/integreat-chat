@@ -233,7 +233,7 @@ class LanguageService:
         translated_message = self.translate_message_llm_wrapper(
             source_language,
             target_language,
-            message
+            self.message
         )
         translated_message = self.restore_links(translated_message, target_language)
         cache.set(cache_key, translated_message)
