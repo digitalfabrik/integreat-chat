@@ -151,8 +151,6 @@ class LanguageService:
         available_languages = list(translations.keys())
         if target_language in available_languages:
             translated_path = translations[target_language]["path"]
-            LOGGER.debug("Target language - %s", target_language)
-            LOGGER.debug("Translated path - %s", translated_path)
             translated_link = f"https://{settings.INTEGREAT_APP_DOMAIN}{translated_path}"
         else:
             LOGGER.debug(
@@ -169,7 +167,9 @@ class LanguageService:
         """
         for placeholder, url in self.placeholders.items():
             url = self.translate_link(url, target_language)
+            LOGGER.debug("After translation, URL: %s", url)
             translated_message = translated_message.replace(placeholder, url)
+            LOGGER.debug("Translated message: %s", translated_message)
         return translated_message
 
     def translate_message_llm_wrapper(
