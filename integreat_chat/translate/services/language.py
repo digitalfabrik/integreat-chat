@@ -166,9 +166,9 @@ class LanguageService:
         Replace placeholders back to URLs after translation
         """
         for placeholder, url in self.placeholders.items():
-            url = self.translate_link(url, target_language)
-            LOGGER.debug("After translation, URL: %s", url)
-            translated_message = translated_message.replace(placeholder, url)
+            translated_url = self.translate_link(url, target_language)
+            LOGGER.debug("Before Translation Message, URL: %s", translated_message)
+            translated_message = translated_message.replace(placeholder, translated_url)
             LOGGER.debug("Translated message: %s", translated_message)
         return translated_message
 
