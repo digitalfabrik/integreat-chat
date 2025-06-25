@@ -29,6 +29,9 @@ def get_page(path: str) -> dict:
         .replace(f"https://{settings.INTEGREAT_APP_DOMAIN}", "")
         .replace(f"https://{settings.INTEGREAT_CMS_DOMAIN}", "")
     )
+    LOGGER.debug("APP Domain: %s", settings.INTEGREAT_APP_DOMAIN)
+    LOGGER.debug("CMS Domain: %s", settings.INTEGREAT_CMS_DOMAIN)
+    LOGGER.debug("Path: %s", path)
     region = path.split("/")[1]
     cur_language = path.split("/")[2]
     headers = {"X-Integreat-Development": "true"}
