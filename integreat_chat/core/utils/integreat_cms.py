@@ -29,9 +29,6 @@ def get_page(path: str) -> dict:
         .replace(f"https://{settings.INTEGREAT_APP_DOMAIN}", "")
         .replace(f"https://{settings.INTEGREAT_CMS_DOMAIN}", "")
     )
-    LOGGER.debug("APP Domain: %s", settings.INTEGREAT_APP_DOMAIN)
-    LOGGER.debug("CMS Domain: %s", settings.INTEGREAT_CMS_DOMAIN)
-    LOGGER.debug("Path: %s", path)
     region = path.split("/")[1]
     cur_language = path.split("/")[2]
     headers = {"X-Integreat-Development": "true"}
@@ -40,8 +37,6 @@ def get_page(path: str) -> dict:
         f"{cur_language}/children/?url={path}&depth=0"
     )
     encoded_url = quote(pages_url, safe=':/=?&')
-    LOGGER.debug("Pages url-%s", pages_url)
-    LOGGER.debug("Encoded url-%s", encoded_url)
     return requests.get(encoded_url, timeout=15, headers=headers).json()[0]
 
 async def async_get_page(session: aiohttp.ClientSession, path: str, retry: int = 0) -> dict:

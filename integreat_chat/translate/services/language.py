@@ -133,8 +133,8 @@ class LanguageService:
         self.message = soup.get_text()
         urls = re.findall(r"(https?://[^\s]+)", self.message)
         self.placeholders = {}
-        for url in urls:
-            placeholder = f"_STR_URL_{len(self.placeholders)}_"
+        for index, url in enumerate(urls):
+            placeholder = f"_STR_URL_{index}_"
             self.message = self.message.replace(url, placeholder)
             self.placeholders[placeholder] = url
 
