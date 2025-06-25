@@ -2,11 +2,14 @@
 Integreat CMS helper functions
 """
 import asyncio
+import logging
 from urllib.parse import quote
 
 import aiohttp
 import requests
 from django.conf import settings
+
+LOGGER = logging.getLogger("django")
 
 def get_region_languages(region: str) -> list[str]:
     """
@@ -34,6 +37,8 @@ def get_page(path: str) -> dict:
         f"{cur_language}/children/?url={path}&depth=0"
     )
     encoded_url = quote(pages_url, safe=':/=?&')
+    LOGGER.debug("Pages url-%s", pages_url)
+    LOGGER.debug("Encoded url-%s", encoded_url)
     return requests.get(encoded_url, timeout=15, headers=headers).json()[0]
 
 async def async_get_page(session: aiohttp.ClientSession, path: str, retry: int = 0) -> dict:
