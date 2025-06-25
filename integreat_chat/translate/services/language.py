@@ -142,6 +142,7 @@ class LanguageService:
         """
         Translate a link to target language from available CMS translations
         """
+        LOGGER.debug("URL to translate: %s", page_url)
         if not page_url.startswith("https://") and not page_url.startswith("http://"):
             LOGGER.debug("Link %s does not seem to be a valid url/, skipping translation", page_url)
             return page_url
