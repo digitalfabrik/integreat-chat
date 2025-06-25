@@ -232,7 +232,7 @@ class LanguageService:
             target_language,
             message
         )
-        translated_message = self.restore_links(translated_message)
+        translated_message = self.restore_links(translated_message, target_language)
         cache.set(cache_key, translated_message)
         return translated_message
 
