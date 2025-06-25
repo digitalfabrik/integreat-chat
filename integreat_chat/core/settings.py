@@ -16,7 +16,6 @@ import os
 from pathlib import Path
 
 from celery.schedules import crontab
-from langchain_huggingface import HuggingFaceEmbeddings
 
 config = configparser.ConfigParser()
 if os.path.isfile('/etc/integreat-chat.ini'):
@@ -100,12 +99,8 @@ RAG_FALLBACK_LANGUAGE = "en"
 SEARCH_MAX_DOCUMENTS = 15
 SEARCH_SCORE_THRESHOLD = 0.1
 SEARCH_MAX_PAGES = 10
-SEARCH_EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 OPENSEARCH_EMBEDDING_MODEL_NAME = (
     "huggingface/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-)
-SEARCH_EMBEDDING_MODEL = HuggingFaceEmbeddings(
-    model_name=SEARCH_EMBEDDING_MODEL_NAME, show_progress=False
 )
 SEARCH_EMBEDDING_MODEL_SUPPORTED_LANGUAGES = [
     "ar","bg","ca","cs","da","de","el","en","es","et","fa","fi","fr","gl","gu","he","hi",
