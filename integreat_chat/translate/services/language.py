@@ -131,7 +131,7 @@ class LanguageService:
         """
         soup = BeautifulSoup(self.message, "lxml")
         self.message = soup.get_text()
-        urls = re.findall(r"(https?://[^\s.,!?\"'()]+)", self.message)
+        urls = re.findall(r"(https?://[^\s]+)", self.message)
         self.placeholders = {}
         for index, url in enumerate(urls):
             placeholder = f"_STR_URL_{index}_"
