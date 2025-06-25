@@ -142,9 +142,9 @@ class LanguageService:
         """
         Translate a link to target language from available CMS translations
         """
-        LOGGER.debug("URL to translate: %s", page_url)
         if not page_url.startswith("https://") and not page_url.startswith("http://"):
-            LOGGER.debug("Link %s does not seem to be a valid url/, skipping translation", page_url)
+            LOGGER.debug("Link %s does not seem to be a valid url/, " \
+            "skipping translation", page_url)
             return page_url
         
         translations = get_page(page_url)["available_languages"]
@@ -152,6 +152,8 @@ class LanguageService:
         if target_language in available_languages:
             translated_path = translations[target_language]["path"]
             translated_link = f"https://{settings.INTEGREAT_APP_DOMAIN}{translated_path}"
+            LOGGER.debug("Translated link to %s in message: %s", 
+                         target_language, translated_link)
         else:
             LOGGER.debug(
                 "No translation for %s in %s, using original link",
@@ -167,9 +169,7 @@ class LanguageService:
         """
         for placeholder, url in self.placeholders.items():
             translated_url = self.translate_link(url, target_language)
-            LOGGER.debug("Before Translation Message, URL: %s", translated_message)
             translated_message = translated_message.replace(placeholder, translated_url)
-            LOGGER.debug("Translated message: %s", translated_message)
         return translated_message
 
     def translate_message_llm_wrapper(

@@ -2,14 +2,11 @@
 Integreat CMS helper functions
 """
 import asyncio
-import logging
 from urllib.parse import quote
 
 import aiohttp
 import requests
 from django.conf import settings
-
-LOGGER = logging.getLogger("django")
 
 def get_region_languages(region: str) -> list[str]:
     """
