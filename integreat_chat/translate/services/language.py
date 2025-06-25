@@ -19,6 +19,7 @@ from integreat_chat.chatanswers.services.llmapi import (
 
 from ..static.prompts import Prompts
 from ..static.language_classification_map import LANGUAGE_CLASSIFICATION_MAP
+from integreat_chat.core.utils.integreat_cms import get_page
 
 LOGGER = logging.getLogger("django")
 
@@ -137,11 +138,34 @@ class LanguageService:
             self.message = self.message.replace(url, placeholder)
             self.placeholders[placeholder] = url
 
-    def restore_links(self, translated_message: str) -> str:
+    def translate_link(self, page_url: str, target_language: str) -> str:
         """
-        Replace placeholders back to URLs
+        Translate a link to target language from available CMS translations
+        """
+        if not page_url.startswith("https://") and not page_url.startswith("http://"):
+            LOGGER.debug("Link %s does not seem to be a valid url/, skipping translation", page_url)
+            return page_url
+        
+        translations = get_page(page_url)["available_languages"]
+        available_languages = list(translations.keys())
+        if target_language in available_languages:
+            translated_path = translations[target_language]["path"]
+            translated_link = f"https://{settings.INTEGREAT_APP_DOMAIN}{translated_path}"
+        else:
+            LOGGER.debug(
+                "No translation for %s in %s, using original link",
+                page_url, target_language
+            )
+            translated_link = page_url
+
+        return translated_link
+
+    def restore_links(self, translated_message: str, target_language: str) -> str:
+        """
+        Replace placeholders back to URLs after translation
         """
         for placeholder, url in self.placeholders.items():
+            url = self.translate_link(url, target_language)
             translated_message = translated_message.replace(placeholder, url)
         return translated_message
 
