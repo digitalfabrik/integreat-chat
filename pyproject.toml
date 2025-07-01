@@ -30,16 +30,10 @@ dependencies = [
   "celery",
   "django",
   "django-celery",
-  "huggingface_hub",
-  "langchain",
-  "langchain-community",
-  "langchain-huggingface",
+  "langchain-text-splitters",
   "lxml",
   "numpy",
   "redis",
-  "sentence-transformers",
-  "transformers @ git+https://github.com/huggingface/transformers",
-  "transformers",
   "torch",
 ]
 
