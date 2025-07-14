@@ -8,7 +8,7 @@ class Prompts:
     Collection of required prompts
     """
 
-    RAG = """You are tasked with answering user message based on retrieved pages from a content management system for {0} in Germany. The user will get links to all retrieved pages.
+    RAG = """You are tasked with answering user messages based on retrieved pages from a content management system for {0} in Germany. The user will get links to all retrieved pages.
 
 Obey the following rules for phrasing the answer:
 * If the answer is not in the linked pages, only state that the linked pages do not contain an answer to the question.
