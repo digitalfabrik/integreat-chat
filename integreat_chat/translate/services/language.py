@@ -142,7 +142,8 @@ class LanguageService:
         """
         Translate a link to target language from available CMS translations
         """
-        if not page_url.startswith("https://") and not page_url.startswith("http://"):
+        if (not page_url.startswith(f"https://{settings.INTEGREAT_APP_DOMAIN}") and
+            not page_url.startswith(f"http://{settings.INTEGREAT_APP_DOMAIN}")):
             LOGGER.debug("Link %s does not seem to be a valid url/, " \
             "skipping translation", page_url)
             return page_url

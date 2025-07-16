@@ -33,7 +33,7 @@ def get_page(path: str) -> dict:
         f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/{region}/"
         f"{cur_language}/children/?url={path}&depth=0"
     )
-    encoded_url = quote(pages_url, safe=':/=?&')
+    encoded_url = quote(requests.utils.unquote(pages_url), safe=':/=?&')
     return requests.get(encoded_url, timeout=15, headers=headers).json()[0]
 
 async def async_get_page(session: aiohttp.ClientSession, path: str, retry: int = 0) -> dict:
