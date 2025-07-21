@@ -47,10 +47,10 @@ Response Format:
 
     CHECK_QUESTION = """### Task
 You are part of a retrieval-augmented generation system. Determine whether the **last message in a conversation** requires a response.
-You will be given up to 3 messages, the final message is the most important. Prior messages may provide context but should only be used
-if they clarify the intent. Finally, provide a summary of the message that can be used for searching documents and in a prompt to generate
-an answer. For the summary, leave out too specific personal details and only include generic information that can be found in a knowledge
-base.
+You will be given up to 3 messages, the final message is the one that needs answering. Prior messages may provide context but should 
+only be used if they clarify an otherwise unclear question. Finally, provide a summary of the message that can be used for searching
+documents and in a prompt to generate an answer. For the summary, leave out too specific personal details and only include generic
+information that can be found in a knowledge base.
 
 ### Acceptance Criteria
 Accept messages that:
