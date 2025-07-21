@@ -47,10 +47,8 @@ Response Format:
 
     CHECK_QUESTION = """### Task
 You are part of a retrieval-augmented generation system. Determine whether the **last message in a conversation** requires a response.
-You will be given up to 3 messages, the final message is the one that needs answering. Prior messages may provide context but should 
-only be used if they clarify an otherwise unclear question. Finally, provide a summary of the message that can be used for searching
-documents and in a prompt to generate an answer. For the summary, leave out too specific personal details and only include generic
-information that can be found in a knowledge base.
+You will be given up to 3 messages, the final message is the one that needs answering. If the last message is unclear, the previous messages
+can be used for context.
 
 ### Acceptance Criteria
 Accept messages that:
@@ -62,9 +60,9 @@ Reject messages that:
 - Lack a clear request or actionable intent.
 
 ### Processing Steps
-1. If needed, use previous messages for context, but do not introduce new information.
-2. Determine if the last message is actionable.
-3. Summarize the message into a short sentence or question.
+1. Determine if the last message is actionable.
+2. Summarize the last message into a short sentence or question. Leave out too specific personal details and only include generic
+information that can be found in a knowledge base.
 
 ### Output Format
 Respond with a JSON object:
