@@ -61,7 +61,7 @@ class IntegreatRequest:
         else:
             messages = data["messages"]
         self.messages = []
-        for message in messages:
+        for message in messages[-settings.RAG_CONTEXT_MAX_MESSAGES:]:
             if message["role"] != "user":
                 continue
             try:

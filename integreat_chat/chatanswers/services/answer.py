@@ -52,7 +52,9 @@ class AnswerService:
         else:
             prompt = LlmPrompt(
                 settings.LANGUAGE_CLASSIFICATION_MODEL,
-                [LlmMessage(Prompts.CHECK_QUESTION, role="system")] + self.rag_request.messages,
+                [LlmMessage(Prompts.CHECK_QUESTION.format(
+                    settings.RAG_CONTEXT_MAX_MESSAGES
+                ), role="system")] + self.rag_request.messages,
                 json_schema = Prompts.CHECK_QUESTION_SCHEMA
             )
             response = json.loads(asyncio.run(
