@@ -30,6 +30,7 @@ class Document:
         self.score = score
         self.chunk = chunk
         self.parent_titles = parent_titles
+        self.include_in_answer = include_in_answer
         self.enrich(page)
 
     def enrich(self, page: dict|None):
