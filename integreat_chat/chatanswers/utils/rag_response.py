@@ -77,6 +77,8 @@ class RagResponse:
                 {
                     "source": document.chunk_source_path,
                     "score": document.score,
+                    "included_in_answer": document.include_in_answer,
+                    "reason_inclusion": document.reason_inclusion,
                     "context": document.content,
                 }
                 for document in self.documents
