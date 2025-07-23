@@ -23,6 +23,7 @@ class Document:
             parent_titles: list[str],
             page: dict|None,
             gui_language: str
+            include_in_answer: bool = False
         ):
         self.chunk_source_path = source_path
         self.gui_language = gui_language
@@ -85,6 +86,7 @@ class Document:
             "score": self.score,
             "found_chunk": self.chunk,
             "chunk_path": self.chunk_source_path,
+            "include_in_answer": self.include_in_answer,
         }
         if self.title is not None:
             result["title"] = self.title
