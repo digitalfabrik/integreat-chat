@@ -37,3 +37,4 @@ Major issues that have to be addressed:
 ## Zammad
 
 For details about the Zammad configuration, read the [ZAMMAD_CONFIG.md](./ZAMMAD_CONFIG.md)
+
