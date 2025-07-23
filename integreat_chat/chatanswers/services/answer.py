@@ -137,6 +137,7 @@ class AnswerService:
             [
                 f"# {' > '.join(result.parent_titles + [result.title])}\n{result.content}"
                 for result in documents
+                if result.include_in_answer
             ]
         )[: settings.RAG_CONTEXT_MAX_LENGTH]
 
@@ -216,7 +217,6 @@ class AnswerService:
                     )
                 ))
             llmresponses = await asyncio.gather(*tasks)
-        kept_documents = []
         for i, response in enumerate(llmresponses):
             llm_response = LlmResponse(response)
             LOGGER.info(
@@ -225,8 +225,9 @@ class AnswerService:
                 str(llm_response)
             )
             if str(llm_response).lower().startswith("yes"):
-                kept_documents.append(search_results[i])
-        return kept_documents
+                search_results[i].include_in_answer = True
+            search_results[i].reason_inclusion = str(llm_response)
+        return search_results
 
     def detect_request_human(self) -> bool:
         """
