@@ -22,7 +22,7 @@ class Document:
             score: float,
             parent_titles: list[str],
             page: dict|None,
-            gui_language: str
+            gui_language: str,
             include_in_answer: bool = False
         ):
         self.chunk_source_path = source_path
