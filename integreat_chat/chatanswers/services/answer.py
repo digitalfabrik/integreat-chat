@@ -219,7 +219,6 @@ class AnswerService:
                 str(llm_response)
             )
             if str(llm_response).lower().startswith("yes"):
-                # kept_documents.append(search_results[i])
                 search_results[i].include_in_answer = True
         return search_results
 
