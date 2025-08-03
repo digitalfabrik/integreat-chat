@@ -1,0 +1,5 @@
+Contact: mailto:security@tuerantuer.org
+Expires: 2026-12-31T23:59:00+00:00
+Preferred-Languages: en, de
+Policy: https://security.tuerantuer.org/policy.txt
+Acknowledgments: https://security.tuerantuer.org/acknowledgements.html
