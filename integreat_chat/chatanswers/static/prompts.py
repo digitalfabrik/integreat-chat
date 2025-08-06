@@ -59,9 +59,14 @@ Reject messages that:
 - Are too vague or generic (e.g., "I need help," "I have a question").
 - Lack a clear request or actionable intent.
 
-### Processing Steps
+### Instructions for summarizing the user question
+- Clear questions like "Where can I learn German?" do not need additional context from previous messages and can be taken as is.
+- If the current message is "for work" and the previous message reads "I need to learn German", then a suitable summary would be "how to learn German for work?".
+- Three messages like "Hello, my name is Max", "I need help" and the last message reads "I'm ill", a summary would be "I need help because I'm ill".
+
+### Your Processing Steps
 1. Determine if the last message is actionable.
-2. Summarize the last message into a short sentence or question. Leave out too specific personal details and only include generic
+2. Summarize the last user message into a short sentence or question. Leave out too specific personal details and only include generic
 information that can be found in a knowledge base.
 
 ### Output Format
