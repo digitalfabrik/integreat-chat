@@ -62,8 +62,11 @@ class RagResponse:
         """
         Response suitable for returning as JSON
         """
+        translated_answer = str(self)
         return {
-            "answer": str(self),
+            "answer": translated_answer,
+            "length_generated_answer": len(self.rag_response.split(" ")) + 1,
+            "length_final_message": len(translated_answer.split(" ")) + 1,
             "status": "success",
             "messages": [message.as_dict() for message in self.request.messages],
             "rag_message": self.request.search_term,
