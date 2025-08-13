@@ -22,13 +22,15 @@ class Document:
             score: float,
             parent_titles: list[str],
             page: dict|None,
-            gui_language: str
+            gui_language: str,
+            include_in_answer: bool = False
         ):
         self.chunk_source_path = source_path
         self.gui_language = gui_language
         self.score = score
         self.chunk = chunk
         self.parent_titles = parent_titles
+        self.include_in_answer = include_in_answer
         self.enrich(page)
 
     def enrich(self, page: dict|None):
@@ -85,6 +87,7 @@ class Document:
             "score": self.score,
             "found_chunk": self.chunk,
             "chunk_path": self.chunk_source_path,
+            "include_in_answer": self.include_in_answer,
         }
         if self.title is not None:
             result["title"] = self.title
