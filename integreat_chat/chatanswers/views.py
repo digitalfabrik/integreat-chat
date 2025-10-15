@@ -33,3 +33,22 @@ def chat(request):
         except ValueError as exc:
             rag_response = {"status": "error", "message": str(exc)}
     return JsonResponse(rag_response)
+
+@csrf_exempt
+def transform_message(request):
+    """
+    Transform a user message to be more suitable for search. Expects a JSON body with message
+    and language attributes
+    """
+    rag_response = {"status": "error", "message": "unsupported method"}
+    if (
+        request.method in ("POST")
+        and request.META.get("CONTENT_TYPE").lower() == "application/json"
+    ):
+        try:
+            rag_request = RagRequest(json.loads(request.body))
+            answer_service = AnswerService(rag_request)
+            response = answer_service.transform_message().as_dict()
+        except ValueError as exc:
+            response = {"status": "error", "message": str(exc)}
+    return JsonResponse(response)

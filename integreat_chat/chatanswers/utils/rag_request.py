@@ -31,6 +31,7 @@ class RagRequest(IntegreatRequest):
         """
         return {
             "messages": [message.as_dict() for message in self.messages],
+            "search_term": self.search_term,
             "extracted_question": self.search_term,
             "rag_language": self.first_message.use_language,
             "gui_language": self.gui_language,

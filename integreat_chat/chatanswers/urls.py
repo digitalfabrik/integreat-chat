@@ -4,4 +4,5 @@ from . import views
 urlpatterns = [
     path("extract_answer/", views.chat, name="extract_answer"),
     path("chat/", views.chat, name="chat"),
+    path("transform_message/", views.transform_message, name="transform_message"),
 ]

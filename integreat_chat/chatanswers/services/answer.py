@@ -234,3 +234,21 @@ class AnswerService:
         ))
         LOGGER.debug("Finished checking if user requests human. Response: %s", response)
         return response.lower().startswith("yes")
+
+    def transform_message(self) -> RagResponse:
+        """
+        Transform a user message to be more suitable for search.
+        """
+        prompt = LlmPrompt(
+            settings.LANGUAGE_CLASSIFICATION_MODEL,
+            [LlmMessage(Prompts.CHECK_QUESTION, role="system")] + self.rag_request.messages,
+            json_schema = Prompts.CHECK_QUESTION_SCHEMA
+        )
+
+        response = json.loads(asyncio.run(
+            self.llm_api.chat_prompt_session_wrapper(prompt)
+        )["choices"][0]["message"]["content"])
+        if response["accept_message"]:
+            self.rag_request.search_term = response["summarized_user_question"]
+            LOGGER.debug("Message requires response.")
+        return self.rag_request
