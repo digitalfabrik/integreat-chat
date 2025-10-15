@@ -46,28 +46,31 @@ Response Format:
 
 
     CHECK_QUESTION = """### Task
-You are part of a retrieval-augmented generation (RAG) system. You will be given up to 3 user messages (oldest → newest). Your job:
-1. Identify **distinct intents** in the provided messages.
-2. For each intent decide whether it **requires a response** (accept_message: true/false).
-3. Provide a **short summary** for an intent only if the intent is unclear, ambiguous, or depends on context from earlier messages.
-4. If multiple messages refer to the same topic, merge them into one intent.
+You are part of a retrieval-augmented generation (RAG) system.  
+Your goal is to analyze up to 3 user messages and produce a structured list of **distinct intents** that may appear:
+1. Across multiple messages, and/or  
+2. Within a single message containing multiple requests.
 
-### Definitions
-- Intent = a unit of user need, request, question, or emergency.
-- Clear intent = a single, actionable question (no summary needed).
-- Contextual intent = requires merging earlier messages to form a clear request (summarize).
-- Vague/social = greeting, filler, or too-general statements with no actionable request (reject).
-- Emergency = immediate risk to life or safety (always accept; mark as emergency in summary).
+Each intent should describe one specific user goal or question.
 
-### Processing steps (for the model)
-1. Read all messages (in order).
-2. Group messages by topic (same topic → single intent).
-3. For each group:
-   a. Decide `accept_message` (true if actionable / urgent / clearly requesting help; false if vague).  
-   b. If the group is clear and self-contained, set `summarized_user_question` to the concise question (no extra words).  
-   c. If the group is ambiguous or depends on prior context, produce a short contextual summary (one line) that removes personal details and keeps only what a KB needs.
-   d. If emergency, prefix the summary with `emergency:` (e.g., `emergency: suicidal thoughts`).
-4. Output a JSON object containing all intents (see format below).
+### Acceptance Criteria
+Accept intents that:
+- Are explicit or implicit questions (e.g., “Where can I learn German?” or “I need a doctor”).
+- Express a concrete need or goal.
+- Indicate an emergency or psychological distress (e.g., suicidal thoughts).
+
+Reject intents that:
+- Are vague, incomplete, or purely social (e.g., “Hi”, “I have a question”, “Help”).
+- Lack any actionable information.
+
+### Instructions
+- Detect **multiple intents even within a single user message** (e.g., “I need a job and housing” → two intents: `find a job`, `find housing`).
+- Merge related messages that share the same topic into one intent (e.g., “I need to learn German” + “for work” → `how to learn German for work`).
+- Keep each intent independent — one intent = one line of thought or topic.
+- Summarize **only** when needed:
+  - If an intent is already clear, keep it as-is.
+  - If context from previous messages is required, merge and summarize concisely.
+- For emergencies, prefix with `"emergency:"` in the summary.
 
 ### Output format (exact)
 Return a single JSON object:
