@@ -245,10 +245,38 @@ class AnswerService:
             json_schema = Prompts.CHECK_QUESTION_SCHEMA
         )
 
-        response = json.loads(asyncio.run(
+        raw_response = json.loads(asyncio.run(
             self.llm_api.chat_prompt_session_wrapper(prompt)
         )["choices"][0]["message"]["content"])
-        if response["accept_message"]:
-            self.rag_request.search_term = response["summarized_user_question"]
-            LOGGER.debug("Message requires response.")
+
+        response = json.loads(raw_response)
+
+        intents = response.get("intents", [])
+        actionable_intents = [
+            intent for intent in intents if intent.get("accept_message")
+        ]
+
+        if actionable_intents:
+            # Combine multiple accepted intents into one search term string
+            # or adapt as needed by your retrieval pipeline
+            summarized_terms = [
+                intent["summarized_user_question"].strip()
+                for intent in actionable_intents
+                if intent.get("summarized_user_question")
+            ]
+
+            # You can decide how to combine them:
+            # Option 1: join into one combined string (for simple RAG)
+            self.rag_request.search_term = " | ".join(summarized_terms)
+
+            # Option 2 (alternative): store as a list if your pipeline supports it
+            # self.rag_request.search_terms = summarized_terms
+
+            LOGGER.debug(
+                f"Accepted {len(actionable_intents)} intents. "
+                f"Search terms: {self.rag_request.search_term}"
+            )
+        else:
+            LOGGER.debug("No actionable user intents found.")
+
         return self.rag_request

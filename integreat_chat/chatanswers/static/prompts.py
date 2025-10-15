@@ -46,56 +46,77 @@ Response Format:
 
 
     CHECK_QUESTION = """### Task
-You are part of a retrieval-augmented generation system. Determine whether the **last message in a conversation** requires a response.
-You will be given up to 3 messages, the final message is the one that needs answering. If the last message is unclear, the previous messages
-can be used for context.
+You are part of a retrieval-augmented generation (RAG) system. You will be given up to 3 user messages (oldest → newest). Your job:
+1. Identify **distinct intents** in the provided messages.
+2. For each intent decide whether it **requires a response** (accept_message: true/false).
+3. Provide a **short summary** for an intent only if the intent is unclear, ambiguous, or depends on context from earlier messages.
+4. If multiple messages refer to the same topic, merge them into one intent.
 
-### Acceptance Criteria
-Accept messages that:
-- Are a clear and concise question, OR
-- Indicate a need, OR
-- Indicate a psychological or medical emergency (e.g. thoughts of suicide).
-Reject messages that:
-- Are too vague or generic (e.g., "I need help," "I have a question").
-- Lack a clear request or actionable intent.
+### Definitions
+- Intent = a unit of user need, request, question, or emergency.
+- Clear intent = a single, actionable question (no summary needed).
+- Contextual intent = requires merging earlier messages to form a clear request (summarize).
+- Vague/social = greeting, filler, or too-general statements with no actionable request (reject).
+- Emergency = immediate risk to life or safety (always accept; mark as emergency in summary).
 
-### Instructions for summarizing the user question
-- Clear questions like "Where can I learn German?" do not need additional context from previous messages and can be taken as is.
-- If the current message is "for work" and the previous message reads "I need to learn German", then a suitable summary would be "how to learn German for work?".
-- Three messages like "Hello, my name is Max", "I need help" and the last message reads "I'm ill", a summary would be "I need help because I'm ill".
+### Processing steps (for the model)
+1. Read all messages (in order).
+2. Group messages by topic (same topic → single intent).
+3. For each group:
+   a. Decide `accept_message` (true if actionable / urgent / clearly requesting help; false if vague).  
+   b. If the group is clear and self-contained, set `summarized_user_question` to the concise question (no extra words).  
+   c. If the group is ambiguous or depends on prior context, produce a short contextual summary (one line) that removes personal details and keeps only what a KB needs.
+   d. If emergency, prefix the summary with `emergency:` (e.g., `emergency: suicidal thoughts`).
+4. Output a JSON object containing all intents (see format below).
 
-### Your Processing Steps
-1. Determine if the last message is actionable.
-2. Summarize the last user message into a short sentence or question. Leave out too specific personal details and only include generic
-information that can be found in a knowledge base.
-
-### Output Format
-Respond with a JSON object:
+### Output format (exact)
+Return a single JSON object:
 
 {
-  "accept_message": (true/false),
-  "summarized_user_question": "keyword or empty string",
+  "intents": [
+    {
+      "accept_message": true|false,
+      "summarized_user_question": "short summary or empty string"
+    },
+    ...
+  ]
 }
-```
+
+Notes:
+- Maintain the order of intents as they appear (first → last).
+- Use empty string for `summarized_user_question` when rejecting/vague.
+- Keep summary ≤ 12 words where possible.
 """
 
     CHECK_QUESTION_SCHEMA = {
-        "name": "user_question_classification",
-        "schema": {
-            "type": "object",
-            "properties": {
-                "accept_message": {
-                    "type": "boolean"
+    "name": "user_question_classification",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "intents": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "accept_message": {
+                            "type": "boolean"
+                        },
+                        "summarized_user_question": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["accept_message", "summarized_user_question"],
+                    "additionalProperties": False
                 },
-                "summarized_user_question": {
-                    "type": "string"
-                }
-            },
-            "required": ["accept_message", "summarized_user_question"],
-            "additionalProperties": False,
+                "minItems": 1
+            }
         },
-        "strict": True,
+        "required": ["intents"],
+        "additionalProperties": False
+    },
+    "strict": True,
     }
+
 
     OPTIMIZE_MESSAGE = """Please summarize the following text into one terse sentence or question. Only answer with the summary, no text around it.
 
