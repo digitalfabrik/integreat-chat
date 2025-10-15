@@ -245,13 +245,11 @@ class AnswerService:
             json_schema = Prompts.CHECK_QUESTION_SCHEMA
         )
 
-        raw_response = json.loads(asyncio.run(
+        response = json.loads(asyncio.run(
             self.llm_api.chat_prompt_session_wrapper(prompt)
         )["choices"][0]["message"]["content"])
 
-        response = json.loads(raw_response)
-
-        intents = response.get("intents", [])
+        intents = response["intents"]
         actionable_intents = [
             intent for intent in intents if intent.get("accept_message")
         ]
