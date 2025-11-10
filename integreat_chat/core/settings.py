@@ -41,7 +41,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'handlers': {
         'apache': {
-            'level': 'DEBUG' if DEBUG else config["DEFAULT"]["LOG_LEVEL"],
+            'level': 'DEBUG' if DEBUG else config["MAIN"]["LOG_LEVEL"],
             'class': 'logging.StreamHandler',
             'stream': 'ext://sys.stderr',  # Logs to Apache's error log
         },
@@ -49,20 +49,20 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['apache'],
-            'level': 'DEBUG' if DEBUG else config["DEFAULT"]["LOG_LEVEL"],
+            'level': 'DEBUG' if DEBUG else config["MAIN"]["LOG_LEVEL"],
             'propagate': True,
         },
     },
 }
 
 ALLOWED_HOSTS = (
-    config["DEFAULT"]["ALLOWED_HOSTS"].split(",") if "ALLOWED_HOSTS" in config["DEFAULT"] else ["127.0.0.1"]
+    config["MAIN"]["ALLOWED_HOSTS"].split(",") if "ALLOWED_HOSTS" in config["MAIN"] else ["127.0.0.1"]
 )
 
-INTEGREAT_CMS_DOMAIN = config["DEFAULT"]["INTEGREAT_CMS_DOMAIN"]
-INTEGREAT_APP_DOMAIN = config["DEFAULT"]["INTEGREAT_APP_DOMAIN"]
+INTEGREAT_CMS_DOMAIN = config["MAIN"]["INTEGREAT_CMS_DOMAIN"]
+INTEGREAT_APP_DOMAIN = config["MAIN"]["INTEGREAT_APP_DOMAIN"]
 
-INTEGREAT_REGIONS = [region.strip() for region in config["REGIONS"].keys()]
+INTEGREAT_REGIONS = [region.strip() for region in config.options('REGIONS')]
 INTEGREAT_REGION_NAMES = {region:config["REGIONS"][region] for region in config["REGIONS"].keys()}
 
 # Configuration Variables for answer service
@@ -81,12 +81,12 @@ RAG_SCORE_THRESHOLD = 0.1
 RAG_MAX_PAGES = 3
 RAG_MODEL = "llama3.3"
 RAG_RELEVANCE_CHECK = (
-        config["DEFAULT"]["RAG_RELEVANCE_CHECK"] if
-        "RAG_RELEVANCE_CHECK" in config["DEFAULT"] else "True"
+        config["MAIN"]["RAG_RELEVANCE_CHECK"] if
+        "RAG_RELEVANCE_CHECK" in config["MAIN"] else "True"
     ) == "True"
 RAG_HUMAN_REQUEST_CHECK = (
-        config["DEFAULT"]["RAG_HUMAN_REQUEST_CHECK"] if
-        "RAG_HUMAN_REQUEST_CHECK" in config["DEFAULT"] else "True"
+        config["MAIN"]["RAG_HUMAN_REQUEST_CHECK"] if
+        "RAG_HUMAN_REQUEST_CHECK" in config["MAIN"] else "True"
     ) == "True"
 RAG_RELEVANCE_CHECK_MODEL = "llama3.3"
 RAG_QUERY_OPTIMIZATION = True
@@ -243,13 +243,13 @@ CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 60 * 60 * 1
 CELERY_BROKER_URL = (
-        config["DEFAULT"]["CELERY_REDIS_URL"] if
-        "CELERY_REDIS_URL" in config["DEFAULT"]
+        config["MAIN"]["CELERY_REDIS_URL"] if
+        "CELERY_REDIS_URL" in config["MAIN"]
         else "redis://localhost:6379/0"
 )
 CELERY_RESULT_BACKEND = (
-        config["DEFAULT"]["CELERY_RESULT_BACKEND"] if
-        "CELERY_RESULT_BACKEND" in config["DEFAULT"]
+        config["MAIN"]["CELERY_RESULT_BACKEND"] if
+        "CELERY_RESULT_BACKEND" in config["MAIN"]
         else "redis://localhost:6379/0"
 )
 CELERY_BEAT_SCHEDULE = {
