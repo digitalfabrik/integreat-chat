@@ -3,6 +3,7 @@ Setup and use of OpenSearch
 """
 
 import hashlib
+import logging
 import time
 from datetime import timedelta, datetime
 
@@ -10,6 +11,9 @@ import requests
 from django.conf import settings
 from langchain_text_splitters import HTMLHeaderTextSplitter
 from integreat_chat.core.utils.integreat_cms import get_all_pages, get_parent_page_titles
+
+LOGGER = logging.getLogger(__name__)
+
 
 class OpenSearch:
     """
@@ -189,7 +193,11 @@ class OpenSearch:
                 }
             }
         }
-        return self.request(f"/{index}/_delete_by_query", payload, "POST")["deleted"]
+        response = self.request(f"/{index}/_delete_by_query", payload, "POST")
+        if "deleted" in response:
+            return response["deleted"]
+        LOGGER.warning("Did not delete any pages, response:\n%s", str(response))
+        return 0
 
     def index_chunk(self, index: str, chunk: str, page: dict, parent_title: str) -> None:
         """
