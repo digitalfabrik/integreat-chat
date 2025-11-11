@@ -97,7 +97,7 @@ class AnswerService:
             settings.RAG_MAX_PAGES * 2,
             min_score=settings.RAG_SCORE_THRESHOLD,
         ).documents
-        documents = self.filter_documents(search_results)[:settings.RAG_MAX_PAGES]
+        documents = self.filter_documents(search_results)
         if not documents and not shallow_search:
             self.rag_request.search_term = self.llm_api.simple_prompt(
                 Prompts.SHALLOW_SEARCH.format(
@@ -165,7 +165,10 @@ class AnswerService:
             settings.INTEGREAT_REGION_NAMES[self.region],
             self.language,
             self.rag_request.search_term,
-            self.format_context(documents)
+            self.format_context(
+                [document for document in documents if document.include_in_answer]
+                [:settings.RAG_MAX_PAGES]
+            )
         )
 
     def extract_answer(self) -> RagResponse:
