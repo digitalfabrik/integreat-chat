@@ -67,7 +67,7 @@ Reject messages that:
 ### Your Processing Steps
 1. Determine if the last message is actionable.
 2. Summarize the last user message into a short sentence or question. Leave out too specific personal details and only include generic
-information that can be found in a knowledge base.
+information that can be found in a knowledge base. Use the language 'LANG_CODE' for the summary.
 
 ### Output Format
 Respond with a JSON object:
@@ -117,7 +117,7 @@ User message: {0}
 """
 
     SHALLOW_SEARCH = """# Task
-You are part of a retrieval-augmented generation (RAG) system. In a previous search no relevant pages were found for a search term. We now want to run a more abstract search. Extract the general topic (one or two words) for a new search. Only return the best search term without any additional text.
+You are part of a retrieval-augmented generation (RAG) system. In a previous search no relevant pages were found for a search term. We now want to run a more abstract search. Extract the general topic (one or two words) for a new search. Only return the best search term without any additional text. Use the language '{0}' for the search term.
 ## Examples
 - "Finding a job as a medical doctor" to "Finding jobs"
 - "medical treatment for flu" to "medical consultation"
@@ -125,5 +125,5 @@ You are part of a retrieval-augmented generation (RAG) system. In a previous sea
 - "asylum request was denied after 2 years" to "asylum process"
 - "Homeschooling in Germany" to "schooling"
 ## Search Term
-{0}
+{1}
 """

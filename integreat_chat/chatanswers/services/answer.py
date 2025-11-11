@@ -50,9 +50,13 @@ class AnswerService:
             automatic_answer = False
             message = Messages.TALK_TO_HUMAN
         else:
+            prompt_text = Prompts.CHECK_QUESTION.replace(
+                    "LANG_CODE",
+                    str(self.rag_request.last_message.use_language)
+                )
             prompt = LlmPrompt(
                 settings.LANGUAGE_CLASSIFICATION_MODEL,
-                [LlmMessage(Prompts.CHECK_QUESTION, role="system")] + self.rag_request.messages,
+                [LlmMessage(prompt_text, role="system")] + self.rag_request.messages,
                 json_schema = Prompts.CHECK_QUESTION_SCHEMA
             )
             response = json.loads(asyncio.run(
@@ -96,7 +100,10 @@ class AnswerService:
         documents = self.filter_documents(search_results)[:settings.RAG_MAX_PAGES]
         if not documents and not shallow_search:
             self.rag_request.search_term = self.llm_api.simple_prompt(
-                Prompts.SHALLOW_SEARCH.format(self.rag_request.search_term)
+                Prompts.SHALLOW_SEARCH.format(
+                    self.rag_request.last_message.use_language,
+                    self.rag_request.search_term
+                )
             )
             LOGGER.debug(
                 "No documents found, trying shallow search: %s.",
