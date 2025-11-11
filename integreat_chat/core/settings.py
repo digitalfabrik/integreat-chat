@@ -95,6 +95,10 @@ RAG_CONTEXT_MAX_LENGTH = 8000
 RAG_SUPPORTED_LANGUAGES = ["en", "de"]
 RAG_FALLBACK_LANGUAGE = "en"
 
+# Limit number of messages processed. The last N messages will be used.
+REQUEST_MAX_MESSAGES = 10
+
+
 # SEARCH_MAX_DOCUMENTS - number of documents retrieved from the VDB
 SEARCH_MAX_DOCUMENTS = 15
 SEARCH_SCORE_THRESHOLD = 0.1

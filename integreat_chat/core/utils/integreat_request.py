@@ -59,7 +59,7 @@ class IntegreatRequest:
         if "message" in data:
             messages = [{"content": data["message"], "role": "user"}]
         else:
-            messages = data["messages"]
+            messages = data["messages"][-(settings.REQUEST_MAX_MESSAGES):]
         self.messages = []
         for message in messages:
             if message["role"] != "user":
