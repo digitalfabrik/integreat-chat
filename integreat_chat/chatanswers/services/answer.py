@@ -224,8 +224,7 @@ class AnswerService:
                 search_results[i].gui_source_path,
                 str(llm_response)
             )
-            if str(llm_response).lower().startswith("yes"):
-                search_results[i].include_in_answer = True
+            search_results[i].include_in_answer = str(llm_response).lower().startswith("yes")
             search_results[i].reason_inclusion = str(llm_response)
         return search_results
 
