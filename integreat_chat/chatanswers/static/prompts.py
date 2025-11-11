@@ -18,7 +18,9 @@ Obey the following rules for phrasing the answer:
 
 User message: {2}
 
-Linked pages: {3}
+Linked pages: 
+---
+{3}
 """
 
     CHECK_DOCUMENT = """# Task
