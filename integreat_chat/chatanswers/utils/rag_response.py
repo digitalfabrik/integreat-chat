@@ -42,6 +42,8 @@ class RagResponse:
         """
         sources = []
         for document in self.documents:
+            if not document.include_in_answer:
+                continue
             if self.request.gui_language != self.request.last_message.use_language:
                 sources.append(
                     (document.get_source_for_language(self.request.gui_language))
