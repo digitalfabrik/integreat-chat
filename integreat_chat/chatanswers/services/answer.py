@@ -165,10 +165,7 @@ class AnswerService:
             settings.INTEGREAT_REGION_NAMES[self.region],
             self.language,
             self.rag_request.search_term,
-            self.format_context(
-                [document for document in documents if document.include_in_answer]
-                [:settings.RAG_MAX_PAGES]
-            )
+            self.format_context(documents)
         )
 
     def extract_answer(self) -> RagResponse:
@@ -183,11 +180,15 @@ class AnswerService:
         if response := self.skip_rag_answer(language_service):
             return response
         documents = self.get_documents()
-        no_answer_response = self.get_no_answer_response(language_service, documents)
-        if not documents:
+        rag_documents = (
+            [document for document in documents if document.include_in_answer]
+            [:settings.RAG_MAX_PAGES]
+        )
+        if not rag_documents:
+            no_answer_response = self.get_no_answer_response(language_service, documents)
             LOGGER.info("No documents found for : %s", self.rag_request.search_term)
             return no_answer_response
-        answer = self.llm_api.simple_prompt(self.format_rag_prompt(documents))
+        answer = self.llm_api.simple_prompt(self.format_rag_prompt(rag_documents))
         LOGGER.info(
             "Finished generating answer. Question: %s\nAnswer: %s",
             self.rag_request.search_term,
