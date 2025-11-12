@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 
 from celery.schedules import crontab
+from integreat_chat.core.utils.integreat_cms import get_integreat_regions
 
 config = configparser.ConfigParser()
 if os.path.isfile('/etc/integreat-chat.ini'):
@@ -62,8 +63,9 @@ ALLOWED_HOSTS = (
 INTEGREAT_CMS_DOMAIN = config["MAIN"]["INTEGREAT_CMS_DOMAIN"]
 INTEGREAT_APP_DOMAIN = config["MAIN"]["INTEGREAT_APP_DOMAIN"]
 
-INTEGREAT_REGIONS = [region.strip() for region in config.options('REGIONS')]
-INTEGREAT_REGION_NAMES = {region:config["REGIONS"][region] for region in config["REGIONS"].keys()}
+_regions_data = get_integreat_regions()
+INTEGREAT_REGIONS = _regions_data[0]
+INTEGREAT_REGION_NAMES = _regions_data[1]
 
 # Configuration Variables for answer service
 LANGUAGE_CLASSIFICATION_MODEL = "llama3.3"
