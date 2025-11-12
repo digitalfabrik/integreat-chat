@@ -49,8 +49,8 @@ Response Format:
 
     CHECK_QUESTION = """### Task
 You are part of a retrieval-augmented generation system. Determine whether the **last message in a conversation** requires a response.
-You will be given up to 3 messages, the final message is the one that needs answering. If the last message is unclear, the previous messages
-can be used for context.
+You will be given up to 3 messages, the final message is the one that needs answering. If the last message is contains an incopmlete
+question or partial sentence, the previous messages can be used for context.
 
 ### Acceptance Criteria
 Accept messages that:
@@ -61,7 +61,7 @@ Reject messages that:
 - Are too vague or generic (e.g., "I need help," "I have a question").
 - Lack a clear request or actionable intent.
 
-### Instructions for summarizing the user question
+### Examples for summarizing the user question
 - Clear questions like "Where can I learn German?" do not need additional context from previous messages and can be taken as is.
 - If the current message is "for work" and the previous message reads "I need to learn German", then a suitable summary would be "how to learn German for work?".
 - Three messages like "Hello, my name is Max", "I need help" and the last message reads "I'm ill", a summary would be "I need help because I'm ill".
