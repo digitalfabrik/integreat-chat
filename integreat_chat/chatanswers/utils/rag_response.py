@@ -70,7 +70,7 @@ class RagResponse:
             "length_generated_answer": len(self.rag_response.split(" ")) + 1,
             "length_final_message": len(translated_answer.split(" ")) + 1,
             "status": "success",
-            "messages": [message.as_dict() for message in self.request.messages],
+            "messages": [message.as_dict() for message in self.request.all_messages],
             "rag_message": self.request.search_term,
             "rag_language": self.request.first_message.use_language,
             "rag_sources": [document.chunk_source_path for document in self.documents],
