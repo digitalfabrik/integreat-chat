@@ -129,3 +129,8 @@ You are part of a retrieval-augmented generation (RAG) system. In a previous sea
 ## Search Term
 {1}
 """
+
+    CONTEXT_CHECK = """You're a compontent of a RAG system tasked with answering questions. Your job is to judge if a message contains an answerable question or if context from previous messages is required. Answer only with "yes", if more context is required and "no" if the message itself can be answered.
+
+User message: {0}
+"""
