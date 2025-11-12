@@ -38,6 +38,13 @@ class AnswerService:
         self.llm_model_name = settings.RAG_MODEL
         self.llm_api = LlmApiClient()
 
+    def message_requires_context(self) -> bool:
+        """
+        Check if the last message is a standalone message or requires context of previous messages
+        """
+        prompt = Prompts.CONTEXT_CHECK.format(self.rag_request.last_message.translated_message)
+        return self.llm_api.simple_prompt(prompt).startswith("yes")
+
     def skip_rag_answer(self, language_service: LanguageService) -> str|bool:
         """
         Check if a chat message is a question
@@ -54,9 +61,11 @@ class AnswerService:
                     "LANG_CODE",
                     str(self.rag_request.last_message.use_language)
                 )
+            num_messages = 3 if self.message_requires_context() else 1
             prompt = LlmPrompt(
                 settings.LANGUAGE_CLASSIFICATION_MODEL,
-                [LlmMessage(prompt_text, role="system")] + self.rag_request.messages,
+                [LlmMessage(prompt_text, role="system")] +
+                self.rag_request.messages[-num_messages:],
                 json_schema = Prompts.CHECK_QUESTION_SCHEMA
             )
             response = json.loads(asyncio.run(
