@@ -102,3 +102,19 @@ def get_parent_page_titles(region_slug: str, language_slug: str, path: str):
         f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/{region_slug}/{language_slug}/parents/?url={path}"
     )
     return requests.get(parents_url, timeout=30, headers=headers).json()
+
+def get_integreat_regions():
+    """
+    get all configured region names from Integreat CMS
+    """
+    headers = {"X-Integreat-Development": "true"}
+    regions_url = (
+        f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/regions/"
+    )
+    response = requests.get(regions_url, timeout=30, headers=headers).json()
+    chat_enabled_regions = [region for region in response if region.get("is_chat_enabled")]
+    
+    regions = [region["path"] for region in chat_enabled_regions]
+    region_names = {region["path"]: region["name_without_prefix"] for region in chat_enabled_regions}
+    
+    return regions, region_names
