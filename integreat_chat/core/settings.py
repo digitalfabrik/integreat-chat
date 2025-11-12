@@ -96,7 +96,7 @@ RAG_SUPPORTED_LANGUAGES = ["en", "de"]
 RAG_FALLBACK_LANGUAGE = "en"
 
 # Limit number of messages processed. The last N messages will be used.
-REQUEST_MAX_MESSAGES = 10
+REQUEST_MAX_MESSAGES = 6
 
 
 # SEARCH_MAX_DOCUMENTS - number of documents retrieved from the VDB

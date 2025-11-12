@@ -21,12 +21,14 @@ class ChatMessage:
             self,
             message: dict,
             integreat_request: "IntegreatRequest",
+            language_dection = True
         ):
         self.original_message = message["content"]
         self.role = message["role"]
         self.integreat_request = integreat_request
         self.hash = hashlib.sha256(self.original_message.encode("utf-8")).hexdigest()
-        warm_cache = self.translated_message  # pylint: disable=unused-variable
+        if language_dection:
+            _ = self.translated_message  # pylint: disable=unused-variable
 
     @property
     def likely_message_language(self) -> str:
