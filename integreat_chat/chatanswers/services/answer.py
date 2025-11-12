@@ -45,6 +45,78 @@ class AnswerService:
         prompt = Prompts.CONTEXT_CHECK.format(self.rag_request.last_message.translated_message)
         return self.llm_api.simple_prompt(prompt).startswith("yes")
 
+    def prepare_request_human_prompt(self) -> LlmPrompt:
+        """
+        Prepare prompt for checking if a human ist requested
+        """
+        return LlmPrompt(settings.RAG_RELEVANCE_CHECK_MODEL, [
+            LlmMessage(Prompts.HUMAN_REQUEST_CHECK.format(
+                self.rag_request.last_message.translated_message
+            ), "user")
+        ])
+
+    def prepare_summarize_prompt(self, num_messages: int) -> LlmPrompt:
+        """
+        Prepare prompt for message summary
+        """
+        prompt_text = Prompts.SUMMARIZE_MESSAGE.replace(
+            "LANG_CODE",
+            str(self.rag_request.last_message.use_language)
+        )
+        return LlmPrompt(settings.RAG_RELEVANCE_CHECK_MODEL,
+            [LlmMessage(prompt_text, role="system")] +
+            self.rag_request.messages[-num_messages:]
+        )
+
+    def prepare_accept_message_prompt(self, num_messages: int) -> LlmPrompt:
+        """
+        Prepare prompt for checking if a human ist requested
+        """
+        return LlmPrompt(settings.RAG_RELEVANCE_CHECK_MODEL,
+            [LlmMessage(Prompts.CHECK_QUESTION, role="system")] +
+            self.rag_request.messages[-num_messages:]
+        )
+
+    async def check_message_parallelized(self, num_messages: int) -> tuple[bool,str,bool]:
+        """
+        Check if a chat message is a question
+
+        :return: request human, summarized message, accept_message
+        """
+        tasks = []
+        async with aiohttp.ClientSession() as session:
+            # HUMAN_REQUEST_CHECK
+            tasks.append(
+                asyncio.create_task(self.llm_api.chat_prompt(
+                    session,
+                    self.prepare_request_human_prompt()
+                )
+            ))
+            LOGGER.debug("Sent HUMAN_REQUEST_CHECK")
+            # SUMMARIZE_MESSAGE
+            tasks.append(
+                asyncio.create_task(self.llm_api.chat_prompt(
+                    session,
+                    self.prepare_summarize_prompt(num_messages)
+                ))
+            )
+            LOGGER.debug("Sent SUMMARIZE_MESSAGE")
+            # CHECK_QUESTION
+            tasks.append(
+                asyncio.create_task(self.llm_api.chat_prompt(
+                    session,
+                    self.prepare_accept_message_prompt(num_messages)
+                ))
+            )
+            LOGGER.debug("Sent CHECK_QUESTION")
+            llmresponses = await asyncio.gather(*tasks)
+        LOGGER.debug("Gathered check responses")
+        return (
+            str(LlmResponse(llmresponses[0])).lower().startswith("yes"),
+            str(LlmResponse(llmresponses[1])),
+            str(LlmResponse(llmresponses[2])).lower().startswith("yes"),
+        )
+
     def skip_rag_answer(self, language_service: LanguageService) -> str|bool:
         """
         Check if a chat message is a question
@@ -52,27 +124,18 @@ class AnswerService:
         :param message: a user message
         :return: answer message if no further processing is required, else False
         """
+        num_messages = 3 if self.message_requires_context() else 1
+        LOGGER.debug("Using the last %s messages.", num_messages)
+        request_human, summary, accept_message = asyncio.run(
+            self.check_message_parallelized(num_messages)
+        )
         automatic_answer = True
-        if self.detect_request_human():
+        if request_human:
             automatic_answer = False
             message = Messages.TALK_TO_HUMAN
         else:
-            prompt_text = Prompts.CHECK_QUESTION.replace(
-                    "LANG_CODE",
-                    str(self.rag_request.last_message.use_language)
-                )
-            num_messages = 3 if self.message_requires_context() else 1
-            prompt = LlmPrompt(
-                settings.LANGUAGE_CLASSIFICATION_MODEL,
-                [LlmMessage(prompt_text, role="system")] +
-                self.rag_request.messages[-num_messages:],
-                json_schema = Prompts.CHECK_QUESTION_SCHEMA
-            )
-            response = json.loads(asyncio.run(
-                self.llm_api.chat_prompt_session_wrapper(prompt)
-            )["choices"][0]["message"]["content"])
-            if response["accept_message"]:
-                self.rag_request.search_term = response["summarized_user_question"]
+            if accept_message:
+                self.rag_request.search_term = summary
                 LOGGER.debug("Message requires response.")
                 return False
             message = Messages.NOT_QUESTION
@@ -92,7 +155,7 @@ class AnswerService:
 
         :param shallow_search: indicates that this is a shallow search.
         """
-        LOGGER.debug("Retrieving documents for: %s.", self.rag_request.search_term)
+        LOGGER.debug("Retrieving documents for: %s", self.rag_request.search_term)
         search_request = SearchRequest(
             {
                 "message": str(self.rag_request.search_term),
@@ -240,17 +303,3 @@ class AnswerService:
             search_results[i].include_in_answer = str(llm_response).lower().startswith("yes")
             search_results[i].reason_inclusion = str(llm_response)
         return search_results
-
-    def detect_request_human(self) -> bool:
-        """
-        Check if the user requests to talk to a human counselor or is asking a question
-        return: bool that indicates if the user requests a human or not
-        """
-        if not settings.RAG_HUMAN_REQUEST_CHECK:
-            return False
-        LOGGER.debug("Checking if user requests human intervention")
-        response = self.llm_api.simple_prompt(Prompts.HUMAN_REQUEST_CHECK.format(
-            self.rag_request.last_message.translated_message
-        ))
-        LOGGER.debug("Finished checking if user requests human. Response: %s", response)
-        return response.lower().startswith("yes")
