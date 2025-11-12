@@ -74,6 +74,7 @@ class RagResponse:
             "rag_message": self.request.search_term,
             "rag_language": self.request.last_user_message.use_language,
             "rag_sources": [document.chunk_source_path for document in self.documents],
+            "rag_search_terms": [self.request.search_term],
             "automatic_answers": self.automatic_answers,
             "details": [
                 {

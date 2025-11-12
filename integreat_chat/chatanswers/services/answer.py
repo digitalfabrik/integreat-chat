@@ -83,7 +83,7 @@ class AnswerService:
 
         :param shallow_search: indicates that this is a shallow search.
         """
-        LOGGER.debug("Retrieving documents for: %s.", self.rag_request.search_term)
+        LOGGER.info("Retrieving documents for: %s.", self.rag_request.search_term)
         search_request = SearchRequest(
             {
                 "message": str(self.rag_request.search_term),
