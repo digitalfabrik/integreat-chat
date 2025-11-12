@@ -60,17 +60,17 @@ class IntegreatRequest:
             messages = [{"content": data["message"], "role": "user"}]
         else:
             messages = data["messages"]
-        messages = []
+        parsed_messages = []
         for message in messages:
             try:
-                messages.append(ChatMessage(
+                parsed_messages.append(ChatMessage(
                     message,
                     self,
                     language_dection=(message["role"] == "user")
                 ))
             except ValueError:
                 LOGGER.error("Skipping message because language could not be classified.")
-        return messages
+        return parsed_messages
 
     @property
     def last_user_messages(self) -> list:
