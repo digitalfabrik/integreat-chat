@@ -72,7 +72,7 @@ class RagResponse:
             "status": "success",
             "messages": [message.as_dict() for message in self.request.all_messages],
             "rag_message": self.request.search_term,
-            "rag_language": self.request.first_user_message.use_language,
+            "rag_language": self.request.last_user_message.use_language,
             "rag_sources": [document.chunk_source_path for document in self.documents],
             "automatic_answers": self.automatic_answers,
             "details": [
