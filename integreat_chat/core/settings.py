@@ -96,6 +96,7 @@ RAG_QUERY_OPTIMIZATION_MODEL = "llama3.3"
 RAG_CONTEXT_MAX_LENGTH = 8000
 RAG_SUPPORTED_LANGUAGES = ["en", "de"]
 RAG_FALLBACK_LANGUAGE = "en"
+RAG_CONTEXT_LENGTH = 2 # Number of messages passed to LLM if the last message requires context
 
 # Limit number of messages processed. The last N messages will be used.
 REQUEST_MAX_MESSAGES = 10

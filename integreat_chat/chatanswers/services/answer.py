@@ -124,7 +124,7 @@ class AnswerService:
         :param message: a user message
         :return: answer message if no further processing is required, else False
         """
-        num_messages = 3 if self.message_requires_context() else 1
+        num_messages = settings.RAG_CONTEXT_LENGTH if self.message_requires_context() else 1
         LOGGER.debug("Using the last %s messages.", num_messages)
         request_human, summary, accept_message = asyncio.run(
             self.check_message_parallelized(num_messages)
