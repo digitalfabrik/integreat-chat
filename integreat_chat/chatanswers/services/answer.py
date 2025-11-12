@@ -56,7 +56,7 @@ class AnswerService:
                 )
             prompt = LlmPrompt(
                 settings.LANGUAGE_CLASSIFICATION_MODEL,
-                [LlmMessage(prompt_text, role="system")] + self.rag_request.last_user_messages,
+                [LlmMessage(prompt_text, role="system")] + self.rag_request.last_messages,
                 json_schema = Prompts.CHECK_QUESTION_SCHEMA
             )
             response = json.loads(asyncio.run(
