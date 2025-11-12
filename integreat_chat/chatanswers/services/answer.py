@@ -33,7 +33,7 @@ class AnswerService:
         param language: Integreat CMS language slug
         """
         self.rag_request = rag_request
-        self.language = rag_request.last_message.use_language
+        self.language = rag_request.last_user_message.use_language
         self.region = rag_request.region
         self.llm_model_name = settings.RAG_MODEL
         self.llm_api = LlmApiClient()
@@ -52,11 +52,11 @@ class AnswerService:
         else:
             prompt_text = Prompts.CHECK_QUESTION.replace(
                     "LANG_CODE",
-                    str(self.rag_request.last_message.use_language)
+                    str(self.rag_request.last_user_message.use_language)
                 )
             prompt = LlmPrompt(
                 settings.LANGUAGE_CLASSIFICATION_MODEL,
-                [LlmMessage(prompt_text, role="system")] + self.rag_request.last_messages,
+                [LlmMessage(prompt_text, role="system")] + self.rag_request.last_user_messages,
                 json_schema = Prompts.CHECK_QUESTION_SCHEMA
             )
             response = json.loads(asyncio.run(
@@ -87,7 +87,7 @@ class AnswerService:
         search_request = SearchRequest(
             {
                 "message": str(self.rag_request.search_term),
-                "language": self.rag_request.last_message.use_language,
+                "language": self.rag_request.last_user_message.use_language,
                 "region": self.rag_request.region
             },
             True
@@ -101,7 +101,7 @@ class AnswerService:
         if not documents and not shallow_search:
             self.rag_request.search_term = self.llm_api.simple_prompt(
                 Prompts.SHALLOW_SEARCH.format(
-                    self.rag_request.last_message.use_language,
+                    self.rag_request.last_user_message.use_language,
                     self.rag_request.search_term
                 )
             )
@@ -241,7 +241,7 @@ class AnswerService:
             return False
         LOGGER.debug("Checking if user requests human intervention")
         response = self.llm_api.simple_prompt(Prompts.HUMAN_REQUEST_CHECK.format(
-            self.rag_request.last_message.translated_message
+            self.rag_request.last_user_message.translated_message
         ))
         LOGGER.debug("Finished checking if user requests human. Response: %s", response)
         return response.lower().startswith("yes")

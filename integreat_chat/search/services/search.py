@@ -32,8 +32,8 @@ class SearchService:
         results = self.os.reduce_search_result(
             response = self.os.search(
                 self.search_request.region,
-                self.search_request.last_message.use_language,
-                self.search_request.last_message.translated_message
+                self.search_request.last_user_message.use_language,
+                self.search_request.last_user_message.translated_message
             ),
             deduplicate = self.deduplicate_results,
             max_results = max_results,

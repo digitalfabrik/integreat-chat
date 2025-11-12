@@ -28,9 +28,9 @@ class RagResponse:
         RAG response. Translate if GUI language does not match used
         RAG language.
         """
-        if self.request.gui_language != self.request.last_message.use_language:
+        if self.request.gui_language != self.request.last_user_message.use_language:
             message = self.request.language_service.translate_message(
-                self.request.last_message.use_language, self.request.gui_language, self.rag_response
+                self.request.last_user_message.use_language, self.request.gui_language, self.rag_response
             )
         else:
             message = self.rag_response
@@ -44,7 +44,7 @@ class RagResponse:
         for document in self.documents:
             if not document.include_in_answer:
                 continue
-            if self.request.gui_language != self.request.last_message.use_language:
+            if self.request.gui_language != self.request.last_user_message.use_language:
                 sources.append(
                     (document.get_source_for_language(self.request.gui_language))
                 )

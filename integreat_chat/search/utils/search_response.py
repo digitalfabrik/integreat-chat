@@ -104,7 +104,7 @@ class SearchResponse:
     Response for a search
     """
     def __init__(self, search_request: SearchRequest, documents: list[Document]):
-        self.search_term = search_request.last_message.translated_message
+        self.search_term = search_request.last_user_message.translated_message
         self.documents = [document for document in documents
                           if document.title is not None and document.content is not None]
 
