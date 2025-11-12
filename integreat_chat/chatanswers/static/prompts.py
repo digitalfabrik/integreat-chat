@@ -47,33 +47,72 @@ Response Format:
 """
 
 
-    CHECK_QUESTION = """### Task
-You are part of a retrieval-augmented generation system. Determine whether the **last message in a conversation** requires a response.
-You will be given up to 3 messages, the final message is the one that needs answering. If the last message is contains an incopmlete
-question or partial sentence, the previous messages can be used for context.
+    CHECK_QUESTION = """### System Role
 
-### Acceptance Criteria
-Accept messages that:
-- Are a clear and concise question, OR
-- Indicate a need, OR
-- Indicate a psychological or medical emergency (e.g. thoughts of suicide).
-Reject messages that:
-- Are too vague or generic (e.g., "I need help," "I have a question").
-- Lack a clear request or actionable intent.
+You are part of a retrieval-augmented generation (RAG) system.
+Your goal is to decide **whether the last message in a short conversation requires a response**, and to produce a **concise summary** of what that response should address.
 
-### Examples for summarizing the user question
-- Clear questions like "Where can I learn German?" do not need additional context from previous messages and can be taken as is.
-- If the current message is "for work" and the previous message reads "I need to learn German", then a suitable summary would be "how to learn German for work?".
-- Three messages like "Hello, my name is Max", "I need help" and the last message reads "I'm ill", a summary would be "I need help because I'm ill".
+You will be given up to 3 short messages.
+The **last message** is the one to analyze.
+Only refer to earlier messages if the last one is **grammatically incomplete or clearly depends on prior context**.
 
-### Your Processing Steps
-1. Determine if the last message is actionable.
-2. Summarize the last user message into a short sentence or question. Leave out too specific personal details and only include generic
-information that can be found in a knowledge base. Use the language 'LANG_CODE' for the summary.
+---
+
+### Decision Rules
+
+#### ✅ Accept if the last message:
+
+* Is a **clear and complete question**, or
+* Expresses a **need, request, or problem**, or
+* Describes a **psychological or medical emergency** (e.g. self-harm, suicidal thoughts).
+
+#### ❌ Reject if the last message:
+
+* Is **too vague** (e.g., “I need help”, “Can you assist?”),
+* **Lacks an actionable intent**, or
+* Is **social chatter or unrelated text** (e.g., greetings, comments, small talk).
+
+---
+
+### Context Use Policy
+
+* **Default behavior:** Treat each message **independently**.
+* Only use **previous messages** if the last one is **incomplete or clearly references them** (e.g., “for work”, “that one”).
+* Never merge unrelated topics from earlier messages.
+* The final summary must **represent only the current user need or question**, not a combination of prior topics.
+
+---
+
+### Examples
+
+| Conversation (last message is bold)                    | Summary                           | Accept |
+| ------------------------------------------------------ | --------------------------------- | ------ |
+| “Where can I learn German?”                            | “where to learn German”           | true   |
+| “I need to learn German.” **“for work”**               | “how to learn German for work”    | true   |
+| “Hello, my name is Max.” “I need help.” **“I’m ill.”** | “needs help because they are ill” | true   |
+| “Can you help?”                                        | “”                                | false  |
+| “I’m thinking about ending my life.”                   | “suicidal thoughts, emergency”    | true   |
+
+---
+
+### Output Instructions
+
+Perform these steps:
+
+1. **Determine if the last message should be accepted** according to the rules above.
+2. **Summarize** the last message (and minimal necessary context) into a short, neutral question or need statement, in language `LANG_CODE`.
+
+   * Exclude personal names or identifying details.
+   * Keep it concise and knowledge-base friendly.
+   * If rejected, leave the summary empty.
+
+---
 
 ### Output Format
-Respond with a JSON object:
 
+Return only valid JSON:
+
+```
 {
   "accept_message": (true/false),
   "summarized_user_question": "keyword or empty string",
