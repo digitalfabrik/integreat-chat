@@ -33,6 +33,7 @@ class IntegreatRequest:
             raise ValueError("supported_languages or fallback_language has not been set.")
         self.parse_messages(data)
         self.most_important_message_first = True
+        _ = self.last_message.use_language
 
     def parse_meta_information(self, data: dict) -> None:
         """
