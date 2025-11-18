@@ -35,11 +35,11 @@ class LanguageService:
         self.message = None
         self.placeholders = {}
 
-    def parse_language(self, response: dict) -> str:
+    def parse_language(self, response: str) -> str:
         """
         Parse String with language classification received from model
         """
-        classfied_language = response["bcp47-tag"]
+        classfied_language = response
         stripped_language = classfied_language.split("-")[0]
         if stripped_language in LANGUAGE_CLASSIFICATION_MAP:
             return LANGUAGE_CLASSIFICATION_MAP[stripped_language]
@@ -58,12 +58,11 @@ class LanguageService:
             [
                 LlmMessage(Prompts.LANGUAGE_CLASSIFICATION, role="system"),
                 LlmMessage(message, role="user")
-            ],
-            json_schema = Prompts.LANGUAGE_CLASSIFICATION_SCHEMA
+            ]
         )
         LOGGER.debug("Detecting message language")
         response = LlmResponse(asyncio.run(self.llm_api.chat_prompt_session_wrapper(prompt)))
-        return self.parse_language(response.as_dict())
+        return self.parse_language(str(response))
 
     def classify_language(self, message: str) -> str:
         """
