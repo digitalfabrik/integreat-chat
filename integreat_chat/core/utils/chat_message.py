@@ -28,7 +28,7 @@ class ChatMessage:
         self.hash = hashlib.sha256(self.original_message.encode("utf-8")).hexdigest()
         warm_cache = self.translated_message  # pylint: disable=unused-variable
 
-    @property
+    @cached_property
     def likely_message_language(self) -> str:
         """
         Detect language and decide which language to use for RAG
@@ -55,7 +55,7 @@ class ChatMessage:
             )
         return self.original_message
 
-    @property
+    @cached_property
     def use_language(self) -> str:
         """
         Select a language for RAG prompting
