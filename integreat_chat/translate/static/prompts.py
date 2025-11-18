@@ -10,7 +10,7 @@ class Prompts:
     LANGUAGE_CLASSIFICATION = """Identify the BCP47 language tag of the provided message.
 Make sure to only return valid BCP-47 tags.
 If languages are mixed, return the language that has more stop words in the message.
-If a few German nouns are mixed into the message, ignore them.
+If a few German nouns are mixed into the message, ignore them. Return only the BCP-47 tag, no other text.
 """
 
     LANGUAGE_CLASSIFICATION_SCHEMA = {

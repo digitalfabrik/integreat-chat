@@ -2,11 +2,16 @@
 Very simple LiteLLM Client (should be compatible to OpenAI API)
 """
 import json
+import logging
 
 import asyncio
 import aiohttp
 
 from django.conf import settings
+
+
+LOGGER = logging.getLogger(__name__)
+
 
 class LlmMessage:
     """
@@ -69,7 +74,11 @@ class LlmResponse:
         """
         Parse JSON in response
         """
-        return json.loads(str(self))
+        try:
+            return json.loads(str(self))
+        except json.decoder.JSONDecodeError:
+            LOGGER.exception("Failed to parse JSON LLM response from response: %s", str(self))
+            return {}
 
 class LlmApiClient:
     """
