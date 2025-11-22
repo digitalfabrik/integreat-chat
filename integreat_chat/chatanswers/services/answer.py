@@ -166,10 +166,17 @@ class AnswerService:
         )
         search = SearchService(search_request, deduplicate_results=True)
         documents = search.search_documents(
-            settings.RAG_MAX_PAGES * 3,
+            settings.RAG_MAX_PAGES * 4,
             min_score=settings.RAG_SCORE_THRESHOLD,
         ).documents
-        if not documents and not shallow_search:
+        batches = ceil(len(documents)/3)
+        filtered_documents = []
+        for batch in range(0, batches):
+            filtered_documents += self.filter_documents(documents[batch*3:batch*3+3])
+            relevant_docs = self.count_relevant_documents(filtered_documents)
+            if (relevant_docs > 1 and batch == 0) or (relevant_docs >= 1 and batch > 0):
+                break
+        if not self.count_relevant_documents(documents) and not shallow_search:
             self.rag_request.search_term = self.llm_api.simple_prompt(
                 Prompts.SHALLOW_SEARCH.format(
                     self.rag_request.last_message.use_language,
@@ -181,18 +188,21 @@ class AnswerService:
                 self.rag_request.search_term
             )
             return self.get_documents(shallow_search=True)
-        LOGGER.debug("Retrieved %s documents.", len(documents))
-        batches = ceil(len(documents)/3)
-        filtered_documents = []
-        relevant_docs = 0
-        for batch in range(0, batches):
-            filtered_documents += self.filter_documents(documents[batch*3:batch*3+3])
-            for document in filtered_documents:
-                if document.include_in_answer:
-                    relevant_docs += 1
-                if (batch == 0 and relevant_docs == 1) or relevant_docs > 1:
-                    break
+        LOGGER.debug("Retrieved %s documents.", len(filtered_documents))
         return filtered_documents
+
+    def count_relevant_documents(self, documents: list) -> int:
+        """
+        Count the number of relevant documents in the list.
+
+        :param documents: list of documents with relevance check performed
+        :return: number of relevant documents
+        """
+        relevant_docs = 0
+        for document in documents:
+            if document.include_in_answer:
+                relevant_docs += 1
+        return relevant_docs
 
     def filter_documents(self, documents: list) -> list:
         """
