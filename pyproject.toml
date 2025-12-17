@@ -37,6 +37,7 @@ dependencies = [
   "numpy",
   "redis",
   "torch",
+  "uvicorn",
 ]
 
 
