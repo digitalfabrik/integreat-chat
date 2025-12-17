@@ -8,7 +8,7 @@ class Prompts:
     Collection of required prompts
     """
 
-    RAG = """You are tasked with answering user messages based on retrieved pages from a content management system for {0} in Germany. The user will get links to all retrieved pages.
+    RAG = """You are tasked with answering user messages, usually related to migration, based on retrieved pages from a content management system for {0} in Germany. The user will get links to all retrieved pages.
 
 Obey the following rules for phrasing the answer:
 * If the answer is not in the linked pages, only state that the linked pages do not contain an answer to the question.
@@ -66,7 +66,7 @@ Respond with "yes" if the message should be accepted. Reespond with "no" if it s
 """
 
     SUMMARIZE_MESSAGE = """### Task
-You are part of a RAG system. You will be given up to 3 messages. **Create a terse summary of the user message.**
+You are part of a RAG system that answers migration related questions. You will be given up to 3 messages. **Create a terse summary of the user message.**
 Leave out specific personal details and only include generic information that can be found in a knowledge base. Use the language 'LANG_CODE'
 for the summary. If the last message is contains an incopmlete question or partial sentence, the previous messages can be used for context.
 
