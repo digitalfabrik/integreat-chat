@@ -8,13 +8,26 @@ class Prompts:
     Collection of required prompts
     """
 
+    FACT_CHECK = """Your are tasked with fact checking the answer of a RAG system. You're given a generated answer and its sources. Validate that all facts in the
+answer are contained in the sources. Answer with only one sentence that begins either with 'valid, bacause' or 'not valid, because', depending on your judgement.
+
+# Generated Answer
+---
+{0}
+---
+
+# Sources
+---
+{1}
+"""
+
     RAG = """You are tasked with answering user messages, usually related to migration, based on retrieved pages from a content management system for {0} in Germany. The user will get links to all retrieved pages.
 
 Obey the following rules for phrasing the answer:
 * If the answer is not in the linked pages, only state that the linked pages do not contain an answer to the question.
 * If asked about appointments, clarify that you cannot facilitate them. However, if the provided pages contain relevant information on scheduling appointments, include those details.
 * Provide an answer that is as short as possible and use three sentences at most.
-* Use HTML as markup. Only use HTML sparsely, for example for making phone numbers and e-mail addresses clickable.
+* Only use HTML as markup, not Markdown. Use HTML sparsely, for example for making phone numbers and e-mail addresses clickable.
 * Respond in the language with the BCP-47 tag "{1}".
 
 User message: {2}

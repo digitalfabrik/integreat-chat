@@ -11,6 +11,7 @@ from django.conf import settings
 
 from integreat_chat.search.services.search import SearchService
 from integreat_chat.search.utils.search_request import SearchRequest
+from integreat_chat.search.utils.search_response import Document
 from integreat_chat.translate.services.language import LanguageService
 
 from ..static.prompts import Prompts
@@ -259,6 +260,25 @@ class AnswerService:
             self.format_context(documents)
         )
 
+    def answer_valid(self, answer: str, documents: list[Document]) -> bool:
+        """
+        Check if a given answer is valid
+        """
+        if not settings.RAG_FACT_CHECK:
+            return True
+        check = self.llm_api.simple_prompt(Prompts.FACT_CHECK.format(
+            answer,
+            self.format_context(documents)
+        ))
+        if check.lower().startswith('not valid'):
+            LOGGER.info(
+                "Answer not valid. Question: %s\nAnswer: %s\nReason: %s",
+                self.rag_request.search_term,
+                answer,
+                check
+            )
+        return answer != "" and check.lower().startswith("valid")
+
     def extract_answer(self) -> RagResponse:
         """
         Search for pages that are related to the question and create
@@ -279,12 +299,25 @@ class AnswerService:
             no_answer_response = self.get_no_answer_response(language_service, documents)
             LOGGER.info("No documents found for : %s", self.rag_request.search_term)
             return no_answer_response
-        answer = self.llm_api.simple_prompt(self.format_rag_prompt(rag_documents))
-        LOGGER.info(
-            "Finished generating answer. Question: %s\nAnswer: %s",
-            self.rag_request.search_term,
-            answer
-        )
+        retries = 0
+        while True:
+            retries += 1
+            answer = self.llm_api.simple_prompt(self.format_rag_prompt(rag_documents))
+            if self.answer_valid(answer, rag_documents):
+                LOGGER.info(
+                    "Finished generating answer. Question: %s\nAnswer: %s",
+                    self.rag_request.search_term,
+                    answer
+                )
+                break
+            if retries >= 3:
+                LOGGER.info(
+                    "Stopped after 3rd attempt. Could not generate valid answer for question: %s\n",
+                    self.rag_request.search_term
+                )
+                answer = ""
+                break
+
         if answer == "":
             return no_answer_response
         return RagResponse(documents, self.rag_request, answer)
