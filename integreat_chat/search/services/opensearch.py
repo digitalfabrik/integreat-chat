@@ -133,7 +133,7 @@ class OpenSearch:
                             "title_embedding": {
                                 "query_text": message,
                                 "model_id": self.model_id,
-                                "k": 5
+                                "k": 50
                             }
                         }
                         },
@@ -142,7 +142,7 @@ class OpenSearch:
                             "chunk_embedding": {
                                 "query_text": message,
                                 "model_id": self.model_id,
-                                "k": 5
+                                "k": 50
                             }
                         }
                         }
@@ -454,16 +454,16 @@ class OpenSearchSetup(OpenSearch):
                 {
                     "normalization-processor": {
                         "normalization": {
-                            "technique": "min_max"
+                            "technique": "z_score"
                         },
                         "combination": {
                             "technique": "arithmetic_mean",
                             "parameters": {
                                 "weights": [
-                                    0.15,  # title match
+                                    0.25,  # title match
                                     0.35,  # content match
                                     0.15,  # title embedding
-                                    0.35   # content embedding
+                                    0.25   # content embedding
                                 ]
                             }
                         }
