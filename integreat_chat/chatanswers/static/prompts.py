@@ -46,6 +46,7 @@ Evaluation Criteria:
 * General relevance is not enough — it must contain specific and authoritative information.
 * If the document only provides related background information but does not directly answer the question, answer "no".
 * If the document contains the exact answer or directly relevant information, answer "yes".
+* If the document's content is tailored to a narrower or more specific audience than can be safely derived from the question, reply with "no".
 
 Response Format:
 
