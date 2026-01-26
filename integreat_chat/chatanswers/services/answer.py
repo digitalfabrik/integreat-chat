@@ -241,11 +241,12 @@ class AnswerService:
         """
         Generate response that no answer has been found
         """
+        answer = Messages.NO_ANSWER + (Messages.RELEVANT_PAGES if documents else "")
         return RagResponse(
                 documents,
                 self.rag_request,
                 language_service.translate_message(
-                    "en", self.language, Messages.NO_ANSWER
+                    "en", self.language, answer
                 ),
             )
 
@@ -296,9 +297,8 @@ class AnswerService:
             [:settings.RAG_MAX_PAGES]
         )
         if not rag_documents:
-            no_answer_response = self.get_no_answer_response(language_service, documents)
             LOGGER.info("No documents found for : %s", self.rag_request.search_term)
-            return no_answer_response
+            return self.get_no_answer_response(language_service, documents)
         retries = 0
         while True:
             retries += 1
@@ -319,7 +319,7 @@ class AnswerService:
                 break
 
         if answer == "":
-            return no_answer_response
+            return self.get_no_answer_response(language_service, documents)
         return RagResponse(documents, self.rag_request, answer)
 
     async def check_documents_relevance(self, question: str, search_results: list) -> bool:
