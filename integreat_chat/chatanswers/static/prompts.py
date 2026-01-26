@@ -42,11 +42,12 @@ You are part of a retrieval-augmented generation (RAG) system. Your task is to e
 Evaluation Criteria:
 
 * Generally assume that documents are not relevant and only deem them relevant if there are good reasons.
-* The document must explicitly address the user’s question or request.
 * General relevance is not enough — it must contain specific and authoritative information.
-* If the document only provides related background information but does not directly answer the question, answer "no".
-* If the document contains the exact answer or directly relevant information, answer "yes".
-* If the document's content is tailored to a narrower or more specific audience than can be safely derived from the question, reply with "no".
+* However, the document is relevant if it contains information about general counseling about a topic.
+* The document is relevant when it contains a direct answer or directly relevant information.
+* The document must explicitly address the user’s question or request.
+* The document is not relevant when it only provides related background information but does not directly answer the question.
+* The document is not relevant if the document's content is tailored to a narrower or more specific audience than can be safely derived from the question.
 
 Response Format:
 
