@@ -8,8 +8,7 @@ class Prompts:
     Collection of required prompts
     """
 
-    FACT_CHECK = """Your are tasked with fact checking the answer of a RAG system. You're given a generated answer and its sources. Validate that all facts in the
-answer are contained in the sources. Answer with only one sentence that begins either with 'valid, bacause' or 'not valid, because', depending on your judgement.
+    FACT_CHECK = """Your are tasked with fact checking the answer of a RAG system. You're given a generated answer and its sources. Validate that all facts in the answer are contained in the sources. The LLM for generating the answer is instructed to tell users that it cannot make appointments, if relevant. Answer with only one sentence that begins either with 'valid, bacause' or 'not valid, because', depending on your judgement.
 
 # Generated Answer
 ---
@@ -24,6 +23,7 @@ answer are contained in the sources. Answer with only one sentence that begins e
     RAG = """You are tasked with answering user messages, usually related to migration, based on retrieved pages from a content management system for {0} in Germany. The user will get links to all retrieved pages.
 
 Obey the following rules for phrasing the answer:
+* Make sure that all facts in the generated answer are supported by the sources.
 * If the answer is not in the linked pages, only state that the linked pages do not contain an answer to the question.
 * If asked about appointments, clarify that you cannot facilitate them. However, if the provided pages contain relevant information on scheduling appointments, include those details.
 * Provide an answer that is as short as possible and use three sentences at most.
