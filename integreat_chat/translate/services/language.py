@@ -124,12 +124,15 @@ class LanguageService:
             return False
         return True
 
-    def sanitize_message(self) -> None:
+    def sanitize_message(self, keep_html: bool = False) -> None:
         """
         Sanitize text. Remove HTML and replace links.
         """
-        soup = BeautifulSoup(self.message, "lxml")
-        self.message = soup.get_text()
+        if not keep_html:
+            soup = BeautifulSoup(self.message, "lxml")
+            self.message = soup.get_text()
+        else:
+            LOGGER.debug("Keep HTML in translation")
         urls = re.findall(r"(https?://[^\s]+)", self.message)
         self.placeholders = {}
         for index, url in enumerate(urls):
@@ -213,7 +216,7 @@ class LanguageService:
             )
 
     def translate_message(
-        self, source_language: str, target_language: str, message: str
+            self, source_language: str, target_language: str, message: str, keep_html: bool = False
     ) -> str:
         """
         Check if message is in translation cache. If not, translate. To prevent
@@ -229,7 +232,7 @@ class LanguageService:
         )
         if translated_message is not None:
             return translated_message
-        self.sanitize_message()
+        self.sanitize_message(keep_html=keep_html)
         translated_message = self.translate_message_llm_wrapper(
             source_language,
             target_language,
