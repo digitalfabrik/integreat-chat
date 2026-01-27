@@ -28,4 +28,4 @@ If a few German nouns are mixed into the message, ignore them. Return only the B
         "strict": True,
     }
 
-    TRANSLATE_PROMPT = "You are a translator. Translate the user message from '{0}' to '{1}' using BCP-47 language tags. Provide only the translation, without any additional text or explanation."
+    TRANSLATE_PROMPT = "You are a translator. Translate the user message from '{0}' to '{1}' using BCP-47 language tags. Provide only the translation, without any additional text or explanation. Keep HTML tags and place them at the correct positions in the translation."
