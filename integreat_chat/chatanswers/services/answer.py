@@ -38,6 +38,7 @@ class AnswerService:
         self.region = rag_request.region
         self.llm_model_name = settings.RAG_MODEL
         self.llm_api = LlmApiClient()
+        self.shallow_search = False
 
     def message_requires_context(self) -> bool:
         """
@@ -150,11 +151,9 @@ class AnswerService:
             automatic_answer,
         )
 
-    def get_documents(self, shallow_search: bool = False) -> list:
+    def get_documents(self) -> list:
         """
         Retrieve documents for RAG
-
-        :param shallow_search: indicates that this is a shallow search.
         """
         LOGGER.debug("Retrieving documents for: %s", self.rag_request.search_term)
         search_request = SearchRequest(
@@ -177,7 +176,7 @@ class AnswerService:
             relevant_docs = self.count_relevant_documents(filtered_documents)
             if (relevant_docs > 1 and batch == 0) or (relevant_docs >= 1 and batch > 0):
                 break
-        if not self.count_relevant_documents(documents) and not shallow_search:
+        if not self.count_relevant_documents(documents) and not self.shallow_search:
             self.rag_request.search_term = self.llm_api.simple_prompt(
                 Prompts.SHALLOW_SEARCH.format(
                     self.rag_request.last_message.use_language,
@@ -188,7 +187,8 @@ class AnswerService:
                 "No documents found, trying shallow search: %s.",
                 self.rag_request.search_term
             )
-            return self.get_documents(shallow_search=True)
+            self.shallow_search = True
+            return self.get_documents()
         LOGGER.debug("Retrieved %s documents.", len(filtered_documents))
         return filtered_documents
 
@@ -320,6 +320,10 @@ class AnswerService:
 
         if answer == "":
             return self.get_no_answer_response(language_service, documents)
+        if self.shallow_search:
+            answer = language_service.translate_message(
+                "en", self.language, Messages.SHALLOW_SEARCH.format(self.rag_request.search_term)
+            ) + answer
         return RagResponse(documents, self.rag_request, answer)
 
     async def check_documents_relevance(self, question: str, search_results: list) -> bool:

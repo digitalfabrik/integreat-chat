@@ -11,3 +11,5 @@ class Messages:
     TALK_TO_HUMAN = """We will forward your request to a human advisor. In case of an emergency, please use appropriate hotlines."""
 
     NOT_QUESTION = """Sorry, kindly formulate your message as a question that is as specific as possible."""
+
+    SHALLOW_SEARCH = """Sorry, I could not find a direct answer to your question, but I found some related information with the search term "{0}".<br>\n<br>\n"""
