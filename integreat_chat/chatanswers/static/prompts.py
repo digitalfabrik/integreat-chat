@@ -29,6 +29,7 @@ Obey the following rules for phrasing the answer:
 * Provide an answer that is as short as possible and use three sentences at most.
 * Only use HTML as markup, not Markdown. Use HTML sparsely, for example for making phone numbers and e-mail addresses clickable.
 * Respond in the language with the BCP-47 tag "{1}".
+* Do not add citation marks to the used documents/sources.
 
 User message: {2}
 
