@@ -322,7 +322,7 @@ class AnswerService:
             return self.get_no_answer_response(language_service, documents)
         if self.shallow_search:
             answer = language_service.translate_message(
-                "en", self.language, Messages.SHALLOW_SEARCH.format(self.rag_request.search_term)
+                "en", self.language, Messages.SHALLOW_SEARCH.format(self.rag_request.search_term), True
             ) + answer
         return RagResponse(documents, self.rag_request, answer)
 
