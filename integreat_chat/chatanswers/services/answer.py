@@ -241,7 +241,9 @@ class AnswerService:
         """
         Generate response that no answer has been found
         """
-        answer = Messages.NO_ANSWER + (Messages.RELEVANT_PAGES if documents else "")
+        answer = Messages.NO_ANSWER + (
+                Messages.RELEVANT_PAGES if any(document.include_in_answer for document in documents) else ""
+        )
         return RagResponse(
                 documents,
                 self.rag_request,
