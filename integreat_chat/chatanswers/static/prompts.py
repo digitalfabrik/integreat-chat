@@ -8,7 +8,7 @@ class Prompts:
     Collection of required prompts
     """
 
-    FACT_CHECK = """Your are tasked with fact checking the answer of a RAG system. You're given a generated answer and its sources. Validate that all facts in the answer are contained in the sources. The LLM for generating the answer is instructed to tell users that it cannot make appointments, if relevant. Answer with only one sentence that begins either with 'valid, bacause' or 'not valid, because', depending on your judgement.
+    FACT_CHECK = """Your are tasked with fact checking the answer of a RAG system in the Integreat App. You're given a generated answer and its sources. Validate that all facts in the answer are contained in the sources. The LLM for generating the answer is instructed to tell users that it cannot make appointments, if relevant. Answer with only one sentence that begins either with 'valid, bacause' or 'not valid, because', depending on your judgement.
 
 # Generated Answer
 ---
@@ -20,7 +20,7 @@ class Prompts:
 {1}
 """
 
-    RAG = """You are tasked with answering user messages, usually related to migration, based on retrieved pages from a content management system for {0} in Germany. The user will get links to all retrieved pages.
+    RAG = """You are tasked with answering user messages, usually related to migration, based on retrieved pages from a content management system for {0} in Germany. The user will get links to all retrieved pages. The platform the user is using is named Integreat App.
 
 Obey the following rules for phrasing the answer:
 * Make sure that all facts in the generated answer are supported by the sources.
@@ -39,7 +39,7 @@ Linked pages:
 """
 
     CHECK_DOCUMENT = """# Task
-You are part of a retrieval-augmented generation (RAG) system. Your task is to evaluate whether a retrieved document definitely contains a direct answer to the user’s message.
+You are part of a retrieval-augmented generation (RAG) system in the Integreat App. Your task is to evaluate whether a retrieved document definitely contains a direct answer to the user’s message. If the user is talking about 'you' or 'app', assume it is the Integreat App.
 Evaluation Criteria:
 
 * Generally assume that documents are not relevant and only deem them relevant if there are good reasons.
@@ -65,7 +65,7 @@ Response Format:
 
 
     CHECK_QUESTION = """### Task
-You are part of a retrieval-augmented generation system. Determine whether the **last message in a conversation** requires a response.
+You are part of a retrieval-augmented generation system in the Integreat App. Determine whether the **last message in a conversation** requires a response.
 You will be given up to 3 messages, the final message is the one that needs answering.
 
 ### Acceptance Criteria
@@ -82,9 +82,10 @@ Respond with "yes" if the message should be accepted. Reespond with "no" if it s
 """
 
     SUMMARIZE_MESSAGE = """### Task
-You are part of a RAG system that answers migration related questions. You will be given up to 3 messages. **Create a terse summary of the user message.**
+You are part of a RAG system in the Integreat App that answers migration related questions. You will be given up to 3 messages. **Create a terse summary of the user message.**
 Leave out specific personal details and only include generic information that can be found in a knowledge base. Use the language 'LANG_CODE'
 for the summary. If the last message is contains an incopmlete question or partial sentence, the previous messages can be used for context.
+If the user is talking about 'you' or 'app', assume it is the Integreat App.
 
 ### Examples for summarizing the user question
 - Clear questions like "Where can I learn German?" do not need additional context and can be summarized to "learning German"
@@ -115,7 +116,7 @@ User message: {0}
 """
 
     SHALLOW_SEARCH = """# Task
-You are part of a retrieval-augmented generation (RAG) system. In a previous search no relevant pages were found for a search term. We now want to run a more abstract search. Extract the general topic (one or two words) for a new search. Only return the best search term without any additional text. Use the language '{0}' for the search term.
+You are part of a retrieval-augmented generation (RAG) system in the Integreat App. In a previous search no relevant pages were found for a search term. We now want to run a more abstract search. Extract the general topic (one or two words) for a new search. Only return the best search term without any additional text. Use the language '{0}' for the search term.
 ## Examples
 - "Finding a job as a medical doctor" to "Finding jobs"
 - "medical treatment for flu" to "medical consultation"
