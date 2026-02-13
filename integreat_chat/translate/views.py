@@ -97,6 +97,7 @@ def message_to_region_languages(request):
                 for language in get_region_languages(data["region"]):
                     LOGGER.debug(f"translating to {language}")
                     result["translations"].append({
+                        "language": language,
                         "translation": str(language_service.translate_message(
                             data["source_language"],
                             language,
