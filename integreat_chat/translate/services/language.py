@@ -30,7 +30,9 @@ class LanguageService:
     """
 
     def __init__(self):
-        """ """
+        """
+        Initialize class
+        """
         self.llm_api = LlmApiClient()
         self.message = None
         self.placeholders = {}
@@ -133,7 +135,7 @@ class LanguageService:
             self.message = soup.get_text()
         else:
             LOGGER.debug("Keep HTML in translation")
-        urls = re.findall(r"(https?://[^\s]+)", self.message)
+        urls = re.findall(r"(https?://[^\s\"\']+)", self.message)
         self.placeholders = {}
         for index, url in enumerate(urls):
             placeholder = f"_STR_URL_{index}_"
@@ -146,8 +148,10 @@ class LanguageService:
         """
         if (not page_url.startswith(f"https://{settings.INTEGREAT_APP_DOMAIN}") and
             not page_url.startswith(f"http://{settings.INTEGREAT_APP_DOMAIN}")):
-            LOGGER.debug("Link %s does not seem to be a valid url/, " \
-            "skipping translation", page_url)
+            LOGGER.debug(
+                "Link %s does not seem to be a valid Integreat App URL, skipping translation",
+                page_url
+            )
             return page_url
         
         translations = get_page(page_url)["available_languages"]

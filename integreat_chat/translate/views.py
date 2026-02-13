@@ -57,7 +57,8 @@ def translate_message(request):
                         data["source_language"] if force_src_lang
                             else language_service.classify_language(data["message"]),
                         data["target_language"],
-                        data["message"]
+                        data["message"],
+                        True
                     )),
                     "target_language": data["target_language"],
                     "status": "success",
