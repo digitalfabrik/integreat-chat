@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from integreat_chat.translate.services.language import LanguageService
+from integreat_chat.core.utils.integreat_cms import get_region_languages
 
 LOGGER = logging.getLogger("django")
 
@@ -63,6 +64,46 @@ def translate_message(request):
                     "target_language": data["target_language"],
                     "status": "success",
                 }
+            except KeyError as exc:
+                result = {
+                    "status": "error",
+                    "reason": str(exc)
+                }
+                status = 404
+    return JsonResponse(data=result, status=status)
+
+@csrf_exempt
+def message_to_region_languages(request):
+    """
+    Translate a message from a source into a target language
+    """
+    status = 200
+    result = None
+    if (
+        request.method in ("POST")
+        and request.META.get("CONTENT_TYPE").lower() == "application/json"
+    ):
+        data = json.loads(request.body)
+        language_service = LanguageService()
+        if (
+            "source_language" not in data
+            or "region" not in data
+            or "message" not in data
+        ):
+            result = {"status": "error"}
+        else:
+            try:
+                result = {"translations":[], "status": "success"}
+                for language in get_region_languages(data["region"]):
+                    LOGGER.debug(f"translating to {language}")
+                    result["translations"].append({
+                        "translation": str(language_service.translate_message(
+                            data["source_language"],
+                            language,
+                            data["message"],
+                            True
+                        ))
+                    })
             except KeyError as exc:
                 result = {
                     "status": "error",
