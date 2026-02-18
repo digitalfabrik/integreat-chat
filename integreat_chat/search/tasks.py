@@ -28,3 +28,13 @@ def update_search_indexes() -> None:
     for region_slug in settings.INTEGREAT_REGIONS:
         for language_slug in get_region_languages(region_slug):
             update_index.apply_async([region_slug, language_slug])
+
+
+@shared_task
+def update_search_indexes_full() -> None:
+    """
+    Fully update all search indexes
+    """
+    for region_slug in settings.INTEGREAT_REGIONS:
+        for language_slug in get_region_languages(region_slug):
+            update_index.apply_async([region_slug, language_slug, False])
