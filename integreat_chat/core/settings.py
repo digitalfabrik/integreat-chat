@@ -254,18 +254,22 @@ CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 60 * 60 * 1
 CELERY_BROKER_URL = (
-        config["MAIN"]["CELERY_REDIS_URL"] if
-        "CELERY_REDIS_URL" in config["MAIN"]
-        else "redis://localhost:6379/0"
+    config["MAIN"]["CELERY_REDIS_URL"] if
+    "CELERY_REDIS_URL" in config["MAIN"]
+    else "redis://localhost:6379/0"
 )
 CELERY_RESULT_BACKEND = (
-        config["MAIN"]["CELERY_RESULT_BACKEND"] if
-        "CELERY_RESULT_BACKEND" in config["MAIN"]
-        else "redis://localhost:6379/0"
+    config["MAIN"]["CELERY_RESULT_BACKEND"] if
+    "CELERY_RESULT_BACKEND" in config["MAIN"]
+    else "redis://localhost:6379/0"
 )
 CELERY_BEAT_SCHEDULE = {
-      'update-indexes': {
+    'update-indexes': {
         'task': 'search.tasks.update_search_indexes',
-        'schedule': crontab(hour=2,minute=30),
+        'schedule': crontab(day_of_week='1,2,3,4,5,6',hour=2,minute=30),
+    },
+    'update-indexes-full': {
+        'task': 'search.tasks.update_search_indexes_full',
+        'schedule': crontab(day_of_week='0',hour=2,minute=30),
     },
 }
