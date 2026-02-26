@@ -95,6 +95,53 @@ for the summary. If the last message is contains an incopmlete question or parti
 Return only the terse summarized user question, nothing else.
 """
 
+    EXTRACT_MESSAGE_INTENTS_AND_SUMMARIZE = """### Task
+You are part of a retrieval-augmented generation (RAG) system. Your goal is to analyze up to 3 user messages and produce a structured list of **distinct intents** that may appear:
+1. Across multiple messages, and/or  
+2. Within a single message containing multiple requests.
+
+Each intent should describe one specific user goal or question.
+
+### Acceptance Criteria
+Accept intents that:
+- Are explicit or implicit questions (e.g., “Where can I learn German?” or “I need a doctor”).
+- Express a concrete need or goal.
+- Indicate an emergency or psychological distress (e.g., suicidal thoughts).
+
+Reject intents that:
+- Are vague, incomplete, or purely social (e.g., “Hi”, “I have a question”, “Help”).
+- Lack any actionable information.
+
+### Instructions
+- Detect **multiple intents even within a single user message** (e.g., “I need a job and housing” → two intents: `find a job`, `find housing`).
+- Merge related messages that share the same topic into one intent (e.g., “I need to learn German” + “for work” → `how to learn German for work`).
+- Keep each intent independent — one intent = one line of thought or topic.
+- Summarize **only** when needed:
+  - If an intent is already clear, keep it as-is.
+  - If context from previous messages is required, merge and summarize concisely.
+- For emergencies, prefix with `"emergency:"` in the summary.
+- Use the language 'LANG_CODE' for the intent summaries.
+
+### Demographic Enrichment
+If the user provides any of the following information:
+- **Country of origin**
+- **Age**
+- **Gender**
+
+…incorporate the available information **naturally into the intent sentence** (not as parentheses or metadata).  
+Example style:
+- “A 25-year-old woman from Syria asking how to apply for asylum”
+- “A man seeking housing assistance”
+- “A teenager looking for mental health support”
+
+Include only the demographic details explicitly stated by the user.  
+If none are given, do not add any demographic information.
+
+### Output Format
+- Return **each intent on a new line**.
+- No bullets, numbering, or additional text.
+"""
+
     OPTIMIZE_MESSAGE = """Please summarize the following text into one terse sentence or question. Only answer with the summary, no text around it.
 
 Text: {0}"""

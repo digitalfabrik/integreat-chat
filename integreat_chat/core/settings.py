@@ -139,6 +139,8 @@ VDB_PORT = "19530"
 LLM_SERVER=config['LiteLLM']['SERVER']
 LLM_API_KEY=config['LiteLLM']['API_KEY']
 
+MULTIPLE_QUERIES_LIMIT = 2
+
 # Application definition
 
 INSTALLED_APPS = [

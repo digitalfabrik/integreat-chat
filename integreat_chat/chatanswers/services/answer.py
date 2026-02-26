@@ -61,7 +61,7 @@ class AnswerService:
         """
         Prepare prompt for message summary
         """
-        prompt_text = Prompts.SUMMARIZE_MESSAGE.replace(
+        prompt_text = Prompts.EXTRACT_MESSAGE_INTENTS_AND_SUMMARIZE.replace(
             "LANG_CODE",
             str(self.rag_request.last_message.use_language)
         )
@@ -78,6 +78,24 @@ class AnswerService:
             [LlmMessage(Prompts.CHECK_QUESTION, role="system")] +
             self.rag_request.messages[-num_messages:]
         )
+    
+    def process_intents(intents_str: str) -> str:
+        """
+        Process the intents string returned by the LLM into a list of intents.
+
+        :param intents_str: The raw string output from the LLM.
+        :return: A list of distinct intents.
+        """
+        # Split the string into lines and strip whitespace
+        intents = [intent.strip("- ").strip() for intent in intents_str.splitlines() if intent.strip()]
+        # Remove duplicates while preserving order
+        seen = set()
+        distinct_intents = []
+        for intent in intents:
+            if intent not in seen:
+                seen.add(intent)
+                distinct_intents.append(intent)
+        return distinct_intents
 
     async def check_message_parallelized(self, num_messages: int) -> tuple[bool,str,bool]:
         """
@@ -112,10 +130,11 @@ class AnswerService:
             )
             LOGGER.debug("Sent CHECK_QUESTION")
             llmresponses = await asyncio.gather(*tasks)
+            summarized_intents = self.process_intents(str(llmresponses[1]))
         LOGGER.debug("Gathered check responses")
         return (
             str(LlmResponse(llmresponses[0])).lower().startswith("yes"),
-            str(LlmResponse(llmresponses[1])),
+            summarized_intents,
             str(LlmResponse(llmresponses[2])).lower().startswith("yes"),
         )
 
@@ -151,14 +170,14 @@ class AnswerService:
             automatic_answer,
         )
 
-    def get_documents(self) -> list:
+    def get_documents(self, search_term) -> list:
         """
         Retrieve documents for RAG
         """
         LOGGER.debug("Retrieving documents for: %s", self.rag_request.search_term)
         search_request = SearchRequest(
             {
-                "message": str(self.rag_request.search_term),
+                "message": search_term,
                 "language": self.rag_request.last_message.use_language,
                 "region": self.rag_request.region
             },
@@ -177,18 +196,18 @@ class AnswerService:
             if (relevant_docs > 1 and batch == 0) or (relevant_docs >= 1 and batch > 0):
                 break
         if not self.count_relevant_documents(documents) and not self.shallow_search:
-            self.rag_request.search_term = self.llm_api.simple_prompt(
+            search_term = self.llm_api.simple_prompt(
                 Prompts.SHALLOW_SEARCH.format(
                     self.rag_request.last_message.use_language,
-                    self.rag_request.search_term
+                    self.search_term
                 )
             )
             LOGGER.debug(
                 "No documents found, trying shallow search: %s.",
-                self.rag_request.search_term
+                self.search_term
             )
             self.shallow_search = True
-            return self.get_documents()
+            return self.get_documents(search_term)
         LOGGER.debug("Retrieved %s documents.", len(filtered_documents))
         return filtered_documents
 
@@ -252,14 +271,14 @@ class AnswerService:
                 ),
             )
 
-    def format_rag_prompt(self, documents: list) -> str:
+    def format_rag_prompt(self, documents: list, search_term: str) -> str:
         """
         Generate RAG prompt including context
         """
         return Prompts.RAG.format(
             settings.INTEGREAT_REGION_NAMES[self.region],
             self.language,
-            self.rag_request.search_term,
+            search_term,
             self.format_context(documents)
         )
 
@@ -293,40 +312,46 @@ class AnswerService:
 
         if response := self.skip_rag_answer(language_service):
             return response
-        documents = self.get_documents()
-        rag_documents = (
-            [document for document in documents if document.include_in_answer]
-            [:settings.RAG_MAX_PAGES]
-        )
-        if not rag_documents:
-            LOGGER.info("No documents found for : %s", self.rag_request.search_term)
-            return self.get_no_answer_response(language_service, documents)
-        retries = 0
-        while True:
-            retries += 1
-            answer = self.llm_api.simple_prompt(self.format_rag_prompt(rag_documents))
-            if self.answer_valid(answer, rag_documents):
-                LOGGER.info(
-                    "Finished generating answer. Question: %s\nAnswer: %s",
-                    self.rag_request.search_term,
-                    answer
-                )
-                break
-            if retries >= 3:
-                LOGGER.info(
-                    "Stopped after 3rd attempt. Could not generate valid answer for question: %s\n",
-                    self.rag_request.search_term
-                )
-                answer = ""
-                break
+        answers = []
+        for search_term in self.rag_request.search_term:
+            LOGGER.info("Searching for documents for: %s", search_term)
+            documents = self.get_documents(search_term)
+            rag_documents = (
+                [document for document in documents if document.include_in_answer]
+                [:settings.RAG_MAX_PAGES]
+            )
+            if not rag_documents:
+                LOGGER.info("No documents found for : %s", search_term)
+                return self.get_no_answer_response(language_service, documents)          
+            
+            retries = 0
+            while True:
+                retries += 1
+                answer = self.llm_api.simple_prompt(self.format_rag_prompt(rag_documents))
+                if self.answer_valid(answer, rag_documents):
+                    LOGGER.info(
+                        "Finished generating answer. Question: %s\nAnswer: %s",
+                        search_term,
+                        answer
+                    )
+                    break
+                if retries >= 3:
+                    LOGGER.info(
+                        "Stopped after 3rd attempt. Could not generate valid answer for question: %s\n",
+                        search_term
+                    )
+                    answer = ""
+                    break
 
-        if answer == "":
-            return self.get_no_answer_response(language_service, documents)
-        if self.shallow_search:
-            answer = language_service.translate_message(
-                "en", self.language, Messages.SHALLOW_SEARCH.format(self.rag_request.search_term), True
-            ) + answer
-        return RagResponse(documents, self.rag_request, answer)
+            if answer == "":
+                answer = Messages.NO_ANSWER + (Messages.RELEVANT_PAGES if documents else "")
+            if self.shallow_search:
+                answer = language_service.translate_message(
+                    "en", self.language, Messages.SHALLOW_SEARCH.format(self.rag_request.search_term), True
+                ) + answer
+            answers.append(answer)
+
+        return RagResponse(documents, self.rag_request, "\n\n".join(answers))
 
     async def check_documents_relevance(self, question: str, search_results: list) -> bool:
         """
@@ -361,3 +386,4 @@ class AnswerService:
             search_results[i].include_in_answer = str(llm_response).lower().startswith("yes")
             search_results[i].reason_inclusion = str(llm_response)
         return search_results
+ 
