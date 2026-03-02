@@ -102,7 +102,8 @@ def message_to_region_languages(request):
                             language,
                             data["message"],
                             True
-                        ))
+                        )),
+                        "language": language,
                     })
             except KeyError as exc:
                 result = {
