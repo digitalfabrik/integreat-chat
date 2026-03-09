@@ -4,6 +4,7 @@ Retrieving matching documents for question an create summary text
 
 import asyncio
 import logging
+from venv import logger
 import aiohttp
 from math import ceil
 
@@ -95,6 +96,8 @@ class AnswerService:
             if intent not in seen:
                 seen.add(intent)
                 distinct_intents.append(intent)
+        logger.info("Extracted intents: %s", distinct_intents)
+        print("Extracted intents: %s", distinct_intents)
         return distinct_intents
 
     async def check_message_parallelized(self, num_messages: int) -> tuple[bool,str,bool]:

@@ -122,23 +122,8 @@ Reject intents that:
 - For emergencies, prefix with `"emergency:"` in the summary.
 - Use the language 'LANG_CODE' for the intent summaries.
 
-### Demographic Enrichment
-If the user provides any of the following information:
-- **Country of origin**
-- **Age**
-- **Gender**
-
-…incorporate the available information **naturally into the intent sentence** (not as parentheses or metadata).  
-Example style:
-- “A 25-year-old woman from Syria asking how to apply for asylum”
-- “A man seeking housing assistance”
-- “A teenager looking for mental health support”
-
-Include only the demographic details explicitly stated by the user.  
-If none are given, do not add any demographic information.
-
-### Output Format
-- Return **each intent on a new line**.
+### Output Format (exactly as specified)
+- Return each intent on a new line.
 - No bullets, numbering, or additional text.
 """
 
