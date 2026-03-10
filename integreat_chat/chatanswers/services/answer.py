@@ -134,7 +134,7 @@ class AnswerService:
             self.check_message_parallelized(num_messages)
         )
         automatic_answer = True
-        if request_human:
+        if request_human and settings.INTEGREAT_REGIONS[self.region]["human_counseling"]:
             automatic_answer = False
             message = Messages.TALK_TO_HUMAN
         else:
@@ -259,7 +259,7 @@ class AnswerService:
         Generate RAG prompt including context
         """
         return Prompts.RAG.format(
-            settings.INTEGREAT_REGION_NAMES[self.region],
+            settings.INTEGREAT_REGIONS[self.region]["name"],
             self.language,
             self.rag_request.search_term,
             self.format_context(documents)
