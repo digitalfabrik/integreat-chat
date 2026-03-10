@@ -58,8 +58,7 @@ class LanguageService:
         prompt = LlmPrompt(
             settings.LANGUAGE_CLASSIFICATION_MODEL,
             [
-                LlmMessage(Prompts.LANGUAGE_CLASSIFICATION, role="system"),
-                LlmMessage(message, role="user")
+                LlmMessage(Prompts.LANGUAGE_CLASSIFICATION.format(message), role="user")
             ]
         )
         LOGGER.debug("Detecting message language")

@@ -63,11 +63,13 @@ class AnswerService:
         """
         prompt_text = Prompts.SUMMARIZE_MESSAGE.replace(
             "LANG_CODE",
-            str(self.rag_request.last_message.use_language)
+            str(self.rag_request.last_message.use_language),
+        ).replace(
+            "MESSAGES",
+            "---\n".join([message.translated_message for message in self.rag_request.messages[-num_messages:]])
         )
         return LlmPrompt(settings.RAG_RELEVANCE_CHECK_MODEL,
-            [LlmMessage(prompt_text, role="system")] +
-            self.rag_request.messages[-num_messages:]
+            [LlmMessage(prompt_text, role="system")]
         )
 
     def prepare_accept_message_prompt(self, num_messages: int) -> LlmPrompt:

@@ -8,7 +8,7 @@ class Prompts:
     Collection of required prompts
     """
 
-    FACT_CHECK = """Your are tasked with fact checking the answer of a RAG system. You're given a generated answer and its sources. Validate that all facts in the answer are contained in the sources. The LLM for generating the answer is instructed to tell users that it cannot make appointments, if relevant. Answer with only one sentence that begins either with 'valid, bacause' or 'not valid, because', depending on your judgement.
+    FACT_CHECK = """Your are tasked with fact checking the answer of a RAG system. You're given a generated answer and its sources. Validate that all facts in the answer are contained in the sources. The LLM for generating the answer is instructed to tell users that it cannot make appointments, if relevant. Therefore always accept the fact that no appointments can be made. Answer with only one sentence that begins either with 'valid, bacause' or 'not valid, because', depending on your judgement.
 
 # Generated Answer
 ---
@@ -93,6 +93,10 @@ for the summary. If the last message is contains an incopmlete question or parti
 
 ### Output Format
 Return only the terse summarized user question, nothing else.
+
+### Messages
+
+MESSAGES
 """
 
     OPTIMIZE_MESSAGE = """Please summarize the following text into one terse sentence or question. Only answer with the summary, no text around it.
