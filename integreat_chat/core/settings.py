@@ -16,7 +16,7 @@ import os
 from pathlib import Path
 
 from celery.schedules import crontab
-from integreat_chat.core.utils.integreat_cms import get_integreat_regions
+from integreat_chat.core.utils.integreat_cms import get_integreat_region_names
 
 config = configparser.ConfigParser()
 if os.path.isfile('/etc/integreat-chat.ini'):
@@ -63,9 +63,14 @@ ALLOWED_HOSTS = (
 INTEGREAT_CMS_DOMAIN = config["MAIN"]["INTEGREAT_CMS_DOMAIN"]
 INTEGREAT_APP_DOMAIN = config["MAIN"]["INTEGREAT_APP_DOMAIN"]
 
-_regions_data = get_integreat_regions()
-INTEGREAT_REGIONS = _regions_data[0]
-INTEGREAT_REGION_NAMES = _regions_data[1]
+_region_names = get_integreat_region_names()
+INTEGREAT_REGIONS = {
+    slug: {
+        "name": _region_names.get(slug, slug),
+        "human_counseling": value.strip() == "with-humans",
+    }
+    for slug, value in config["REGIONS"].items()
+}
 
 # Configuration Variables for answer service
 LANGUAGE_CLASSIFICATION_MODEL = "gpt-oss:120b"

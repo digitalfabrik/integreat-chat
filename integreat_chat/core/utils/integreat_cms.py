@@ -118,3 +118,16 @@ def get_integreat_regions():
     region_names = {region["path"]: region["name_without_prefix"] for region in chat_enabled_regions}
     
     return regions, region_names
+
+
+def get_integreat_region_names() -> dict[str, str]:
+    """
+    Get human-readable names for all regions from the Integreat CMS API.
+
+    Returns:
+        A dict mapping each region path slug to its name_without_prefix.
+    """
+    headers = {"X-Integreat-Development": "true"}
+    regions_url = f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/regions/"
+    response = requests.get(regions_url, timeout=30, headers=headers).json()
+    return {region["path"]: region["name_without_prefix"] for region in response}
