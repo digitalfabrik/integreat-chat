@@ -49,7 +49,7 @@ def translate_message(request):
             or "target_language" not in data
             or "message" not in data
         ):
-            result = {"status": "error"}
+            result = {"status": "error", "reason": "Missing source_language, target_language or message attribute."}
         else:
             force_src_lang = "force_source_language" in data and data["force_source_language"]
             try:
@@ -65,6 +65,7 @@ def translate_message(request):
                     "status": "success",
                 }
             except KeyError as exc:
+                LOGGER.error(exc)
                 result = {
                     "status": "error",
                     "reason": str(exc)

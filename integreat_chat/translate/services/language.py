@@ -174,7 +174,11 @@ class LanguageService:
         Replace placeholders back to URLs after translation
         """
         for placeholder, url in self.placeholders.items():
-            translated_url = self.translate_link(url, target_language)
+            try:
+                translated_url = self.translate_link(url, target_language)
+            except:
+                translated_url = url
+                LOGGER.error("Falling back to original URL")
             translated_message = translated_message.replace(placeholder, translated_url)
         return translated_message
 
