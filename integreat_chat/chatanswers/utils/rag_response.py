@@ -67,13 +67,13 @@ class RagResponse:
         translated_answer = str(self)
         return {
             "answer": translated_answer,
+            "original_answer": self.rag_response,
             "length_generated_answer": len(self.rag_response.split(" ")) + 1,
             "length_final_message": len(translated_answer.split(" ")) + 1,
             "status": "success",
             "messages": [message.as_dict() for message in self.request.messages],
             "rag_message": self.request.search_term,
             "rag_language": self.request.first_message.use_language,
-            "rag_sources": [document.chunk_source_path for document in self.documents],
             "automatic_answers": self.automatic_answers,
             "details": [
                 {
