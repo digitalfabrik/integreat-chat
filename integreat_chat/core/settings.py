@@ -81,7 +81,7 @@ TRANSLATION_MODEL_SUPPORTED_LANGUAGES = [
     'eu','fa','fi','fr','ga','gl','gu','he','hi','hr','hu','hy','id','is','it','ja','jv','ka',
     'kk','km','kmr','kn','ko','ky','lo','lt','lv','mk','ml','mn','mr','ms','my','ne','nl','no',
     'pa','pl','pt','pt-br','ro','ru','si','sk','sl','so', 'sq','sr','sv','sw','ta','te','th',
-    'tr','uk','ur','uz','vi','xh','yi','zh','zu'
+    'ti', 'tr','uk','ur','uz','vi','xh','yi','zh','zu'
 ]
 
 RAG_SCORE_THRESHOLD = 0.1
