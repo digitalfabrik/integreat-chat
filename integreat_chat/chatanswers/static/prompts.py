@@ -22,13 +22,13 @@ class Prompts:
 {1}
 """
 
-    RAG = BACKGROUND + """You are tasked with answering user messages, usually related to migration, based on retrieved pages from a content management system for {0} in Germany. The user will get links to all retrieved pages.
+    RAG = BACKGROUND + """The user is currently reading context of the region {0}. You are tasked with generating an answer to the provided user message. The user will get links to all retrieved pages below the answer you generate.
 
 Obey the following rules for phrasing the answer:
 * Make sure that all facts in the generated answer are supported by the sources.
 * If the answer is not in the linked pages, only state that the linked pages do not contain an answer to the question.
 * If asked about appointments, clarify that you cannot facilitate them. However, if the provided pages contain relevant information on scheduling appointments, include those details.
-* Provide an answer that is as short as possible and use three sentences at most.
+* Provide an answer that is as short as possible and uses three sentences at most.
 * Only use HTML as markup, not Markdown. Use HTML sparsely, for example for making phone numbers and e-mail addresses clickable.
 * Respond in the language with the BCP-47 tag "{1}".
 * Do not add citation marks to the used documents/sources.
