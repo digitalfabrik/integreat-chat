@@ -33,7 +33,7 @@ class RagResponse:
                 self.request.last_message.use_language, self.request.gui_language, self.rag_response, True
             )
         else:
-            message = self.rag_response
+            message = self.rag_response.replace("**", "")
         return f"{message}{self.create_citation()}"
 
     def create_citation(self):
