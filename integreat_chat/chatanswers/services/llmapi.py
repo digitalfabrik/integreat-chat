@@ -123,7 +123,7 @@ class LlmApiClient:
         """
         Async wrapper for simple prompt
         """
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=600)) as session:
             return await self.chat_prompt(session, prompt)
 
     async def chat_prompt(self, session: aiohttp.ClientSession, prompt: LlmPrompt) -> dict:
@@ -132,7 +132,7 @@ class LlmApiClient:
         """
         async with session.post(self.api_url,
                                 json={**prompt.as_dict(), "temperature": 0},
-                                timeout=120,
+                                timeout=600,
                                 headers={
                                     'Authorization': f'Bearer {settings.LLM_API_KEY}',
                                     'Content-Type': 'application/json',
