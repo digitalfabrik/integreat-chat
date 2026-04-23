@@ -68,7 +68,20 @@ class LlmResponse:
         """
         Return message response as string
         """
-        return self.response["choices"][0]["message"]["content"]
+        if "choices" not in self.response or not self.response["choices"]:
+            LOGGER.error(
+                "Invalid LLM response structure: expected 'choices' key, got %s",
+                self.response
+            )
+            return ""
+        try:
+            return self.response["choices"][0]["message"]["content"]
+        except (KeyError, IndexError) as exc:
+            LOGGER.error(
+                "Failed to extract content from LLM response: %s. Original response: %s",
+                exc, self.response
+            )
+            return ""
 
     def as_dict(self) -> dict:
         """
