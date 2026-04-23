@@ -115,11 +115,13 @@ class AnswerService:
             LOGGER.debug("Sent CHECK_QUESTION")
             llmresponses = await asyncio.gather(*tasks)
         LOGGER.debug("Gathered check responses")
-        return (
-            str(LlmResponse(llmresponses[0])).lower().startswith("yes"),
-            str(LlmResponse(llmresponses[1])),
-            str(LlmResponse(llmresponses[2])).lower().startswith("yes"),
-        )
+        response_0 = str(LlmResponse(llmresponses[0])).lower().startswith("yes") or False
+        LOGGER.debug(f"HUMAN_REQUEST_CHECK response: {str(LlmResponse(llmresponses[0]))}")
+        response_1 = str(LlmResponse(llmresponses[1])) or ""
+        LOGGER.debug(f"SUMMARIZE_MESSAGE response: {str(LlmResponse(llmresponses[1]))}")
+        response_2 = str(LlmResponse(llmresponses[2])).lower().startswith("yes") or False
+        LOGGER.debug(f"CHECK_QUESTION response: {str(LlmResponse(llmresponses[2]))}")
+        return response_0, response_1, response_2
 
     def skip_rag_answer(self, language_service: LanguageService) -> str|bool:
         """
@@ -355,11 +357,20 @@ class AnswerService:
             llmresponses = await asyncio.gather(*tasks)
         for i, response in enumerate(llmresponses):
             llm_response = LlmResponse(response)
+            response_content = str(llm_response)
+            if not response_content:
+                LOGGER.warning(
+                    "Empty LLM response for document %s. Document will be excluded.",
+                    search_results[i].gui_source_path
+                )
+                search_results[i].include_in_answer = False
+                search_results[i].reason_inclusion = ""
+                continue
             LOGGER.info(
                 "Using %s: %s",
                 search_results[i].gui_source_path,
-                str(llm_response)
+                response_content
             )
-            search_results[i].include_in_answer = str(llm_response).lower().startswith("yes")
-            search_results[i].reason_inclusion = str(llm_response)
+            search_results[i].include_in_answer = response_content.lower().startswith("yes")
+            search_results[i].reason_inclusion = response_content
         return search_results
