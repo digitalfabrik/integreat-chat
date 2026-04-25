@@ -50,6 +50,7 @@ class LlmPrompt:
             "model": self.model,
             "messages": [message.as_dict() for message in self.messages]
         }
+        LOGGER.debug(f"Prompt: {json.dumps(body)}")
         if self.json_schema is not None:
             body["response_format"] = {
                 "type": "json_schema",
@@ -68,7 +69,20 @@ class LlmResponse:
         """
         Return message response as string
         """
-        return self.response["choices"][0]["message"]["content"]
+        if "choices" not in self.response or not self.response["choices"]:
+            LOGGER.error(
+                "Invalid LLM response structure: expected 'choices' key, got %s",
+                self.response
+            )
+            return ""
+        try:
+            return self.response["choices"][0]["message"]["content"]
+        except (KeyError, IndexError) as exc:
+            LOGGER.error(
+                "Failed to extract content from LLM response: %s. Original response: %s",
+                exc, self.response
+            )
+            return ""
 
     def as_dict(self) -> dict:
         """
@@ -110,7 +124,7 @@ class LlmApiClient:
         """
         Async wrapper for simple prompt
         """
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=600)) as session:
             return await self.chat_prompt(session, prompt)
 
     async def chat_prompt(self, session: aiohttp.ClientSession, prompt: LlmPrompt) -> dict:
@@ -119,7 +133,7 @@ class LlmApiClient:
         """
         async with session.post(self.api_url,
                                 json={**prompt.as_dict(), "temperature": 0},
-                                timeout=120,
+                                timeout=600,
                                 headers={
                                     'Authorization': f'Bearer {settings.LLM_API_KEY}',
                                     'Content-Type': 'application/json',

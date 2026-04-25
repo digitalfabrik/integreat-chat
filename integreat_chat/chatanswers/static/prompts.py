@@ -25,6 +25,7 @@ class Prompts:
     RAG = BACKGROUND + """The user is currently reading context of the region {0}. You are tasked with generating an answer to the provided user message. The user will get links to all retrieved pages below the answer you generate.
 
 Obey the following rules for phrasing the answer:
+* Be quick with the answer, the user is waiting. Don't think long.
 * Make sure that all facts in the generated answer are supported by the sources.
 * If the answer is not in the linked pages, only state that the linked pages do not contain an answer to the question.
 * If asked about appointments, clarify that you cannot facilitate them. However, if the provided pages contain relevant information on scheduling appointments, include those details.
@@ -42,7 +43,7 @@ Linked pages:
 
     CHECK_DOCUMENT = """# Task
 """ + BACKGROUND + """Your task is to evaluate whether a retrieved document definitely contains a direct answer to the user’s message.
-Evaluation Criteria:
+Only briefly address the criteria, be quick. The user is waiting. Evaluation Criteria:
 
 * Generally assume that documents are not relevant and only deem them relevant if there are good reasons.
 * General relevance is not enough — it must contain specific and authoritative information.
@@ -87,6 +88,7 @@ Respond with "yes" if the message should be accepted. Reespond with "no" if it s
 """ + BACKGROUND + """You will be given up to 3 messages. **Create a terse summary of the user message.**
 Leave out specific personal details and only include generic information that can be found in a knowledge base. Use the language 'LANG_CODE'
 for the summary. If the last message is contains an incopmlete question or partial sentence, the previous messages can be used for context.
+The user is waiting for a quick response, don't think too long.
 
 ### Examples for summarizing the user question
 - Clear questions like "Where can I learn German?" do not need additional context and can be summarized to "learning German"

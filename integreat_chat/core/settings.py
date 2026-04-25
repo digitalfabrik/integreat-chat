@@ -73,9 +73,9 @@ INTEGREAT_REGIONS = {
 }
 
 # Configuration Variables for answer service
-LANGUAGE_CLASSIFICATION_MODEL = "gpt-oss:120b"
+LANGUAGE_CLASSIFICATION_MODEL = "verdigado-fast"
 
-TRANSLATION_MODEL = "gemma3:27b"
+TRANSLATION_MODEL = "verdigado-fast"
 TRANSLATION_MODEL_SUPPORTED_LANGUAGES = [
     'af','am','ar','az','be','bg','bn','bs','ca','ckb','cs','cy','da','de','el','en','es','et',
     'eu','fa','fi','fr','ga','gl','gu','he','hi','hr','hu','hy','id','is','it','ja','jv','ka',
@@ -86,7 +86,7 @@ TRANSLATION_MODEL_SUPPORTED_LANGUAGES = [
 
 RAG_SCORE_THRESHOLD = 0.1
 RAG_MAX_PAGES = 3
-RAG_MODEL = "gpt-oss:120b"
+RAG_MODEL = "verdigado-pro"
 RAG_RELEVANCE_CHECK = (
         config["MAIN"]["RAG_RELEVANCE_CHECK"] if
         "RAG_RELEVANCE_CHECK" in config["MAIN"] else "True"
@@ -95,9 +95,9 @@ RAG_HUMAN_REQUEST_CHECK = (
         config["MAIN"]["RAG_HUMAN_REQUEST_CHECK"] if
         "RAG_HUMAN_REQUEST_CHECK" in config["MAIN"] else "True"
     ) == "True"
-RAG_RELEVANCE_CHECK_MODEL = "gpt-oss:120b"
+RAG_RELEVANCE_CHECK_MODEL = "verdigado-fast"
 RAG_QUERY_OPTIMIZATION = True
-RAG_QUERY_OPTIMIZATION_MODEL = "gpt-oss:120b"
+RAG_QUERY_OPTIMIZATION_MODEL = "verdigado-fast"
 RAG_CONTEXT_MAX_LENGTH = 60000
 RAG_SUPPORTED_LANGUAGES = ["en", "de"]
 RAG_FALLBACK_LANGUAGE = "en"
@@ -106,6 +106,7 @@ RAG_FACT_CHECK = (
         config["MAIN"]["RAG_FACT_CHECK"] if
         "RAG_FACT_CHECK" in config["MAIN"] else "True"
     ) == "True"
+RAG_VALID_ANSWER_CHECK = False
 
 # Limit number of messages processed. The last N messages will be used.
 REQUEST_MAX_MESSAGES = 10
