@@ -106,6 +106,7 @@ RAG_FACT_CHECK = (
         config["MAIN"]["RAG_FACT_CHECK"] if
         "RAG_FACT_CHECK" in config["MAIN"] else "True"
     ) == "True"
+RAG_VALID_ANSWER_CHECK = False
 
 # Limit number of messages processed. The last N messages will be used.
 REQUEST_MAX_MESSAGES = 10

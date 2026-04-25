@@ -309,7 +309,7 @@ class AnswerService:
         while True:
             retries += 1
             answer = self.llm_api.simple_prompt(self.format_rag_prompt(rag_documents))
-            if self.answer_valid(answer, rag_documents):
+            if not settings.RAG_VALID_ANSWER_CHECK or self.answer_valid(answer, rag_documents):
                 LOGGER.info(
                     "Finished generating answer. Question: %s\nAnswer: %s",
                     self.rag_request.search_term,
