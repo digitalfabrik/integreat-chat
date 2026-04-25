@@ -87,6 +87,7 @@ Respond with "yes" if the message should be accepted. Reespond with "no" if it s
 """ + BACKGROUND + """You will be given up to 3 messages. **Create a terse summary of the user message.**
 Leave out specific personal details and only include generic information that can be found in a knowledge base. Use the language 'LANG_CODE'
 for the summary. If the last message is contains an incopmlete question or partial sentence, the previous messages can be used for context.
+The user is waiting for a quick response, don't think too long.
 
 ### Examples for summarizing the user question
 - Clear questions like "Where can I learn German?" do not need additional context and can be summarized to "learning German"

@@ -86,7 +86,7 @@ TRANSLATION_MODEL_SUPPORTED_LANGUAGES = [
 
 RAG_SCORE_THRESHOLD = 0.1
 RAG_MAX_PAGES = 3
-RAG_MODEL = "verdigado-pro"
+RAG_MODEL = "verdigado-fast"
 RAG_RELEVANCE_CHECK = (
         config["MAIN"]["RAG_RELEVANCE_CHECK"] if
         "RAG_RELEVANCE_CHECK" in config["MAIN"] else "True"
