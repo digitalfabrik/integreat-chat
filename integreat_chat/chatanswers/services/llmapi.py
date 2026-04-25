@@ -50,6 +50,7 @@ class LlmPrompt:
             "model": self.model,
             "messages": [message.as_dict() for message in self.messages]
         }
+        LOGGER.debug(f"Prompt: {json.dumps(body)}")
         if self.json_schema is not None:
             body["response_format"] = {
                 "type": "json_schema",
