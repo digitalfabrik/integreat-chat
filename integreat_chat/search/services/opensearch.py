@@ -276,7 +276,17 @@ class OpenSearch:
         :param language_slug: Integreat CMS language slug
         :param differential: recreate (fill) index if false, update if true
         """
-        cms_pages = get_all_pages(region_slug, language_slug)
+        try:
+            cms_pages = get_all_pages(region_slug, language_slug)
+        except Exception as e:
+            LOGGER.warning(f"Failed to fetch Integreat CMS pages. Backing off for 35s. Error: {e}")
+            time.sleep(35)
+            try:
+                cms_pages = get_all_pages(region_slug, language_slug)
+            except Exception as e:
+                LOGGER.warning(f"Failed to fetch Integreat CMS pages. Aborting. Error: {e}")
+                return
+                
         if differential:
             self.remove_deleted_pages(
                 f"{region_slug}_{language_slug}",
