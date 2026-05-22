@@ -115,36 +115,36 @@ class OpenSearch:
                 "hybrid": {
                     "queries": [
                         {
-                        "match": {
-                            "title": {
-                                "query": message
+                            "match": {
+                                "title": {
+                                    "query": message
+                                }
                             }
-                        }
                         },
                         {
-                        "match": {
-                            "chunk_text": {
-                                "query": message
+                            "match": {
+                                "chunk_text": {
+                                    "query": message
+                                }
                             }
-                        }
                         },
                         {
-                        "neural": {
-                            "title_embedding": {
-                                "query_text": message,
-                                "model_id": self.model_id,
-                                "k": 50
+                            "neural": {
+                                "title_embedding": {
+                                    "query_text": message,
+                                    "model_id": self.model_id,
+                                    "k": 50
+                                }
                             }
-                        }
                         },
                         {
-                        "neural": {
-                            "chunk_embedding": {
-                                "query_text": message,
-                                "model_id": self.model_id,
-                                "k": 50
+                            "neural": {
+                                "chunk_embedding": {
+                                    "query_text": message,
+                                    "model_id": self.model_id,
+                                    "k": 50
+                                }
                             }
-                        }
                         }
                     ]
                 }
