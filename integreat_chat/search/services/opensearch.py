@@ -51,15 +51,24 @@ class OpenSearch:
         param method: a HTTP method
         """
         headers = {'Content-type': 'application/json'}
-        return requests.request(
+        url = f'{self.base_url}{path}'
+        LOGGER.debug("request(): %s %s", method, url)
+        resp = requests.request(
             method=method,
-            url=f'{self.base_url}{path}',
+            url=url,
             auth=(self.user, self.password),
             json=payload,
             timeout=30,
             verify="/etc/opensearch/root-ca.pem",
             headers=headers,
-        ).json()
+        )
+        LOGGER.debug("request(): HTTP %s from %s", resp.status_code, url)
+        if not resp.ok:
+            LOGGER.error(
+                "request(): non-OK response %s from %s – body: %s",
+                resp.status_code, url, resp.text[:2000],
+            )
+        return resp.json()
 
     def reduce_search_result(
             self,
@@ -80,6 +89,12 @@ class OpenSearch:
         result = []
         found_urls = []
         if "hits" not in response:
+            LOGGER.error(
+                "reduce_search_result(): 'hits' missing in response. "
+                "Top-level keys: %s. Full response: %s",
+                list(response.keys()) if isinstance(response, dict) else type(response),
+                response,
+            )
             raise ValueError("Missing hits in result")
         for document in response["hits"]["hits"]:
             if (
@@ -105,6 +120,10 @@ class OpenSearch:
         param language_slug: slug of a language of a region
         param message: search string / message
         """
+        LOGGER.debug(
+            "search() called: region=%s, language=%s, message=%r, model_id=%s",
+            region_slug, language_slug, message, self.model_id,
+        )
         payload = {
             "_source": {
                 "exclude": [
@@ -150,10 +169,14 @@ class OpenSearch:
                 }
             }
         }
-        return self.request(
-            f"/{region_slug}_{language_slug}/_search?"
+        index = f"{region_slug}_{language_slug}"
+        LOGGER.debug("search() index: %s, payload: %s", index, payload)
+        response = self.request(
+            f"/{index}/_search?"
             f"search_pipeline={self.search_pipeline_name}", payload, "GET"
         )
+        LOGGER.debug("search() raw response: %s", response)
+        return response
 
     def search_api(self, index: str, payload: dict) -> dict:
         """
