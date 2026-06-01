@@ -128,6 +128,12 @@ To integrate Zammad, the following configuration has to be set:
 
      # IMPORTANT: Execute the migrations to apply the database changes
      ObjectManager::Attribute.migration_execute
+     attr = ObjectManager::Attribute.find_by(name: "initial_response_sent")
+     attr.to_migrate = true
+     attr.to_create  = true
+     attr.save!
+
+     ObjectManager::Attribute.migration_execute(false)   # 'false' = not a sandbox/dry run 
      ```
      Exit the rails console to reload new models when done with this step!
 1. Create an access token for the Integreat CMS user (`tech+integreat-cms@tuerantuer.org`) with permission `Agent tickets`
