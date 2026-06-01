@@ -235,3 +235,52 @@ To integrate Zammad, the following configuration has to be set:
    * Conditions: `state is open or new`, `Last contact (customer) before (relative) 1 months`
    * Action: `State closed`
    * Disable Notifications: yes
+
+     ```
+     new_id     = Ticket::State.lookup(name: 'new').id.to_s
+     open_id    = Ticket::State.lookup(name: 'open').id.to_s
+     closed_id  = Ticket::State.lookup(name: 'closed').id.to_s
+
+     timeplan = {
+       'days'    => { 'Mon' => true, 'Tue' => false, 'Wed' => false, 'Thu' => false, 'Fri' => false, 'Sat' => false, 'Sun' => false },
+       'hours'   => { '0' => false, '1' => false, '2' => false, '3' => true, '4' => false, '5' => false, '6' => false, '7' => false, '8' => false, '9' => false, '10' => false, '11' => false, '12' => false, '13' => false, '14' => false, '15' => false, '16' => false, '17' => false, '18' => false, '19' => false, '20' => false, '21' => false, '22' => false, '23' => false },
+       'minutes' => { '0' => true, '10' => false, '20' => false, '30' => false, '40' => false, '50' => false },
+     }
+
+     Job.create_or_update(
+       name: 'Delete closed chats after 3 months',
+       object: 'Ticket',
+       timeplan: timeplan,
+       condition: {
+         'ticket.state_id' => { 'operator' => 'is', 'value' => [open_id, closed_id] },
+         'ticket.close_at' => { 'operator' => 'before (relative)', 'value' => '3', 'range' => 'month' },
+       },
+       perform: {
+         'ticket.action' => { 'value' => 'delete' },
+       },
+       disable_notification: true,
+       active: true,
+       updated_by_id: 1,
+       created_by_id: 1,
+     )
+
+     Job.create_or_update(
+       name: 'Auto close inactive chats after 1 month',
+       object: 'Ticket',
+       timeplan: timeplan,
+       condition: {
+         'ticket.state_id'                 => { 'operator' => 'is', 'value' => [new_id, open_id] },
+         'ticket.last_contact_customer_at' => { 'operator' => 'before (relative)', 'value' => '1', 'range' => 'month' },
+       },
+       perform: {
+         'ticket.state_id' => { 'value' => closed_id },
+       },
+       disable_notification: true,
+       active: true,
+       updated_by_id: 1,
+       created_by_id: 1,
+     )
+
+     puts 'Done. Current jobs:'
+     Job.all.pluck(:id, :name, :active).each { |j| puts j.inspect }
+     ```
