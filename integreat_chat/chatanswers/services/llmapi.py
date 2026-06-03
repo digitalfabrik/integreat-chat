@@ -4,7 +4,6 @@ Very simple LiteLLM Client (should be compatible to OpenAI API)
 import json
 import logging
 
-import asyncio
 import aiohttp
 
 from django.conf import settings
@@ -93,22 +92,22 @@ class LlmApiClient:
         """
         self.api_url = f"{settings.LLM_SERVER}/chat/completions"
 
-    def simple_prompt(self, message: str) -> str:
+    async def simple_prompt(self, session: aiohttp.ClientSession, message: str) -> str:
         """
-        Simple message and answer function.
+        Send a single user message to the default RAG model and return its content.
 
-        param message: Message prompted to LLM
-        return: message returned by LLM
+        param session: shared aiohttp session
+        param message: prompt content
+        return: LLM response text
         """
-        return str(
-            LlmResponse(asyncio.run(self.chat_prompt_session_wrapper(
-                LlmPrompt(settings.RAG_MODEL, [LlmMessage(message)])
-            )))
-        )
+        return str(LlmResponse(await self.chat_prompt(
+            session,
+            LlmPrompt(settings.RAG_MODEL, [LlmMessage(message)])
+        )))
 
     async def chat_prompt_session_wrapper(self, prompt: LlmPrompt) -> dict:
         """
-        Async wrapper for simple prompt
+        Run a single prompt with its own short-lived aiohttp session.
         """
         async with aiohttp.ClientSession() as session:
             return await self.chat_prompt(session, prompt)
@@ -119,7 +118,7 @@ class LlmApiClient:
         """
         async with session.post(self.api_url,
                                 json={**prompt.as_dict(), "temperature": 0},
-                                timeout=120,
+                                timeout=aiohttp.ClientTimeout(total=120),
                                 headers={
                                     'Authorization': f'Bearer {settings.LLM_API_KEY}',
                                     'Content-Type': 'application/json',

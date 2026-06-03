@@ -4,9 +4,10 @@ Retrieving matching documents for question an create summary text
 
 import asyncio
 import logging
-import aiohttp
 from math import ceil
 
+import aiohttp
+from asgiref.sync import sync_to_async
 from django.conf import settings
 
 from integreat_chat.search.services.search import SearchService
@@ -40,12 +41,13 @@ class AnswerService:
         self.llm_api = LlmApiClient()
         self.shallow_search = False
 
-    def message_requires_context(self) -> bool:
+    async def message_requires_context(self, session: aiohttp.ClientSession) -> bool:
         """
         Check if the last message is a standalone message or requires context of previous messages
         """
         prompt = Prompts.CONTEXT_CHECK.format(self.rag_request.last_message.translated_message)
-        return self.llm_api.simple_prompt(prompt).startswith("yes")
+        response = await self.llm_api.simple_prompt(session, prompt)
+        return response.startswith("yes")
 
     def prepare_request_human_prompt(self) -> LlmPrompt:
         """
@@ -81,39 +83,27 @@ class AnswerService:
             self.rag_request.messages[-num_messages:]
         )
 
-    async def check_message_parallelized(self, num_messages: int) -> tuple[bool,str,bool]:
+    async def check_message_parallelized(
+        self, session: aiohttp.ClientSession, num_messages: int
+    ) -> tuple[bool, str, bool]:
         """
         Check if a chat message is a question
 
         :return: request human, summarized message, accept_message
         """
-        tasks = []
-        async with aiohttp.ClientSession() as session:
-            # HUMAN_REQUEST_CHECK
-            tasks.append(
-                asyncio.create_task(self.llm_api.chat_prompt(
-                    session,
-                    self.prepare_request_human_prompt()
-                )
-            ))
-            LOGGER.debug("Sent HUMAN_REQUEST_CHECK")
-            # SUMMARIZE_MESSAGE
-            tasks.append(
-                asyncio.create_task(self.llm_api.chat_prompt(
-                    session,
-                    self.prepare_summarize_prompt(num_messages)
-                ))
-            )
-            LOGGER.debug("Sent SUMMARIZE_MESSAGE")
-            # CHECK_QUESTION
-            tasks.append(
-                asyncio.create_task(self.llm_api.chat_prompt(
-                    session,
-                    self.prepare_accept_message_prompt(num_messages)
-                ))
-            )
-            LOGGER.debug("Sent CHECK_QUESTION")
-            llmresponses = await asyncio.gather(*tasks)
+        tasks = [
+            asyncio.create_task(self.llm_api.chat_prompt(
+                session, self.prepare_request_human_prompt()
+            )),
+            asyncio.create_task(self.llm_api.chat_prompt(
+                session, self.prepare_summarize_prompt(num_messages)
+            )),
+            asyncio.create_task(self.llm_api.chat_prompt(
+                session, self.prepare_accept_message_prompt(num_messages)
+            )),
+        ]
+        LOGGER.debug("Sent HUMAN_REQUEST_CHECK / SUMMARIZE_MESSAGE / CHECK_QUESTION")
+        llmresponses = await asyncio.gather(*tasks)
         LOGGER.debug("Gathered check responses")
         return (
             str(LlmResponse(llmresponses[0])).lower().startswith("yes"),
@@ -121,17 +111,25 @@ class AnswerService:
             str(LlmResponse(llmresponses[2])).lower().startswith("yes"),
         )
 
-    def skip_rag_answer(self, language_service: LanguageService) -> str|bool:
+    async def skip_rag_answer(
+        self,
+        session: aiohttp.ClientSession,
+        language_service: LanguageService,
+    ) -> RagResponse | bool:
         """
         Check if a chat message is a question
 
         :param message: a user message
         :return: answer message if no further processing is required, else False
         """
-        num_messages = settings.RAG_CONTEXT_LENGTH if self.message_requires_context() else 1
+        num_messages = (
+            settings.RAG_CONTEXT_LENGTH
+            if await self.message_requires_context(session)
+            else 1
+        )
         LOGGER.debug("Using the last %s messages.", num_messages)
-        request_human, summary, accept_message = asyncio.run(
-            self.check_message_parallelized(num_messages)
+        request_human, summary, accept_message = await self.check_message_parallelized(
+            session, num_messages
         )
         automatic_answer = True
         if request_human and settings.INTEGREAT_REGIONS[self.region]["human_counseling"]:
@@ -147,13 +145,13 @@ class AnswerService:
         return RagResponse(
             [],
             self.rag_request,
-            language_service.translate_message(
-                "en", self.language, message
+            await language_service.translate_message(
+                "en", self.language, message, session=session
             ),
             automatic_answer,
         )
 
-    def get_documents(self) -> list:
+    async def get_documents(self, session: aiohttp.ClientSession) -> list:
         """
         Retrieve documents for RAG
         """
@@ -166,20 +164,27 @@ class AnswerService:
             },
             True
         )
+        await search_request.prepare(session=session)
         search = SearchService(search_request, deduplicate_results=True)
-        documents = search.search_documents(
+        search_response = await sync_to_async(
+            search.search_documents, thread_sensitive=False
+        )(
             settings.RAG_MAX_PAGES * 4,
-            min_score=settings.RAG_SCORE_THRESHOLD,
-        ).documents
+            settings.RAG_SCORE_THRESHOLD,
+        )
+        documents = search_response.documents
         batches = ceil(len(documents)/3)
         filtered_documents = []
         for batch in range(0, batches):
-            filtered_documents += self.filter_documents(documents[batch*3:batch*3+3])
+            filtered_documents += await self.filter_documents(
+                session, documents[batch*3:batch*3+3]
+            )
             relevant_docs = self.count_relevant_documents(filtered_documents)
             if (relevant_docs > 1 and batch == 0) or (relevant_docs >= 1 and batch > 0):
                 break
         if not self.count_relevant_documents(documents) and not self.shallow_search:
-            self.rag_request.search_term = self.llm_api.simple_prompt(
+            self.rag_request.search_term = await self.llm_api.simple_prompt(
+                session,
                 Prompts.SHALLOW_SEARCH.format(
                     self.rag_request.last_message.use_language,
                     self.rag_request.search_term
@@ -190,7 +195,7 @@ class AnswerService:
                 self.rag_request.search_term
             )
             self.shallow_search = True
-            return self.get_documents()
+            return await self.get_documents(session)
         LOGGER.debug("Retrieved %s documents.", len(filtered_documents))
         return filtered_documents
 
@@ -207,7 +212,9 @@ class AnswerService:
                 relevant_docs += 1
         return relevant_docs
 
-    def filter_documents(self, documents: list) -> list:
+    async def filter_documents(
+        self, session: aiohttp.ClientSession, documents: list
+    ) -> list:
         """
         Filter documents by checking for relevance
 
@@ -215,8 +222,8 @@ class AnswerService:
         :return: filtered list of documents
         """
         if settings.RAG_RELEVANCE_CHECK:
-            documents = asyncio.run(self.check_documents_relevance(
-                str(self.rag_request.search_term), documents)
+            documents = await self.check_documents_relevance(
+                session, str(self.rag_request.search_term), documents
             )
         return documents
 
@@ -235,8 +242,9 @@ class AnswerService:
             ]
         )[: settings.RAG_CONTEXT_MAX_LENGTH]
 
-    def get_no_answer_response(
+    async def get_no_answer_response(
             self,
+            session: aiohttp.ClientSession,
             language_service: LanguageService,
             documents: list
         ) -> RagResponse:
@@ -249,8 +257,8 @@ class AnswerService:
         return RagResponse(
                 documents,
                 self.rag_request,
-                language_service.translate_message(
-                    "en", self.language, answer
+                await language_service.translate_message(
+                    "en", self.language, answer, session=session
                 ),
             )
 
@@ -265,16 +273,21 @@ class AnswerService:
             self.format_context(documents)
         )
 
-    def answer_valid(self, answer: str, documents: list[Document]) -> bool:
+    async def answer_valid(
+        self,
+        session: aiohttp.ClientSession,
+        answer: str,
+        documents: list[Document],
+    ) -> bool:
         """
         Check if a given answer is valid
         """
         if not settings.RAG_FACT_CHECK:
             return True
-        check = self.llm_api.simple_prompt(Prompts.FACT_CHECK.format(
-            answer,
-            self.format_context(documents)
-        ))
+        check = await self.llm_api.simple_prompt(
+            session,
+            Prompts.FACT_CHECK.format(answer, self.format_context(documents)),
+        )
         if check.lower().startswith('not valid'):
             LOGGER.info(
                 "Answer not valid. Question: %s\nAnswer: %s\nReason: %s",
@@ -284,7 +297,7 @@ class AnswerService:
             )
         return answer != "" and check.lower().startswith("valid")
 
-    def extract_answer(self) -> RagResponse:
+    async def extract_answer(self) -> RagResponse:
         """
         Search for pages that are related to the question and create
         answer that summarizes the content of found pages.
@@ -293,66 +306,77 @@ class AnswerService:
         """
         language_service = LanguageService()
 
-        if response := self.skip_rag_answer(language_service):
-            return response
-        documents = self.get_documents()
-        rag_documents = (
-            [document for document in documents if document.include_in_answer]
-            [:settings.RAG_MAX_PAGES]
-        )
-        if not rag_documents:
-            LOGGER.info("No documents found for : %s", self.rag_request.search_term)
-            return self.get_no_answer_response(language_service, documents)
-        retries = 0
-        while True:
-            retries += 1
-            answer = self.llm_api.simple_prompt(self.format_rag_prompt(rag_documents))
-            if self.answer_valid(answer, rag_documents):
-                LOGGER.info(
-                    "Finished generating answer. Question: %s\nAnswer: %s",
-                    self.rag_request.search_term,
-                    answer
+        async with aiohttp.ClientSession() as session:
+            if response := await self.skip_rag_answer(session, language_service):
+                return response
+            documents = await self.get_documents(session)
+            rag_documents = (
+                [document for document in documents if document.include_in_answer]
+                [:settings.RAG_MAX_PAGES]
+            )
+            if not rag_documents:
+                LOGGER.info("No documents found for : %s", self.rag_request.search_term)
+                return await self.get_no_answer_response(session, language_service, documents)
+            retries = 0
+            while True:
+                retries += 1
+                answer = await self.llm_api.simple_prompt(
+                    session, self.format_rag_prompt(rag_documents)
                 )
-                break
-            if retries >= 3:
-                LOGGER.info(
-                    "Stopped after 3rd attempt. Could not generate valid answer for question: %s\n",
-                    self.rag_request.search_term
-                )
-                answer = ""
-                break
+                if await self.answer_valid(session, answer, rag_documents):
+                    LOGGER.info(
+                        "Finished generating answer. Question: %s\nAnswer: %s",
+                        self.rag_request.search_term,
+                        answer
+                    )
+                    break
+                if retries >= 3:
+                    LOGGER.info(
+                        "Stopped after 3rd attempt. Could not generate valid answer for question: %s\n",
+                        self.rag_request.search_term
+                    )
+                    answer = ""
+                    break
 
-        if answer == "":
-            return self.get_no_answer_response(language_service, documents)
-        if self.shallow_search:
-            answer = language_service.translate_message(
-                "en", self.language, Messages.SHALLOW_SEARCH.format(self.rag_request.search_term), True
-            ) + answer
-        return RagResponse(documents, self.rag_request, answer)
+            if answer == "":
+                return await self.get_no_answer_response(session, language_service, documents)
+            if self.shallow_search:
+                answer = await language_service.translate_message(
+                    "en",
+                    self.language,
+                    Messages.SHALLOW_SEARCH.format(self.rag_request.search_term),
+                    True,
+                    session=session,
+                ) + answer
+            return RagResponse(documents, self.rag_request, answer)
 
-    async def check_documents_relevance(self, question: str, search_results: list) -> bool:
+    async def check_documents_relevance(
+        self,
+        session: aiohttp.ClientSession,
+        question: str,
+        search_results: list,
+    ) -> list:
         """
         Check if the retrieved documents are relevant for answering the question
 
         param question: a message/question from a user
         param content: a page content that could be relevant for answering the question
-        return: bool that indicates if the page is relevant for the question
+        return: list of documents with include_in_answer set
         """
         tasks = []
-        async with aiohttp.ClientSession() as session:
-            for document in search_results:
-                tasks.append(
-                    asyncio.create_task(self.llm_api.chat_prompt(
-                        session,
-                        LlmPrompt(settings.RAG_RELEVANCE_CHECK_MODEL, [
-                            LlmMessage(Prompts.CHECK_DOCUMENT.format(
-                                f"## {document.parent_titles}\n\n{document.content}"
-                            ), "system"),
-                            LlmMessage(question)]
-                        )
+        for document in search_results:
+            tasks.append(
+                asyncio.create_task(self.llm_api.chat_prompt(
+                    session,
+                    LlmPrompt(settings.RAG_RELEVANCE_CHECK_MODEL, [
+                        LlmMessage(Prompts.CHECK_DOCUMENT.format(
+                            f"## {document.parent_titles}\n\n{document.content}"
+                        ), "system"),
+                        LlmMessage(question)]
                     )
-                ))
-            llmresponses = await asyncio.gather(*tasks)
+                )
+            ))
+        llmresponses = await asyncio.gather(*tasks)
         for i, response in enumerate(llmresponses):
             llm_response = LlmResponse(response)
             LOGGER.info(

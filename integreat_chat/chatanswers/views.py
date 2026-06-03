@@ -16,7 +16,7 @@ LOGGER = logging.getLogger("django")
 
 
 @csrf_exempt
-def chat(request):
+async def chat(request):
     """
     Extract an answer for a user query from Integreat content. Expects a JSON body with message
     and language attributes
@@ -28,8 +28,10 @@ def chat(request):
     ):
         try:
             rag_request = RagRequest(json.loads(request.body))
+            await rag_request.prepare()
             answer_service = AnswerService(rag_request)
-            rag_response = answer_service.extract_answer().as_dict()
+            rag_response_obj = await answer_service.extract_answer()
+            rag_response = await rag_response_obj.as_dict()
         except ValueError as exc:
             rag_response = {"status": "error", "message": str(exc)}
     return JsonResponse(rag_response)

@@ -2,6 +2,8 @@
 base request class
 """
 import logging
+
+import aiohttp
 from django.conf import settings
 
 from integreat_chat.translate.services.language import LanguageService
@@ -33,7 +35,6 @@ class IntegreatRequest:
             raise ValueError("supported_languages or fallback_language has not been set.")
         self.parse_messages(data)
         self.most_important_message_first = True
-        _ = self.last_message.use_language
 
     def parse_meta_information(self, data: dict) -> None:
         """
@@ -53,7 +54,8 @@ class IntegreatRequest:
 
     def parse_messages(self, data: dict) -> None:
         """
-        Parse message(s) from HTTP request body
+        Parse message(s) from HTTP request body. Does NOT trigger language
+        classification or translation; call `prepare()` for that.
         """
         if "messages" not in data and "message" not in data:
             raise ValueError("No messages in request body")
@@ -65,10 +67,26 @@ class IntegreatRequest:
         for message in messages:
             if message["role"] != "user":
                 continue
+            self.messages.append(ChatMessage(message, self))
+
+    async def prepare(self, session: aiohttp.ClientSession | None = None) -> None:
+        """
+        Classify and translate each chat message. Messages whose language cannot
+        be classified are dropped, mirroring the previous behavior.
+        """
+        if session is None:
+            async with aiohttp.ClientSession() as owned_session:
+                await self.prepare(owned_session)
+                return
+        prepared: list[ChatMessage] = []
+        for message in self.messages:
             try:
-                self.messages.append(ChatMessage(message, self))
+                await message.prepare(session)
             except ValueError:
                 LOGGER.error("Skipping message because language could not be classified.")
+                continue
+            prepared.append(message)
+        self.messages = prepared
 
     @property
     def first_message(self):
