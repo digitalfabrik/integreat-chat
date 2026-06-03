@@ -147,7 +147,7 @@ class AnswerService:
         return RagResponse(
             [],
             self.rag_request,
-            language_service.translate_message(
+            language_service.translate_message_sync(
                 "en", self.language, message
             ),
             automatic_answer,
@@ -249,7 +249,7 @@ class AnswerService:
         return RagResponse(
                 documents,
                 self.rag_request,
-                language_service.translate_message(
+                language_service.translate_message_sync(
                     "en", self.language, answer
                 ),
             )
@@ -325,7 +325,7 @@ class AnswerService:
         if answer == "":
             return self.get_no_answer_response(language_service, documents)
         if self.shallow_search:
-            answer = language_service.translate_message(
+            answer = language_service.translate_message_sync(
                 "en", self.language, Messages.SHALLOW_SEARCH.format(self.rag_request.search_term), True
             ) + answer
         return RagResponse(documents, self.rag_request, answer)

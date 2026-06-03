@@ -29,7 +29,7 @@ class RagResponse:
         RAG language.
         """
         if self.request.gui_language != self.request.last_message.use_language:
-            message = self.request.language_service.translate_message(
+            message = self.request.language_service.translate_message_sync(
                 self.request.last_message.use_language, self.request.gui_language, self.rag_response, True
             )
         else:

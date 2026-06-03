@@ -119,7 +119,7 @@ class LlmApiClient:
         """
         async with session.post(self.api_url,
                                 json={**prompt.as_dict(), "temperature": 0},
-                                timeout=120,
+                                timeout=aiohttp.ClientTimeout(total=120),
                                 headers={
                                     'Authorization': f'Bearer {settings.LLM_API_KEY}',
                                     'Content-Type': 'application/json',

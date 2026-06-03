@@ -36,7 +36,7 @@ class ChatMessage:
         if self.integreat_request.skip_language_detection:
             return self.integreat_request.gui_language
         try:
-            return self.integreat_request.language_service.classify_language(self.original_message)
+            return self.integreat_request.language_service.classify_language_sync(self.original_message)
         except ValueError:
             LOGGER.info("Assuming GUI language")
             return self.integreat_request.gui_language
@@ -48,7 +48,7 @@ class ChatMessage:
         Search- or Answer-Services.
         """
         if self.likely_message_language not in self.integreat_request.supported_languages:
-            return self.integreat_request.language_service.translate_message(
+            return self.integreat_request.language_service.translate_message_sync(
                 self.likely_message_language,
                 self.integreat_request.fallback_language,
                 self.original_message

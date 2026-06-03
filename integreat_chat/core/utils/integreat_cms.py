@@ -17,6 +17,19 @@ def get_region_languages(region: str) -> list[str]:
     languages = requests.get(url, timeout=15, headers=headers).json()
     return [language["code"] for language in languages]
 
+async def async_get_region_languages(region: str) -> list[str]:
+    """
+    Get all language slugs of a given region asynchronously.
+    """
+    url = f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/{region}/languages/"
+    headers = {"X-Integreat-Development": "true"}
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)
+        ) as response:
+            languages = await response.json()
+    return [language["code"] for language in languages]
+
 def get_page(path: str) -> dict:
     """
     get page object for RAG source
@@ -64,9 +77,9 @@ async def async_get_page(session: aiohttp.ClientSession, path: str, retry: int =
     ) as response:
         try:
             return (await response.json())[0]
-        except KeyError as exc:
+        except IndexError as exc:
             if retry < 3:
-                return async_get_page(session, path, retry=retry+1)
+                return await async_get_page(session, path, retry=retry+1)
             raise ValueError(f"Could not fetch data for {path}") from exc
 
 async def cms_requests_session_wrapper(paths: list[str]) -> list[dict]:
