@@ -6,7 +6,8 @@ import hashlib
 import logging
 from typing import TYPE_CHECKING
 
-from django.utils.functional import cached_property
+import aiohttp
+
 if TYPE_CHECKING:
     from .integreat_request import IntegreatRequest
 
@@ -26,43 +27,41 @@ class ChatMessage:
         self.role = message["role"]
         self.integreat_request = integreat_request
         self.hash = hashlib.sha256(self.original_message.encode("utf-8")).hexdigest()
-        warm_cache = self.translated_message  # pylint: disable=unused-variable
+        self.likely_message_language: str | None = None
+        self.translated_message: str | None = None
+        self.use_language: str | None = None
 
-    @cached_property
-    def likely_message_language(self) -> str:
+    async def prepare(self, session: aiohttp.ClientSession) -> None:
         """
-        Detect language and decide which language to use for RAG
+        Detect language and translate the message into a supported language if needed.
+        Must be awaited before accessing language/translation attributes.
         """
         if self.integreat_request.skip_language_detection:
-            return self.integreat_request.gui_language
-        try:
-            return self.integreat_request.language_service.classify_language(self.original_message)
-        except ValueError:
-            LOGGER.info("Assuming GUI language")
-            return self.integreat_request.gui_language
+            self.likely_message_language = self.integreat_request.gui_language
+        else:
+            try:
+                self.likely_message_language = (
+                    await self.integreat_request.language_service.classify_language(
+                        self.original_message, session=session
+                    )
+                )
+            except ValueError:
+                LOGGER.info("Assuming GUI language")
+                self.likely_message_language = self.integreat_request.gui_language
 
-    @cached_property
-    def translated_message(self) -> str:
-        """
-        If necessary, translate message into a message supported by the used
-        Search- or Answer-Services.
-        """
         if self.likely_message_language not in self.integreat_request.supported_languages:
-            return self.integreat_request.language_service.translate_message(
-                self.likely_message_language,
-                self.integreat_request.fallback_language,
-                self.original_message
+            self.use_language = self.integreat_request.fallback_language
+            self.translated_message = (
+                await self.integreat_request.language_service.translate_message(
+                    self.likely_message_language,
+                    self.integreat_request.fallback_language,
+                    self.original_message,
+                    session=session,
+                )
             )
-        return self.original_message
-
-    @cached_property
-    def use_language(self) -> str:
-        """
-        Select a language for RAG prompting
-        """
-        if self.likely_message_language not in self.integreat_request.supported_languages:
-            return self.integreat_request.fallback_language
-        return self.likely_message_language
+        else:
+            self.use_language = self.likely_message_language
+            self.translated_message = self.original_message
 
     def as_dict(self) -> dict:
         """

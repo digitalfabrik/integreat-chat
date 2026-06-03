@@ -2,6 +2,8 @@
 RAG response
 """
 
+import aiohttp
+
 from integreat_chat.search.utils.search_response import Document
 from .rag_request import RagRequest
 
@@ -23,14 +25,18 @@ class RagResponse:
         self.rag_response = rag_response
         self.automatic_answers = automatic_answers
 
-    def __str__(self):
+    async def render(self, session: aiohttp.ClientSession | None = None) -> str:
         """
-        RAG response. Translate if GUI language does not match used
-        RAG language.
+        Render the response in the GUI language, translating from the answer
+        language if necessary, and append the citation list.
         """
         if self.request.gui_language != self.request.last_message.use_language:
-            message = self.request.language_service.translate_message(
-                self.request.last_message.use_language, self.request.gui_language, self.rag_response, True
+            message = await self.request.language_service.translate_message(
+                self.request.last_message.use_language,
+                self.request.gui_language,
+                self.rag_response,
+                True,
+                session=session,
             )
         else:
             message = self.rag_response.replace("**", "")
@@ -60,11 +66,11 @@ class RagResponse:
         )
         return f"\n<ul>{citation}</ul>" if citation else ""
 
-    def as_dict(self):
+    async def as_dict(self, session: aiohttp.ClientSession | None = None):
         """
         Response suitable for returning as JSON
         """
-        translated_answer = str(self)
+        translated_answer = await self.render(session=session)
         return {
             "answer": translated_answer,
             "original_answer": self.rag_response,
