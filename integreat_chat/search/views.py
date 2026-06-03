@@ -3,6 +3,7 @@ Views for indexing and searching documents
 """
 import json
 
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -13,7 +14,7 @@ from .services.opensearch import OpenSearch
 from .utils.search_request import SearchRequest
 
 @csrf_exempt
-def search_documents(request):
+async def search_documents(request):
     """
     Search for documents related to the question. If the message is in the wrong language,
     first translate it to the GUI language. As we are only searching for similar documents,
@@ -26,8 +27,12 @@ def search_documents(request):
     ):
         try:
             search_request = SearchRequest(json.loads(request.body))
+            await search_request.prepare()
             search_service = SearchService(search_request, True)
-            result = search_service.search_documents().as_dict()
+            search_response = await sync_to_async(
+                search_service.search_documents, thread_sensitive=False
+            )()
+            result = search_response.as_dict()
         except ValueError as exc:
             result = {"status": "error", "message": str(exc)}
     return JsonResponse(result)

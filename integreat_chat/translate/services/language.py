@@ -6,8 +6,6 @@ import logging
 import hashlib
 import re
 
-import asyncio
-
 import aiohttp
 from bs4 import BeautifulSoup
 
@@ -36,8 +34,6 @@ class LanguageService:
         Initialize class
         """
         self.llm_api = LlmApiClient()
-        self.message = None
-        self.placeholders = {}
 
     def parse_language(self, response: str) -> str:
         """
@@ -50,10 +46,13 @@ class LanguageService:
         LOGGER.debug("Finished message language detection: %s", stripped_language)
         return stripped_language
 
-    async def detect_language_of_string(self, message: str) -> str:
+    async def detect_language_of_string(
+        self, session: aiohttp.ClientSession, message: str
+    ) -> str:
         """
         Detect language for string
 
+        :param session: shared aiohttp session for the LLM call
         :param message: a message string of unknown language
         :return: a BCP-47 tag
         """
@@ -64,27 +63,33 @@ class LanguageService:
             ]
         )
         LOGGER.debug("Detecting message language")
-        response = LlmResponse(await self.llm_api.chat_prompt_session_wrapper(prompt))
+        response = LlmResponse(await self.llm_api.chat_prompt(session, prompt))
         return self.parse_language(str(response))
 
-    async def classify_language(self, message: str) -> str:
+    async def classify_language(
+        self, message: str, session: aiohttp.ClientSession | None = None
+    ) -> str:
         """
         Check if a message fits the estimated language.
         Return another language tag, if it does not fit.
 
         param message: the message of which the language should be detected
+        param session: optional shared aiohttp session
         return: language slug of the detected language
         """
+        if session is None:
+            async with aiohttp.ClientSession() as owned_session:
+                return await self.classify_language(message, owned_session)
         cache_key = hashlib.sha256(
             f"language-classification-{message}".encode("utf-8")
         ).hexdigest()
         classified_language = await cache.aget(cache_key, None)
         if classified_language is None:
-            classified_language = await self.detect_language_of_string(message)
+            classified_language = await self.detect_language_of_string(session, message)
             if classified_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES:
                 # try again once to avoid errors (some temperature exists)
                 # Cache result nonetheless, we don't need to retry this again and again
-                classified_language = await self.detect_language_of_string(message)
+                classified_language = await self.detect_language_of_string(session, message)
             await cache.aset(cache_key, classified_language)
         if classified_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES:
             error_msg = f"Did not detect a supported language: {classified_language}"
@@ -127,21 +132,26 @@ class LanguageService:
             return False
         return True
 
-    def sanitize_message(self, keep_html: bool = False) -> None:
+    def sanitize_message(
+        self, message: str, keep_html: bool = False
+    ) -> tuple[str, dict[str, str]]:
         """
         Sanitize text. Remove HTML and replace links.
+
+        :return: tuple of sanitized text and mapping of placeholder -> original url
         """
         if not keep_html:
-            soup = BeautifulSoup(self.message, "lxml")
-            self.message = soup.get_text()
+            soup = BeautifulSoup(message, "lxml")
+            message = soup.get_text()
         else:
             LOGGER.debug("Keep HTML in translation")
-        urls = re.findall(r"(https?://[^\s\"\']+)", self.message)
-        self.placeholders = {}
+        urls = re.findall(r"(https?://[^\s\"\']+)", message)
+        placeholders: dict[str, str] = {}
         for index, url in enumerate(urls):
             placeholder = f"_STR_URL_{index}_"
-            self.message = self.message.replace(url, placeholder)
-            self.placeholders[placeholder] = url
+            message = message.replace(url, placeholder)
+            placeholders[placeholder] = url
+        return message, placeholders
 
     async def translate_link(
         self, session: aiohttp.ClientSession, page_url: str, target_language: str
@@ -173,22 +183,33 @@ class LanguageService:
 
         return translated_link
 
-    async def restore_links(self, translated_message: str, target_language: str) -> str:
+    async def restore_links(
+        self,
+        session: aiohttp.ClientSession,
+        translated_message: str,
+        placeholders: dict[str, str],
+        target_language: str,
+    ) -> str:
         """
         Replace placeholders back to URLs after translation
         """
-        async with aiohttp.ClientSession() as session:
-            for placeholder, url in self.placeholders.items():
-                try:
-                    translated_url = await self.translate_link(session, url, target_language)
-                except Exception:
-                    translated_url = url
-                    LOGGER.error("Could not translate URL: %s", url)
-                translated_message = translated_message.replace(placeholder, translated_url)
+        if not placeholders:
+            return translated_message
+        for placeholder, url in placeholders.items():
+            try:
+                translated_url = await self.translate_link(session, url, target_language)
+            except Exception:
+                translated_url = url
+                LOGGER.error("Could not translate URL: %s", url)
+            translated_message = translated_message.replace(placeholder, translated_url)
         return translated_message
 
     async def translate_message_llm_wrapper(
-        self, source_language: str, target_language: str, message: str
+        self,
+        session: aiohttp.ClientSession,
+        source_language: str,
+        target_language: str,
+        message: str,
     ) -> str:
         """
         Translate a string from source to target language (without sanity checks).
@@ -207,7 +228,7 @@ class LanguageService:
             ],
         )
         translated_message = str(LlmResponse(
-            await self.llm_api.chat_prompt_session_wrapper(prompt)
+            await self.llm_api.chat_prompt(session, prompt)
         ))
         LOGGER.debug(
             "Finished translation from %s to %s", source_language, target_language
@@ -228,15 +249,28 @@ class LanguageService:
             )
 
     async def translate_message(
-            self, source_language: str, target_language: str, message: str, keep_html: bool = False
+            self,
+            source_language: str,
+            target_language: str,
+            message: str,
+            keep_html: bool = False,
+            session: aiohttp.ClientSession | None = None,
     ) -> str:
         """
         Check if message is in translation cache. If not, translate. To prevent
         problems with URLs, replace them with placeholders.
         Do some sanity checks before translating.
         """
+        if session is None:
+            async with aiohttp.ClientSession() as owned_session:
+                return await self.translate_message(
+                    source_language,
+                    target_language,
+                    message,
+                    keep_html,
+                    owned_session,
+                )
         self.check_language_support(source_language, target_language)
-        self.message = message
         if not self.translation_required(source_language, target_language, message):
             return message
         cache_key, translated_message = await self.check_cache(
@@ -244,41 +278,33 @@ class LanguageService:
         )
         if translated_message is not None:
             return translated_message
-        self.sanitize_message(keep_html=keep_html)
+        sanitized_message, placeholders = self.sanitize_message(message, keep_html=keep_html)
         translated_message = await self.translate_message_llm_wrapper(
+            session,
             source_language,
             target_language,
-            self.message
+            sanitized_message,
         )
-        translated_message = await self.restore_links(translated_message, target_language)
+        translated_message = await self.restore_links(
+            session, translated_message, placeholders, target_language
+        )
         await cache.aset(cache_key, translated_message)
         return translated_message
 
-    async def opportunistic_translate(self, expected_language: str, message: str) -> str:
+    async def opportunistic_translate(
+        self,
+        expected_language: str,
+        message: str,
+        session: aiohttp.ClientSession | None = None,
+    ) -> str:
         """
         Translate if detected language does not fit the expected language
         """
-        classified_language = await self.classify_language(message)
+        classified_language = await self.classify_language(message, session=session)
         return (
             message
             if classified_language == expected_language
-            else await self.translate_message(classified_language, expected_language, message)
+            else await self.translate_message(
+                classified_language, expected_language, message, session=session
+            )
         )
-
-    def classify_language_sync(self, message: str) -> str:
-        """
-        Sync wrapper around classify_language for callers in non-async contexts.
-        """
-        return asyncio.run(self.classify_language(message))
-
-    def translate_message_sync(
-        self,
-        source_language: str,
-        target_language: str,
-        message: str,
-        keep_html: bool = False,
-    ) -> str:
-        """
-        Sync wrapper around translate_message for callers in non-async contexts.
-        """
-        return asyncio.run(self.translate_message(source_language, target_language, message, keep_html))

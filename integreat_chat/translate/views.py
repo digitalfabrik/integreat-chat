@@ -2,6 +2,7 @@
 import json
 import logging
 
+import aiohttp
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -67,10 +68,14 @@ async def translate_message(request):
                     "target_language": data["target_language"],
                     "status": "success",
                 }
-            except TimeoutError:
-                LOGGER.error("LLM request timed out in translate_message")
-                result = {"status": "error", "reason": "Translation service timed out."}
+            except (TimeoutError, aiohttp.ClientError):
+                LOGGER.error("LLM request failed in translate_message", exc_info=True)
+                result = {"status": "error", "reason": "Translation service unavailable."}
                 status = 503
+            except ValueError as exc:
+                LOGGER.info("Unsupported language in translate_message: %s", exc)
+                result = {"status": "error", "reason": str(exc)}
+                status = 422
             except KeyError as exc:
                 LOGGER.error(exc)
                 result = {
@@ -113,10 +118,18 @@ async def message_to_region_languages(request):
                         )),
                         "language": language,
                     })
-            except TimeoutError:
-                LOGGER.error("LLM request timed out in message_to_region_languages")
-                result = {"status": "error", "reason": "Translation service timed out."}
+            except (TimeoutError, aiohttp.ClientError):
+                LOGGER.error(
+                    "LLM request failed in message_to_region_languages", exc_info=True
+                )
+                result = {"status": "error", "reason": "Translation service unavailable."}
                 status = 503
+            except ValueError as exc:
+                LOGGER.info(
+                    "Unsupported language in message_to_region_languages: %s", exc
+                )
+                result = {"status": "error", "reason": str(exc)}
+                status = 422
             except KeyError as exc:
                 result = {
                     "status": "error",
