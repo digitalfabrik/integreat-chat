@@ -22,23 +22,76 @@ class Prompts:
 {1}
 """
 
-    RAG = BACKGROUND + """The user is currently reading context of the region {0}. You are tasked with generating an answer to the provided user message. The user will get links to all retrieved pages below the answer you generate.
+    RAG = BACKGROUND + """The user is currently reading context of the region München. You are tasked with generating an answer to the provided user message. The user will get links to all retrieved pages below the answer you generate. 
+Follow these rules strictly:
+1. Information Sources
+    - Use only information that is explicitly contained in the linked pages.
+    - Every statement must be supported by the linked pages.
+    - Do not use external knowledge.
+    - Do not make assumptions or infer information that is not stated in the sources.
+    - If the linked pages do not contain enough information to answer the question, state: "Die verlinkten Seiten enthalten keine Antwort auf diese Frage."
+2. Appointments
+    - If the user asks about making, booking, or arranging an appointment, clearly state that you cannot facilitate appointments.
+    - If the linked pages contain information about scheduling appointments, include those instructions.
+3. Language
+    - Respond in the language with the BCP-47 tag "{1}".
+4. Formatting
+    - Use HTML only. Do not use Markdown.
+    - Structure answers into short, clearly separated sections.
+    - Use headings and bullet points whenever possible.
+    - Avoid long paragraphs.
+    - Keep each bullet point focused on a single piece of information.
+    - Present comparisons as separate sections.
+    - Put the most important information first.
+    - Make the answer easy to scan on mobile devices.
+5. Length
+    Keep the answer as short as possible while remaining complete. 
+    Prefer bullet points over full sentences. 
+    Aim for 3–8 bullet points. 
+    Do not repeat information. 
+    Include only information that helps answer the question. 
+    Use short phrases instead of long explanations. 
+6. Answer Structure
+    Always use this structure:
+    ```
+    <h3>[Concise title]</h3>
+    [1–3 content sections chosen dynamically]
+    <h4>Quellen</h4>
+    ```
+    The content sections must be selected based on the question and the available information.
+    Possible section headings include:
+    - Voraussetzungen
+    - Wer kann das nutzen?
+    - Fristen
+    - Benötigte Unterlagen
+    - Antrag
+    - Termin
+    - Ablauf
+    - Wo beantragen?
+    - Ansprechpartner
+    - Kosten
+    - Leistungen
+    - Angebote
+    - Nächste Schritte
+    Only include sections that are supported by the linked pages. Do not include empty sections. Do not force a fixed structure. 8. Sources
+    At the end of every answer, add a dedicated 
+7. Sources section & links
+    - Do not cite sources. They will be provided by the calling program.
+    - Do not use inline citations, footnotes, reference numbers, or citation markers within the answer.
+    - Do not link to web URLs. Do link e-mail addresses and phone numbers.
+8. Style
+    - Prioritize clarity over completeness.
+    - Prefer structured information over prose.
+    - Never write large text blocks if the same information can be presented as bullet points.
+    - Aim for an answer style similar to an information card or fact sheet rather than a chatbot conversation.
 
-Obey the following rules for phrasing the answer:
-* Make sure that all facts in the generated answer are supported by the sources.
-* If the answer is not in the linked pages, only state that the linked pages do not contain an answer to the question.
-* If asked about appointments, clarify that you cannot facilitate them. However, if the provided pages contain relevant information on scheduling appointments, include those details.
-* Provide an answer that is as short as possible and uses three sentences at most.
-* Only use HTML as markup, not Markdown. Use HTML sparsely, for example for making phone numbers and e-mail addresses clickable.
-* Respond in the language with the BCP-47 tag "{1}".
-* Do not add citation marks to the used documents/sources.
+User message: {2} 
 
-User message: {2}
-
-Linked pages: 
+Linked pages:
 ---
 {3}
 """
+
 
     CHECK_DOCUMENT = """# Task
 """ + BACKGROUND + """Your task is to evaluate whether a retrieved document definitely contains a direct answer to the user’s message.
@@ -93,7 +146,6 @@ for the summary. If the last message is contains an incopmlete question or parti
 - If the current message is "for work" and the previous message reads "I need to learn German", then a suitable summary would be "learning German for work".
 - Three messages like "Hello, my name is Max", "I need help" and "I'm ill", a summary would be "helping with illness".
 - Replace "You" with "Frag Integreat": "Who are you?" should be rephrased to "who is Frag Integreat?"
-- If the user provides a place or country of origin, include it in the search term.
 
 ### Output Format
 Return only the terse summarized user question, nothing else.
