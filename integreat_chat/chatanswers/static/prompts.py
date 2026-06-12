@@ -93,6 +93,7 @@ for the summary. If the last message is contains an incopmlete question or parti
 - If the current message is "for work" and the previous message reads "I need to learn German", then a suitable summary would be "learning German for work".
 - Three messages like "Hello, my name is Max", "I need help" and "I'm ill", a summary would be "helping with illness".
 - Replace "You" with "Frag Integreat": "Who are you?" should be rephrased to "who is Frag Integreat?"
+- If the user provides a place or country of origin, include it in the search term.
 
 ### Output Format
 Return only the terse summarized user question, nothing else.
