@@ -2,11 +2,14 @@
 Integreat CMS helper functions
 """
 import asyncio
+import logging
 from urllib.parse import quote
 
 import aiohttp
 import requests
 from django.conf import settings
+
+LOGGER = logging.getLogger(__name__)
 
 def get_region_languages(region: str) -> list[str]:
     """
@@ -77,20 +80,21 @@ async def async_get_page(session: aiohttp.ClientSession, path: str, retry: int =
     ) as response:
         try:
             return (await response.json())[0]
-        except IndexError as exc:
+        except (IndexError, KeyError) as exc:
             if retry < 3:
                 return await async_get_page(session, path, retry=retry+1)
+            LOGGER.error("Could not fetch page from CMS: %s", path)
             raise ValueError(f"Could not fetch data for {path}") from exc
 
-async def cms_requests_session_wrapper(paths: list[str]) -> list[dict]:
+async def cms_requests_session_wrapper(paths: list[str]) -> list[dict | BaseException]:
     """
     Create an aiohttp session, send requests and gather responses
     """
     async with aiohttp.ClientSession() as session:
         tasks = [async_get_page(session, path) for path in paths]
-        return await asyncio.gather(*tasks)
+        return await asyncio.gather(*tasks, return_exceptions=True)
 
-def get_pages(paths: list[str]) -> list[dict]:
+def get_pages(paths: list[str]) -> list[dict | BaseException]:
     """
     Get content for multiple pages
     """
