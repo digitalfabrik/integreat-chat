@@ -63,6 +63,9 @@ ALLOWED_HOSTS = (
 INTEGREAT_CMS_DOMAIN = config["MAIN"]["INTEGREAT_CMS_DOMAIN"]
 INTEGREAT_APP_DOMAIN = config["MAIN"]["INTEGREAT_APP_DOMAIN"]
 
+# Country for which this Integreat Chat instance is active
+INTEGREAT_COUNTRY = "Germany"
+
 _region_names = get_integreat_region_names()
 INTEGREAT_REGIONS = {
     slug: {

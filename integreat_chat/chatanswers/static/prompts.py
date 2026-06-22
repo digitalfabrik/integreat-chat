@@ -3,7 +3,9 @@ Static Prompts
 """
 # pylint: disable=C0301,disable=R0903
 
-BACKGROUND = """You're part of a retrieval augmented generation (RAG) chat bot for the Integreat App. The name of the chat bot is "Frag Integreat". The Integreat App contains information for refugees and migrants. """
+from django.conf import settings
+
+BACKGROUND = f"""You're part of a retrieval augmented generation (RAG) chat bot for the Integreat App. The name of the chat bot is "Frag Integreat". The Integreat App contains information for refugees and migrants in {settings.INTEGREAT_COUNTRY}. """
 
 class Prompts:
     """
@@ -84,8 +86,8 @@ Respond with "yes" if the message should be accepted. Reespond with "no" if it s
 """
 
     SUMMARIZE_MESSAGE = """### Task
-""" + BACKGROUND + """You will be given up to 3 messages. **Create a terse summary of the user message.**
-Leave out specific personal details and only include generic information that can be found in a knowledge base. Use the language 'LANG_CODE'
+""" + BACKGROUND + f"""You will be given up to 3 messages. **Create a terse summary of the user message.**
+Leave out specific personal details and only include generic information that can be found in a knowledge base. If the user indicates they are currently outside {settings.INTEGREAT_COUNTRY} (for example still in their country of origin), reflect this in the summary (e.g. "... from abroad"), but do not include the specific country of origin, as it is usually not relevant. Use the language 'LANG_CODE'
 for the summary. If the last message is contains an incopmlete question or partial sentence, the previous messages can be used for context.
 
 ### Examples for summarizing the user question
@@ -93,6 +95,7 @@ for the summary. If the last message is contains an incopmlete question or parti
 - If the current message is "for work" and the previous message reads "I need to learn German", then a suitable summary would be "learning German for work".
 - Three messages like "Hello, my name is Max", "I need help" and "I'm ill", a summary would be "helping with illness".
 - Replace "You" with "Frag Integreat": "Who are you?" should be rephrased to "who is Frag Integreat?"
+- "I'm living in Egypt. How can I find a job in Munich?" should be summarized to "finding a job from abroad".
 
 ### Output Format
 Return only the terse summarized user question, nothing else.
