@@ -1,6 +1,8 @@
 """
 A service to search for documents
 """
+import logging
+
 from django.conf import settings
 
 from core.utils.integreat_cms import get_pages
@@ -8,6 +10,8 @@ from core.utils.integreat_cms import get_pages
 from .opensearch import OpenSearch
 from ..utils.search_request import SearchRequest
 from ..utils.search_response import SearchResponse, Document
+
+LOGGER = logging.getLogger(__name__)
 
 class SearchService:
     """
@@ -41,13 +45,16 @@ class SearchService:
         )
         pages = get_pages([result["url"] for result in results])
         documents = []
-        for item_num, result in enumerate(results):
+        for result, page in zip(results, pages):
+            if isinstance(page, BaseException):
+                LOGGER.error("Skipping document, page could not be fetched: %s", result["url"])
+                continue
             documents.append(Document(
                 result["url"],
                 result["chunk_text"],
                 result["score"],
                 result["parent_titles"],
-                pages[item_num],
+                page,
                 self.search_request.gui_language,
             ))
         return SearchResponse(self.search_request, documents)
