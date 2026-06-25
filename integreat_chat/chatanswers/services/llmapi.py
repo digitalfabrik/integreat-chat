@@ -3,6 +3,7 @@ Very simple LiteLLM Client (should be compatible to OpenAI API)
 """
 import json
 import logging
+import re
 
 import aiohttp
 
@@ -10,6 +11,24 @@ from django.conf import settings
 
 
 LOGGER = logging.getLogger(__name__)
+
+# Runs of byte-fallback tokens (e.g. "<0xE2><0x80><0xAF>") that some
+# llama.cpp/Ollama models emit verbatim instead of the decoded character.
+_BYTE_TOKEN_RUN = re.compile(r"(?:<0x[0-9A-Fa-f]{2}>)+")
+
+
+def decode_byte_tokens(text: str) -> str:
+    """
+    Turn leaked byte-fallback token runs back into their UTF-8 characters.
+    """
+    def replace(match: re.Match) -> str:
+        raw = bytes(
+            int(token, 16)
+            for token in re.findall(r"<0x([0-9A-Fa-f]{2})>", match.group(0))
+        )
+        return raw.decode("utf-8", errors="replace")
+
+    return _BYTE_TOKEN_RUN.sub(replace, text)
 
 
 class LlmMessage:
@@ -67,7 +86,7 @@ class LlmResponse:
         """
         Return message response as string
         """
-        return self.response["choices"][0]["message"]["content"]
+        return decode_byte_tokens(self.response["choices"][0]["message"]["content"])
 
     def as_dict(self) -> dict:
         """
