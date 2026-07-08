@@ -24,6 +24,7 @@ class RagRequest(IntegreatRequest):
         super().__init__(data, skip_language_detection)
         self.most_important_message_first = False
         self.search_term = None
+        self.search_terms: list[str] = []
 
     def as_dict(self) -> dict:
         """
@@ -32,6 +33,7 @@ class RagRequest(IntegreatRequest):
         return {
             "messages": [message.as_dict() for message in self.messages],
             "extracted_question": self.search_term,
+            "search_terms": self.search_terms,
             "rag_language": self.first_message.use_language,
             "gui_language": self.gui_language,
             "region": self.region,
