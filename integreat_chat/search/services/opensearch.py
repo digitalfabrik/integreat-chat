@@ -358,7 +358,8 @@ class OpenSearchSetup(OpenSearch):
         model_id = self.register_embedding_model(group_id)
         if not model_id:
             raise ValueError("Unexpected OpenSearch response while registering model")
-        self.deploy_model(model_id)
+        if not self.deploy_model(model_id):
+            raise ValueError("OpenSearch model did not reach DEPLOYED state")
         self.create_ingestion_pipeline(model_id)
         self.create_search_pipeline()
         return group_id, model_id
@@ -495,15 +496,46 @@ class OpenSearchSetup(OpenSearch):
         except (KeyError, IndexError):
             return None
 
-    def deploy_model(self, model_id: str):
+    def deploy_model(self, model_id: str) -> bool:
         """
-        Register embedding model
+        Deploy the embedding model and wait until it is actually loaded.
+
+        The ingestion pipeline (and any indexing) fails with "Model not ready
+        yet" if it runs before the model reaches the DEPLOYED state, so we block
+        until deployment finishes instead of firing the request and returning.
         """
-        if "task_id" in (response := self.request(
-            f"/_plugins/_ml/models/{model_id}/_deploy", {}, "POST"
-        )):
-            return response["task_id"]
+        if self.model_is_deployed(model_id):
+            return True
+        self.request(f"/_plugins/_ml/models/{model_id}/_deploy", {}, "POST")
+        # Loading a ~488 MB model into memory can take a while; poll for ~5 min.
+        for n in range(0, 60):  # pylint: disable=W0612
+            time.sleep(5)
+            state = self.get_model_state(model_id)
+            if state == "DEPLOYED":
+                return True
+            if state in ("DEPLOY_FAILED", "PARTIALLY_DEPLOYED", "UNDEPLOYED"):
+                LOGGER.warning(
+                    "Model %s deployment ended in state %s", model_id, state
+                )
+                return False
+        LOGGER.warning(
+            "Model %s did not reach DEPLOYED state in time (last state: %s)",
+            model_id, self.get_model_state(model_id),
+        )
         return False
+
+    def get_model_state(self, model_id: str) -> str:
+        """
+        Return the current model_state of a model (empty string if unknown)
+        """
+        response = self.request(f"/_plugins/_ml/models/{model_id}", {}, "GET")
+        return response.get("model_state", "")
+
+    def model_is_deployed(self, model_id: str) -> bool:
+        """
+        Check whether a model is already deployed
+        """
+        return self.get_model_state(model_id) == "DEPLOYED"
 
     def create_ingestion_pipeline(self, model_id: str):
         """
