@@ -428,8 +428,16 @@ class OpenSearchSetup(OpenSearch):
 
     def register_embedding_model(self, model_group_id: str) -> str:
         """
-        Register embedding model
+        Register embedding model, reusing an already-registered model in the
+        group if one exists (registering a 488 MB model on every run is slow and
+        piles up duplicate versions).
         """
+        existing = self.get_model_id_by_group(
+            model_group_id, settings.OPENSEARCH_EMBEDDING_MODEL_NAME
+        )
+        if existing:
+            LOGGER.info("Reusing existing model %s", existing)
+            return existing
         payload = {
             "name": settings.OPENSEARCH_EMBEDDING_MODEL_NAME,
             "version": "1.0.2",
@@ -439,14 +447,53 @@ class OpenSearchSetup(OpenSearch):
         register_response = self.request(
             "/_plugins/_ml/models/_register", payload, "POST"
         )
-        if "task_id" in register_response:
-            for n in range(0, 10):  # pylint: disable=W0612
-                time.sleep(5)
-                if "model_id" in (task_response := self.request(
-                    f"/_plugins/_ml/tasks/{register_response['task_id']}", {}, "GET"
-                )):
-                    return task_response["model_id"]
+        if "task_id" not in register_response:
+            LOGGER.warning(
+                "Could not register model, OpenSearch response: %s", register_response
+            )
+            return False
+        # A cold register downloads ~488 MB, so poll for up to ~5 minutes.
+        for n in range(0, 60):  # pylint: disable=W0612
+            time.sleep(5)
+            task_response = self.request(
+                f"/_plugins/_ml/tasks/{register_response['task_id']}", {}, "GET"
+            )
+            if "model_id" in task_response:
+                return task_response["model_id"]
+            if task_response.get("state") == "FAILED":
+                LOGGER.warning(
+                    "Model registration task failed: %s", task_response
+                )
+                return False
+        LOGGER.warning(
+            "Model registration did not complete in time, last task response: %s",
+            task_response,
+        )
         return False
+
+    def get_model_id_by_group(self, model_group_id: str, name: str):
+        """
+        Look up an existing usable model ID in a model group by its name
+        """
+        payload = {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {"term": {"model_group_id": model_group_id}},
+                        {"term": {"name.keyword": name}},
+                        {"terms": {"model_state": [
+                            "REGISTERED", "DEPLOYING", "DEPLOYED"
+                        ]}},
+                    ]
+                }
+            },
+            "size": 1,
+        }
+        response = self.request("/_plugins/_ml/models/_search", payload, "GET")
+        try:
+            return response["hits"]["hits"][0]["_id"]
+        except (KeyError, IndexError):
+            return None
 
     def deploy_model(self, model_id: str):
         """
