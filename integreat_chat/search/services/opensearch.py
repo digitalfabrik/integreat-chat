@@ -51,7 +51,7 @@ class OpenSearch:
         param method: a HTTP method
         """
         headers = {'Content-type': 'application/json'}
-        return requests.request(
+        response = requests.request(
             method=method,
             url=f'{self.base_url}{path}',
             auth=(self.user, self.password),
@@ -59,7 +59,19 @@ class OpenSearch:
             timeout=30,
             verify="/etc/opensearch/root-ca.pem",
             headers=headers,
-        ).json()
+        )
+        if not response.ok:
+            LOGGER.warning(
+                "OpenSearch %s %s returned HTTP %s: %s",
+                method, path, response.status_code, response.text,
+            )
+        try:
+            return response.json()
+        except requests.exceptions.JSONDecodeError as error:
+            raise ValueError(
+                f"Non-JSON response from OpenSearch {method} {path} "
+                f"(HTTP {response.status_code}): {response.text}"
+            ) from error
 
     def reduce_search_result(
             self,
@@ -384,16 +396,35 @@ class OpenSearchSetup(OpenSearch):
 
     def create_model_group(self):
         """
-        Create model group
+        Create model group (or reuse an existing one with the same name)
         """
+        name = "integreat-chat-2025-01-31"
         payload = {
-            "name": "integreat-chat-2025-01-31",
+            "name": name,
             "description": "Integreat Chat embedding models"
         }
         response = self.request("/_plugins/_ml/model_groups/_register", payload, "POST")
         if "model_group_id" in response:
             return response["model_group_id"]
+        LOGGER.warning(
+            "Could not register model group, OpenSearch response: %s", response
+        )
+        existing = self.get_model_group_id_by_name(name)
+        if existing:
+            LOGGER.info("Reusing existing model group %s", existing)
+            return existing
         return False
+
+    def get_model_group_id_by_name(self, name: str):
+        """
+        Look up an existing model group ID by its exact name
+        """
+        payload = {"query": {"term": {"name.keyword": name}}, "size": 1}
+        response = self.request("/_plugins/_ml/model_groups/_search", payload, "GET")
+        try:
+            return response["hits"]["hits"][0]["_id"]
+        except (KeyError, IndexError):
+            return None
 
     def register_embedding_model(self, model_group_id: str) -> str:
         """
@@ -401,7 +432,7 @@ class OpenSearchSetup(OpenSearch):
         """
         payload = {
             "name": settings.OPENSEARCH_EMBEDDING_MODEL_NAME,
-            "version": "1.0.1",
+            "version": "1.0.2",
             "model_group_id": model_group_id,
             "model_format": "TORCH_SCRIPT"
         }
