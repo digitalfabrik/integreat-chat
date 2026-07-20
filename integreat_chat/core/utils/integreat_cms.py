@@ -128,12 +128,23 @@ def get_integreat_regions():
     regions_url = (
         f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/regions/"
     )
-    response = requests.get(regions_url, timeout=30, headers=headers).json()
-    chat_enabled_regions = [region for region in response if region.get("is_chat_enabled")]
-    
+    try:
+        response = requests.get(regions_url, timeout=30, headers=headers)
+        response.raise_for_status()
+        regions_data = response.json()
+    except (requests.RequestException, ValueError) as error:
+        LOGGER.warning(
+            "Could not fetch regions from Integreat CMS (%s): %s",
+            regions_url,
+            error,
+        )
+        return [], {}
+
+    chat_enabled_regions = [region for region in regions_data if region.get("is_chat_enabled")]
+
     regions = [region["path"] for region in chat_enabled_regions]
     region_names = {region["path"]: region["name_without_prefix"] for region in chat_enabled_regions}
-    
+
     return regions, region_names
 
 
@@ -143,8 +154,20 @@ def get_integreat_region_names() -> dict[str, str]:
 
     Returns:
         A dict mapping each region path slug to its name_without_prefix.
+        Returns an empty dict if the API is unreachable or returns an
+        unexpected (non-JSON) response, so that settings loading never fails.
     """
     headers = {"X-Integreat-Development": "true"}
     regions_url = f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/regions/"
-    response = requests.get(regions_url, timeout=30, headers=headers).json()
-    return {region["path"]: region["name_without_prefix"] for region in response}
+    try:
+        response = requests.get(regions_url, timeout=30, headers=headers)
+        response.raise_for_status()
+        regions_data = response.json()
+    except (requests.RequestException, ValueError) as error:
+        LOGGER.warning(
+            "Could not fetch region names from Integreat CMS (%s): %s",
+            regions_url,
+            error,
+        )
+        return {}
+    return {region["path"]: region["name_without_prefix"] for region in regions_data}
