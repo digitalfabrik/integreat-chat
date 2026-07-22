@@ -42,6 +42,56 @@ class OpenSearch:
         self.model_id = settings.SEARCH_OPENSEARCH_MODEL_ID
         self.model_group_id = settings.SEARCH_OPENSEARCH_MODEL_GROUP_ID
 
+    def get_number_documents(self, index: str) -> int:
+        """
+        Get approximate document count for an index.
+
+        param index: index name
+        return: number of documents (approximate)
+        """
+        response = requests.request(
+            method="GET",
+            url=f"{self.base_url}/_cat/indices/{index}?format=json",
+            auth=(self.user, self.password),
+            timeout=10,
+            verify="/etc/opensearch/root-ca.pem",
+            headers={'Content-type': 'application/json'},
+        )
+        if not response.ok:
+            LOGGER.warning("OpenSearch GET /_cat/indices/%s returned HTTP %s", index, response.status_code)
+            return 0
+        try:
+            return int(response.json()[0].get("docs.count", 0))
+        except (KeyError, IndexError, ValueError) as e:
+            LOGGER.warning("Failed to parse document count for index %s: %s", index, e)
+            return 0
+
+    def get_all_indexes(self) -> list[dict]:
+        """
+        Get all indexes with their document counts.
+
+        return: list of dicts with 'name' and 'document_count' keys
+        """
+        try:
+            response = requests.request(
+                method="GET",
+                url=f"{self.base_url}/_cat/indices?format=json",
+                auth=(self.user, self.password),
+                timeout=10,
+                verify="/etc/opensearch/root-ca.pem",
+                headers={'Content-type': 'application/json'},
+            )
+            if not response.ok:
+                LOGGER.warning("OpenSearch GET /_cat/indices returned HTTP %s", response.status_code)
+                return []
+            return [
+                {"name": idx["index"], "document_count": int(idx.get("docs.count", 0))}
+                for idx in response.json()
+            ]
+        except Exception as e:
+            LOGGER.warning("Failed to fetch indexes from OpenSearch: %s", e)
+            return []
+
     def request(self, path: str, payload: dict, method: str = "GET") -> dict:
         """
         Wrapper around Requests to OpenSearch server
