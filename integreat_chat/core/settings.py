@@ -141,8 +141,8 @@ OPENSEARCH_PASSWORD = (
     else "changeme"
 )
 
-VDB_HOST = "127.0.0.1"
-VDB_PORT = "19530"
+VDB_HOST = "localhost"
+VDB_PORT = "9200"
 
 LLM_SERVER=config['LiteLLM']['SERVER']
 LLM_API_KEY=config['LiteLLM']['API_KEY']
