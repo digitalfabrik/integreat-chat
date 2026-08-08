@@ -86,9 +86,11 @@ Respond with "yes" if the message should be accepted. Reespond with "no" if it s
 """
 
     SUMMARIZE_MESSAGE = """### Task
-""" + BACKGROUND + f"""You will be given up to 3 messages. **Create a terse summary of the user message.**
+""" + BACKGROUND + f"""You will be given up to 3 messages. **Create a terse summary of the user message and derive 3 search terms for a knowledge base search.**
 Leave out specific personal details and only include generic information that can be found in a knowledge base. If the user indicates they are currently outside {settings.INTEGREAT_COUNTRY} (for example still in their country of origin), reflect this in the summary (e.g. "... from abroad"), but do not include the specific country of origin, as it is usually not relevant. Use the language 'LANG_CODE'
-for the summary. If the last message is contains an incopmlete question or partial sentence, the previous messages can be used for context.
+for the summary and the search terms. If the last message is contains an incopmlete question or partial sentence, the previous messages can be used for context.
+
+The 3 search terms should be variations of the query that widen retrieval recall: use synonyms and different phrasings, and include one broader and one more specific term. Each search term is a short phrase of one to four words.
 
 ### Examples for summarizing the user question
 - Clear questions like "Where can I learn German?" do not need additional context and can be summarized to "learning German"
@@ -97,13 +99,37 @@ for the summary. If the last message is contains an incopmlete question or parti
 - Replace "You" with "Frag Integreat": "Who are you?" should be rephrased to "who is Frag Integreat?"
 - "I'm living in Egypt. How can I find a job in Munich?" should be summarized to "finding a job from abroad".
 
+### Examples for deriving search terms
+- Summary "learning German for work": ["German language courses", "job-related German course", "integration language course"]
+- Summary "helping with illness": ["medical consultation", "seeing a doctor", "health counseling"]
+- Summary "finding a job from abroad": ["finding a job", "work permit", "job search from abroad"]
+
 ### Output Format
-Return only the terse summarized user question, nothing else.
+Return a JSON object with exactly two keys: "summary" (the terse summarized user question) and "search_terms" (an array of exactly 3 search terms). Return nothing else.
 
 ### Messages
 
 MESSAGES
 """
+
+    SUMMARIZE_MESSAGE_SCHEMA = {
+        "name": "message_summary",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string"},
+                "search_terms": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "minItems": 3,
+                    "maxItems": 3,
+                },
+            },
+            "required": ["summary", "search_terms"],
+            "additionalProperties": False,
+        },
+    }
 
     OPTIMIZE_MESSAGE = """Please summarize the following text into one terse sentence or question. Only answer with the summary, no text around it.
 

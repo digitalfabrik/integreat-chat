@@ -71,7 +71,8 @@ class AnswerService:
             "---\n".join([message.translated_message for message in self.rag_request.messages[-num_messages:]])
         )
         return LlmPrompt(settings.RAG_RELEVANCE_CHECK_MODEL,
-            [LlmMessage(prompt_text, role="system")]
+            [LlmMessage(prompt_text, role="system")],
+            json_schema=Prompts.SUMMARIZE_MESSAGE_SCHEMA,
         )
 
     def prepare_accept_message_prompt(self, num_messages: int) -> LlmPrompt:
@@ -85,11 +86,11 @@ class AnswerService:
 
     async def check_message_parallelized(
         self, session: aiohttp.ClientSession, num_messages: int
-    ) -> tuple[bool, str, bool]:
+    ) -> tuple[bool, str, list[str], bool]:
         """
         Check if a chat message is a question
 
-        :return: request human, summarized message, accept_message
+        :return: request human, summarized message, search terms, accept_message
         """
         tasks = [
             asyncio.create_task(self.llm_api.chat_prompt(
@@ -105,11 +106,38 @@ class AnswerService:
         LOGGER.debug("Sent HUMAN_REQUEST_CHECK / SUMMARIZE_MESSAGE / CHECK_QUESTION")
         llmresponses = await asyncio.gather(*tasks)
         LOGGER.debug("Gathered check responses")
+        summary, search_terms = self.parse_summary_response(llmresponses[1])
         return (
             str(LlmResponse(llmresponses[0])).lower().startswith("yes"),
-            str(LlmResponse(llmresponses[1])),
+            summary,
+            search_terms,
             str(LlmResponse(llmresponses[2])).lower().startswith("yes"),
         )
+
+    def parse_summary_response(self, response: dict) -> tuple[str, list[str]]:
+        """
+        Parse the structured summarize response into a summary and search terms.
+
+        Falls back gracefully if the JSON is malformed or incomplete, so the
+        retrieval step always receives at least one usable term.
+
+        :param response: raw LLM response dict for the summarize prompt
+        :return: summary string and list of search terms
+        """
+        parsed = LlmResponse(response).as_dict()
+        summary = str(parsed.get("summary", "")).strip()
+        search_terms = [
+            str(term).strip()
+            for term in parsed.get("search_terms", [])
+            if str(term).strip()
+        ]
+        if not summary and not search_terms:
+            summary = str(LlmResponse(response)).strip()
+        if not summary and search_terms:
+            summary = search_terms[0]
+        if not search_terms and summary:
+            search_terms = [summary]
+        return summary, search_terms
 
     async def skip_rag_answer(
         self,
@@ -128,7 +156,7 @@ class AnswerService:
             else 1
         )
         LOGGER.debug("Using the last %s messages.", num_messages)
-        request_human, summary, accept_message = await self.check_message_parallelized(
+        request_human, summary, search_terms, accept_message = await self.check_message_parallelized(
             session, num_messages
         )
         automatic_answer = True
@@ -138,6 +166,7 @@ class AnswerService:
         else:
             if accept_message:
                 self.rag_request.search_term = summary
+                self.rag_request.search_terms = search_terms
                 LOGGER.debug("Message requires response.")
                 return False
             message = Messages.NOT_QUESTION
@@ -155,10 +184,53 @@ class AnswerService:
         """
         Retrieve documents for RAG
         """
-        LOGGER.debug("Retrieving documents for: %s", self.rag_request.search_term)
+        terms = self.rag_request.search_terms or [self.rag_request.search_term]
+        LOGGER.debug("Retrieving documents for: %s", terms)
+        results = await asyncio.gather(
+            *[self.search_for_term(session, term) for term in terms]
+        )
+        documents = self.merge_documents(results)
+        batches = ceil(len(documents)/3)
+        filtered_documents = []
+        for batch in range(0, batches):
+            filtered_documents += await self.filter_documents(
+                session, documents[batch*3:batch*3+3]
+            )
+            relevant_docs = self.count_relevant_documents(filtered_documents)
+            if (relevant_docs > 1 and batch == 0) or (relevant_docs >= 1 and batch > 0):
+                break
+        if not self.count_relevant_documents(documents) and not self.shallow_search:
+            shallow_term = await self.llm_api.simple_prompt(
+                session,
+                Prompts.SHALLOW_SEARCH.format(
+                    self.rag_request.last_message.use_language,
+                    self.rag_request.search_term
+                )
+            )
+            self.rag_request.search_term = shallow_term
+            self.rag_request.search_terms = [shallow_term]
+            LOGGER.debug(
+                "No documents found, trying shallow search: %s.",
+                self.rag_request.search_term
+            )
+            self.shallow_search = True
+            return await self.get_documents(session)
+        LOGGER.debug("Retrieved %s documents.", len(filtered_documents))
+        return filtered_documents
+
+    async def search_for_term(
+        self, session: aiohttp.ClientSession, term: str
+    ) -> list:
+        """
+        Run a single OpenSearch query for one search term.
+
+        :param session: shared aiohttp session
+        :param term: search term to query
+        :return: list of retrieved documents
+        """
         search_request = SearchRequest(
             {
-                "message": str(self.rag_request.search_term),
+                "message": str(term),
                 "language": self.rag_request.last_message.use_language,
                 "region": self.rag_request.region
             },
@@ -172,32 +244,26 @@ class AnswerService:
             settings.RAG_MAX_PAGES * 4,
             settings.RAG_SCORE_THRESHOLD,
         )
-        documents = search_response.documents
-        batches = ceil(len(documents)/3)
-        filtered_documents = []
-        for batch in range(0, batches):
-            filtered_documents += await self.filter_documents(
-                session, documents[batch*3:batch*3+3]
-            )
-            relevant_docs = self.count_relevant_documents(filtered_documents)
-            if (relevant_docs > 1 and batch == 0) or (relevant_docs >= 1 and batch > 0):
-                break
-        if not self.count_relevant_documents(documents) and not self.shallow_search:
-            self.rag_request.search_term = await self.llm_api.simple_prompt(
-                session,
-                Prompts.SHALLOW_SEARCH.format(
-                    self.rag_request.last_message.use_language,
-                    self.rag_request.search_term
-                )
-            )
-            LOGGER.debug(
-                "No documents found, trying shallow search: %s.",
-                self.rag_request.search_term
-            )
-            self.shallow_search = True
-            return await self.get_documents(session)
-        LOGGER.debug("Retrieved %s documents.", len(filtered_documents))
-        return filtered_documents
+        return search_response.documents
+
+    def merge_documents(self, result_lists: list) -> list:
+        """
+        Merge documents retrieved for the individual search terms. Deduplicate
+        by page URL, keeping the highest scoring occurrence, and sort by score
+        descending.
+
+        :param result_lists: list of document lists, one per search term
+        :return: merged and sorted list of documents
+        """
+        merged: dict = {}
+        for documents in result_lists:
+            for document in documents:
+                key = document.chunk_source_path
+                if key not in merged or document.score > merged[key].score:
+                    merged[key] = document
+        return sorted(
+            merged.values(), key=lambda document: document.score, reverse=True
+        )
 
     def count_relevant_documents(self, documents: list) -> int:
         """
