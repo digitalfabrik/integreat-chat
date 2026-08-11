@@ -80,11 +80,11 @@ LANGUAGE_CLASSIFICATION_MODEL = "gpt-oss:120b"
 
 TRANSLATION_MODEL = "gemma3:27b"
 TRANSLATION_MODEL_SUPPORTED_LANGUAGES = [
-    'af','am','ar','az','be','bg','bn','bs','ca','ckb','cs','cy','da','de','el','en','es','et',
-    'eu','fa','fi','fr','ga','gl','gu','he','hi','hr','hu','hy','id','is','it','ja','jv','ka',
-    'kk','km','kmr','kn','ko','ky','lo','lt','lv','mk','ml','mn','mr','ms','my','ne','nl','no',
-    'pa','pl','ps','pt','pt-br','ro','ru','si','sk','sl','so', 'sq','sr','sv','sw','ta','te',
-    'th','ti', 'tr','uk','ur','uz','vi','xh','yi','zh','zu'
+    'af','am','ar','az','be','bg','bn','bs','ca','ckb','cs','cy','da','de','de-si','el','en',
+    'es','et','eu','fa','fi','fr','ga','gl','gu','he','hi','hr','hu','hy','id','is','it','ja',
+    'jv','ka','kk','km','kmr','kn','ko','ky','lo','lt','lv','mk','ml','mn','mr','ms','my',
+    'ne','nl','no','pa','pl','ps','pt','pt-br','ro','ru','si','sk','sl','so', 'sq','sr','sv',
+    'sw','ta','te','th','ti', 'tr','uk','ur','uz','vi','xh','yi','zh','zu'
 ]
 
 RAG_SCORE_THRESHOLD = 0.1
