@@ -5,6 +5,7 @@ RAG response
 import aiohttp
 
 from integreat_chat.search.utils.search_response import Document
+
 from .rag_request import RagRequest
 
 
@@ -52,7 +53,7 @@ class RagResponse:
                 continue
             if self.request.gui_language != self.request.last_message.use_language:
                 sources.append(
-                    (document.get_source_for_language(self.request.gui_language))
+                    document.get_source_for_language(self.request.gui_language)
                 )
             else:
                 sources.append((document.chunk_source_path, document.title))

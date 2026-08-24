@@ -2,24 +2,27 @@
 A service to detect languages and translate messages
 """
 
-import logging
 import hashlib
+import logging
 import re
 
 import aiohttp
 from bs4 import BeautifulSoup
 
 # pylint: disable=no-name-in-module
-
 from django.conf import settings
 from django.core.cache import cache
-from integreat_chat.chatanswers.services.llmapi import (
-    LlmApiClient, LlmMessage, LlmPrompt, LlmResponse
-)
 
-from ..static.prompts import Prompts
-from ..static.language_classification_map import LANGUAGE_CLASSIFICATION_MAP
+from integreat_chat.chatanswers.services.llmapi import (
+    LlmApiClient,
+    LlmMessage,
+    LlmPrompt,
+    LlmResponse,
+)
 from integreat_chat.core.utils.integreat_cms import async_get_page
+
+from ..static.language_classification_map import LANGUAGE_CLASSIFICATION_MAP
+from ..static.prompts import Prompts
 
 LOGGER = logging.getLogger("django")
 
@@ -81,7 +84,7 @@ class LanguageService:
             async with aiohttp.ClientSession() as owned_session:
                 return await self.classify_language(message, owned_session)
         cache_key = hashlib.sha256(
-            f"language-classification-{message}".encode("utf-8")
+            f"language-classification-{message}".encode()
         ).hexdigest()
         classified_language = await cache.aget(cache_key, None)
         if classified_language is None:
@@ -113,7 +116,7 @@ class LanguageService:
         Check if message exists in translation cache. If not, return cache key
         """
         cache_key = hashlib.sha256(
-            f"{source_language}-{target_language}-{message}".encode("utf-8")
+            f"{source_language}-{target_language}-{message}".encode()
         ).hexdigest()
         return cache_key, await cache.aget(cache_key, None)
 
@@ -128,9 +131,7 @@ class LanguageService:
                 "Skipping translation from %s to %s", source_language, target_language
             )
             return False
-        if self.is_numerical(message):
-            return False
-        return True
+        return not self.is_numerical(message)
 
     def sanitize_message(
         self, message: str, keep_html: bool = False
@@ -198,9 +199,9 @@ class LanguageService:
         for placeholder, url in placeholders.items():
             try:
                 translated_url = await self.translate_link(session, url, target_language)
-            except Exception:
+            except (aiohttp.ClientError, ValueError):
                 translated_url = url
-                LOGGER.error("Could not translate URL: %s", url)
+                LOGGER.exception("Could not translate URL: %s", url)
             translated_message = translated_message.replace(placeholder, translated_url)
         return translated_message
 
@@ -226,6 +227,13 @@ class LanguageService:
                 ), role="system"),
                 LlmMessage(message, role="user")
             ],
+            # Disable the model's internal "thinking"/reasoning trace for
+            # translation specifically. Translation does not benefit from
+            # it and it slows the CPU-only worker down without improving
+            # the output. Scoped here (not globally) so other LLM calls
+            # (classification, RAG, page-order) keep whatever behaviour the
+            # backend expects.
+            extra_body={"reasoning_effort": "none"},
         )
         translated_message = str(LlmResponse(
             await self.llm_api.chat_prompt(session, prompt)

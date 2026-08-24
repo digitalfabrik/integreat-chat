@@ -3,6 +3,7 @@ Index pages for region & language
 """
 
 from django.core.management.base import BaseCommand, CommandError
+
 from integreat_chat.core.utils.integreat_cms import get_region_languages
 
 from ...tasks import update_index

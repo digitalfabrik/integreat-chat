@@ -15,6 +15,7 @@ class RagRequest(IntegreatRequest):
     """
     Class that represents a chat user message
     """
+
     def __init__(self, data: dict, skip_language_detection: bool = False):
         """
         Set needed attributes for RAG request
@@ -24,6 +25,12 @@ class RagRequest(IntegreatRequest):
         super().__init__(data, skip_language_detection)
         self.most_important_message_first = False
         self.search_term = None
+        # When True, the caller has explicitly fixed ``search_term`` and the
+        # AnswerService must NOT overwrite it (e.g. with the LLM's message
+        # summary). Used by the bescheidcheck counseling path, where the
+        # question is generated but a fixed phrase is what matches the
+        # regional Integreat content.
+        self.pinned_search_term = False
 
     def as_dict(self) -> dict:
         """

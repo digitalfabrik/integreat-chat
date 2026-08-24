@@ -11,7 +11,6 @@ from integreat_chat.translate.services.language import LanguageService
 from ..static.region_language_map import REGION_LANGUAGE_MAP
 from .chat_message import ChatMessage
 
-
 LOGGER = logging.getLogger('django')
 
 

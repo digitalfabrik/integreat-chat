@@ -26,11 +26,10 @@ async def async_get_region_languages(region: str) -> list[str]:
     """
     url = f"https://{settings.INTEGREAT_CMS_DOMAIN}/api/v3/{region}/languages/"
     headers = {"X-Integreat-Development": "true"}
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)
-        ) as response:
-            languages = await response.json()
+    async with aiohttp.ClientSession() as session, session.get(
+        url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)
+    ) as response:
+        languages = await response.json()
     return [language["code"] for language in languages]
 
 def get_page(path: str) -> dict:

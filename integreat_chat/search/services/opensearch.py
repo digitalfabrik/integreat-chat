@@ -5,12 +5,16 @@ Setup and use of OpenSearch
 import hashlib
 import logging
 import time
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 
 import requests
 from django.conf import settings
 from langchain_text_splitters import HTMLHeaderTextSplitter
-from integreat_chat.core.utils.integreat_cms import get_all_pages, get_parent_page_titles
+
+from integreat_chat.core.utils.integreat_cms import (
+    get_all_pages,
+    get_parent_page_titles,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -88,7 +92,7 @@ class OpenSearch:
                 {"name": idx["index"], "document_count": int(idx.get("docs.count", 0))}
                 for idx in response.json()
             ]
-        except Exception as e:
+        except (requests.exceptions.RequestException, ValueError, KeyError) as e:
             LOGGER.warning("Failed to fetch indexes from OpenSearch: %s", e)
             return []
 
@@ -236,7 +240,7 @@ class OpenSearch:
         """
         payload = {"query": {"match_all": {}}}
         result = self.request(f"/{index}/_search?_source=id&size=10000", payload, "GET")
-        if not "hits" in result:
+        if "hits" not in result:
             return []
         return [page["_source"]["id"] for page in result["hits"]["hits"]]
 
@@ -324,7 +328,7 @@ class OpenSearch:
             if datetime.now(updated.tzinfo) - updated < timedelta(days=7) or not differential:
                 update_counter = update_counter + 1
                 self.delete_document(f"{region_slug}_{language_slug}", page["id"])
-                texts, paths = self.split_page(page)  # pylint: disable=W0612
+                texts, _paths = self.split_page(page)  # pylint: disable=W0612
                 parent_title = self.get_parent_titles(region_slug, language_slug, page)
                 for chunk in texts:
                     self.index_chunk(f"{region_slug}_{language_slug}", chunk, page, parent_title)
@@ -340,12 +344,12 @@ class OpenSearch:
         """
         try:
             cms_pages = get_all_pages(region_slug, language_slug)
-        except Exception as e:
+        except (requests.exceptions.RequestException, ValueError) as e:
             LOGGER.warning(f"Failed to fetch Integreat CMS pages. Backing off for 35s. Error: {e}")
             time.sleep(35)
             try:
                 cms_pages = get_all_pages(region_slug, language_slug)
-            except Exception as e:
+            except (requests.exceptions.RequestException, ValueError) as e:
                 LOGGER.warning(f"Failed to fetch Integreat CMS pages. Aborting. Error: {e}")
                 return
                 
@@ -504,7 +508,7 @@ class OpenSearchSetup(OpenSearch):
             )
             return False
         # A cold register downloads ~488 MB, so poll for up to ~5 minutes.
-        for n in range(0, 60):  # pylint: disable=W0612
+        for n in range(60):  # pylint: disable=W0612
             time.sleep(5)
             task_response = self.request(
                 f"/_plugins/_ml/tasks/{register_response['task_id']}", {}, "GET"
@@ -558,7 +562,7 @@ class OpenSearchSetup(OpenSearch):
             return True
         self.request(f"/_plugins/_ml/models/{model_id}/_deploy", {}, "POST")
         # Loading a ~488 MB model into memory can take a while; poll for ~5 min.
-        for n in range(0, 60):  # pylint: disable=W0612
+        for n in range(60):  # pylint: disable=W0612
             time.sleep(5)
             state = self.get_model_state(model_id)
             if state == "DEPLOYED":

@@ -5,3 +5,7 @@ __pycache__
 db.sqlite3
 build/
 celerybeat-schedule.db
+
+# Local OCR/translation sample uploads (do not commit)
+*.jpg
+*.jpeg

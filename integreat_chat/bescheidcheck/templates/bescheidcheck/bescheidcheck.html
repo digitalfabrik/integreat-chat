@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bescheid-Check</title>
+    <style>
+        :root {
+            --bg: #f7f8fa;
+            --panel: #ffffff;
+            --border: #d8dce3;
+            --accent: #0b5cff;
+            --accent-soft: #e8efff;
+            --warn-bg: #fff5e5;
+            --warn-border: #f5c97b;
+            --err: #b00020;
+            --ok: #0a8043;
+            --muted: #5a6072;
+            --highlight: #e5eaff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: #1b1f27;
+            margin: 0;
+            padding: 24px;
+            line-height: 1.5;
+        }
+        h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+        h2 { font-size: 1.2rem; margin: 0 0 .5rem; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .muted { color: var(--muted); }
+        .warning {
+            background: var(--warn-bg);
+            border: 1px solid var(--warn-border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .warning.visible { display: block; }
+        .error { color: var(--err); }
+        .ok { color: var(--ok); }
+        button {
+            font: inherit;
+            padding: 10px 18px;
+            border-radius: 6px;
+            border: 1px solid var(--accent);
+            background: var(--accent);
+            color: #fff;
+            cursor: pointer;
+            min-width: 120px;
+        }
+        button.secondary {
+            background: transparent;
+            color: var(--accent);
+        }
+        button:disabled { opacity: .5; cursor: not-allowed; }
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: -3px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        label { display: block; margin-bottom: 10px; }
+        select, input[type="file"] {
+            font: inherit;
+            padding: 8px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #fff;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        fieldset { border: 1px solid var(--border); padding: 12px; border-radius: 6px; margin-bottom: 16px; }
+        fieldset legend { padding: 0 8px; color: var(--muted); }
+        .actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .progress { display: none; }
+
+        .progress-bar {
+            height: 10px;
+            border-radius: 6px;
+            background: var(--accent-soft);
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            width: 0;
+            border-radius: 6px;
+            transition: width 0.25s ease;
+            background: var(--accent);
+        }
+        .progress-bar.indeterminate .progress-bar-fill {
+            width: 40%;
+            background: linear-gradient(90deg,
+                var(--accent-soft) 0%,
+                var(--accent) 50%,
+                var(--accent-soft) 100%);
+            background-size: 200% 100%;
+            animation: bc-progress-shimmer 1.1s ease-in-out infinite;
+        }
+        @keyframes bc-progress-shimmer {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .progress-bar-label {
+            display: inline-block;
+            margin-top: 6px;
+            font-size: 0.85em;
+        }
+
+        .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 860px) { .columns { grid-template-columns: 1fr; } }
+        .bc-page {
+            position: relative;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+            background: #fff;
+        }
+        .bc-page.original { background: #fdfdfd; }
+        .bc-page.original p { cursor: pointer; }
+        .bc-page p {
+            margin: 0 0 10px;
+            border-radius: 4px;
+            transition: background .2s;
+            line-height: 1.5;
+        }
+        .bc-page p.pulse { background: var(--highlight); outline: 2px solid var(--accent); outline-offset: 2px; }
+        .bc-page p.failed {
+            color: #8a8f9c;
+            opacity: 0.85;
+        }
+        .bc-page .para-index {
+            font-size: 0.75em;
+            color: var(--muted);
+            margin-right: 6px;
+        }
+        .hl-box {
+            position: absolute;
+            left: var(--x);
+            top: var(--y);
+            width: var(--w);
+            height: var(--h);
+            border: 2px solid var(--accent);
+            background: rgba(11, 92, 255, 0.08);
+            box-sizing: border-box;
+            pointer-events: none;
+            display: none;
+        }
+        .bc-page.hiding-original-body p { pointer-events: auto; }
+        .counseling {
+            display: none;
+            padding: 12px;
+            border: 1px solid #cfe3ff;
+            background: #f0f5ff;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        .counseling.visible { display: block; }
+        .counseling-answer {
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            background: #fff;
+            border: 1px solid #d8e5ff;
+        }
+        .counseling-answer ul { margin: 8px 0 0; padding-left: 22px; }
+        .counseling-answer li { margin: 4px 0; }
+        .counseling-answer a { color: var(--accent); word-break: break-all; }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        .badge.supported { background: #e6f7ee; color: var(--ok); }
+        .badge.unsupported { background: #fbe9ec; color: var(--err); }
+        .badge.low { background: var(--warn-bg); color: #876200; }
+        .footer { margin-top: 24px; text-align: center; color: var(--muted); font-size: 0.85em; }
+        ul { margin: 8px 0; padding-left: 22px; }
+        .file-count { font-size: 0.9em; color: var(--muted); margin-top: 4px; }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .brand h1 { margin: 0; font-size: 1.5rem; }
+        .brand p { margin: 2px 0 0; }
+        .menu-wrap { display: flex; gap: 10px; flex-wrap: wrap; }
+        .menu {
+            position: relative;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .menu-btn {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            height: 38px;
+            padding: 0 10px;
+            font: inherit;
+            color: #1b1f27;
+            background: none;
+            border: 0;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .menu-btn:hover { background: var(--accent-soft); }
+        .menu-btn .value {
+            max-width: 130px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            whitespace: nowrap;
+        }
+        .menu-btn .caret { width: 10px; height: 10px; }
+        .menu-btn .icon { width: 18px; height: 18px; flex-shrink: 0; color: var(--accent); }
+        .menu-list {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            min-width: 200px;
+            max-height: 320px;
+            overflow-y: auto;
+            margin: 0;
+            padding: 6px;
+            list-style: none;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(16, 24, 40, .12);
+            z-index: 30;
+            display: none;
+        }
+        .menu.open .menu-list { display: block; }
+        .menu.open .menu-list[hidden] { display: block; }
+        .menu-item {
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .menu-item:hover { background: #f0f2f6; }
+        .menu-item[aria-selected="true"] {
+            font-weight: 600;
+            background: var(--accent-soft);
+        }
+        .menu-item.none { color: var(--muted); cursor: default; }
+        .ext-info-toggle {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            height: 38px;
+            padding: 0 10px;
+            font: inherit;
+            color: #1b1f27;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            gap: 8px;
+        }
+        .ext-info-toggle:hover { background: #f0f2f6; }
+        .ext-info-toggle .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: background .2s;
+        }
+        .ext-info-toggle[aria-checked="true"] { background: var(--accent-soft); border-color: var(--accent); }
+        .ext-info-toggle[aria-checked="true"] .dot { background: var(--accent); }
+        .bc-classification-hidden { display: none !important; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="brand">
+            <h1>Bescheid-Check</h1>
+            <p class="muted">Upload a Bescheid, and we'll transcribe, classify and translate it.</p>
+        </div>
+
+        <div class="menu-wrap">
+            {% if counseling_regions %}
+            <div class="menu" id="regionMenu" aria-label="Region menu">
+                <button type="button" class="menu-btn" id="regionBtn"
+                        aria-haspopup="true" aria-expanded="false" data-menu="region">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M3 12h18"/>
+                        <path d="M12 3c2.5 2.4 3.9 5.6 3.9 9S14.5 18.6 12 21C9.5 18.6 8.1 15.4 8.1 12S9.5 5.4 12 3z"/>
+                    </svg>
+                    <span class="value" id="regionValue"></span>
+                    <svg class="caret" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
+                </button>
+                <ul class="menu-list" id="regionList">
+                    <li class="menu-item none" id="regionNone">No regions configured</li>
+                    {% for r in counseling_regions %}
+                    <li class="menu-item" data-value="{{ r.slug }}" data-label="{{ r.name }}" role="option">{{ r.name }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div class="menu" id="langMenu" aria-label="Language menu">
+                <button type="button" class="menu-btn" id="langBtn"
+                        aria-haspopup="true" aria-expanded="false" data-menu="lang">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 8h7"/>
+                        <path d="M8 5v3"/>
+                        <path d="M10 8c-1 2.5-3 4.5-5 5.5"/>
+                        <path d="M14 19l4-9 4 9"/>
+                        <path d="M15.5 16h5"/>
+                    </svg>
+                    <span class="value" id="langValue"></span>
+                    <svg class="caret" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
+                </button>
+                <div id="langWarning" class="warning">
+                    Your browser language ("<span id="langWarningCode"></span>") is not supported for
+                    translation. You have selected another language as the target instead.
+                </div>
+                <ul class="menu-list" id="langList">
+                    {% for lang in supported_languages %}
+                    <li class="menu-item" data-value="{{ lang }}" data-label="{{ lang }}" role="option">{{ lang }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <button type="button" class="ext-info-toggle" id="extInfoToggle"
+                    role="switch" aria-checked="false"
+                    aria-label="Show extended processing information">
+                <span class="dot" aria-hidden="true"></span>
+                <span class="value">Extended info</span>
+            </button>
+        </div>
+    </div>
+
+    <p class="muted">
+        Upload a German administrative letter (Bescheid) as PNG/JPEG/HEIC image(s) or PDF.
+        We will transcribe it, classify the letter type, and translate the text into the
+        language you choose. Click a translated paragraph to see the original highlighted.
+    </p>
+
+    <p>
+        <span class="badge supported">Supported types:</span>
+        {% for t in supported_types %}<code>{{ t }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}
+    </p>
+
+    <div class="panel" id="upload-panel">
+        <fieldset>
+            <legend>Document</legend>
+
+            <label for="files">
+                Files (max {{ max_images }}) — PNG, JPEG, HEIC, or a PDF (max {{ max_pdf_pages }} pages)
+            </label>
+            <input type="file" id="files" name="files" multiple
+                   accept="image/png,image/jpeg,image/heic,application/pdf">
+            <div class="file-count" id="file-count"></div>
+
+            <div class="actions">
+                <button type="button" id="analyzeBtn">
+                    <span class="spinner" id="spinner" style="display:none"></span>
+                    <span id="analyzeLabel">Analyze</span>
+                </button>
+                <button type="button" class="secondary" id="resetBtn" style="display:none">
+                    New document
+                </button>
+                <button type="button" class="secondary" id="addPageBtn" style="display:none">
+                    Add missing page
+                </button>
+            </div>
+            <p id="progress" class="progress muted" role="status" aria-live="polite"></p>
+        </fieldset>
+    </div>
+
+    <div id="results" hidden>
+        <div class="panel">
+            <h2 id="resultTitle">Result</h2>
+            <div class="muted" id="resultSubtitle"></div>
+            <div id="progressBar" class="progress-bar" role="progressbar"
+                 aria-valuemin="0" aria-valuemax="4" aria-valuenow="0" hidden>
+                <div id="progressBarFill" class="progress-bar-fill"></div>
+            </div>
+            <span id="progressBarLabel" class="progress-bar-label muted" hidden></span>
+            <div id="classification" class="counseling visible"></div>
+            <div class="counseling" id="counselingBox"></div>
+        </div>
+
+        <div class="columns">
+            <div>
+                <h2>Original (OCR)</h2>
+                <div id="originals"></div>
+            </div>
+            <div>
+                <h2>Translation</h2>
+                <div id="translated"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+        <h2>Privacy policy</h2>
+        <p>
+            This tool processes a copy of your documents on local hardware.
+            Uploaded files are only kept in memory while the analysis runs and
+            are deleted immediately afterwards. Nothing is stored on a server,
+            and there is no account or analytics. This tool does not replace
+            legal advice.
+        </p>
+    </div>
+
+    <p class="footer">Bescheid-Check · Integreat · Tür an Tür Digitalfabrik gGmbH</p>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+    const MAX_IMAGES = {{ max_images }};
+    const SUPPORTED_LANGS = {{ supported_languages_js|safe }};
+
+    const els = {
+        files: document.getElementById("files"),
+        fileCount: document.getElementById("file-count"),
+        langBtn: document.getElementById("langBtn"),
+        langValue: document.getElementById("langValue"),
+        langList: document.getElementById("langList"),
+        regionMenu: document.getElementById("regionMenu"),
+        regionBtn: document.getElementById("regionBtn"),
+        regionValue: document.getElementById("regionValue"),
+        regionList: document.getElementById("regionList"),
+        regionNone: document.getElementById("regionNone"),
+        analyzeBtn: document.getElementById("analyzeBtn"),
+        analyzeLabel: document.getElementById("analyzeLabel"),
+        spinner: document.getElementById("spinner"),
+        resetBtn: document.getElementById("resetBtn"),
+        addPageBtn: document.getElementById("addPageBtn"),
+        progress: document.getElementById("progress"),
+        langWarning: document.getElementById("langWarning"),
+        langWarningCode: document.getElementById("langWarningCode"),
+        results: document.getElementById("results"),
+        resultTitle: document.getElementById("resultTitle"),
+        resultSubtitle: document.getElementById("resultSubtitle"),
+        progressBar: document.getElementById("progressBar"),
+        progressBarFill: document.getElementById("progressBarFill"),
+        progressBarLabel: document.getElementById("progressBarLabel"),
+        classification: document.getElementById("classification"),
+        counselingBox: document.getElementById("counselingBox"),
+        originals: document.getElementById("originals"),
+        translated: document.getElementById("translated"),
+        extInfoToggle: document.getElementById("extInfoToggle"),
+    };
+
+    const EXTENDED_INFO_KEY = "bcExtendedInfo";
+    let extendedInfo = false;
+    try {
+        extendedInfo = localStorage.getItem(EXTENDED_INFO_KEY) === "1";
+    } catch (e) { }
+
+    function setExtendedInfo(on) {
+        extendedInfo = on ? true : false;
+        try {
+            localStorage.setItem(EXTENDED_INFO_KEY, extendedInfo ? "1" : "0");
+        } catch (e) { }
+        if (els.extInfoToggle) {
+            els.extInfoToggle.setAttribute("aria-checked", String(extendedInfo));
+        }
+        if (lastRender && els.results && !els.results.hidden) {
+            renderClassification(lastRender.classification);
+            renderCounseling(lastRender.data);
+            renderResultSubtitle(lastRender.data);
+            renderFinalLabel(lastRender.data);
+        }
+    }
+
+    let lastRender = null;
+
+    if (els.extInfoToggle) {
+        els.extInfoToggle.setAttribute("aria-checked", String(extendedInfo));
+        els.extInfoToggle.addEventListener("click", () => {
+            setExtendedInfo(!extendedInfo);
+        });
+    }
+
+    const langState = { value: "de" };
+    let regionValue = "";
+
+    function setLang(value, { warn = false } = {}) {
+        langState.value = value;
+        els.langValue.textContent = value;
+        for (const li of els.langList.querySelectorAll("[data-value]")) {
+            li.setAttribute("aria-selected", li.dataset.value === value);
+        }
+        if (warn) {
+            els.langWarning.classList.add("visible");
+            els.langWarningCode.textContent = navigator.language || "unknown";
+        } else {
+            els.langWarning.classList.remove("visible");
+        }
+    }
+
+    function setRegion(value) {
+        regionValue = value;
+        let label = "";
+        for (const li of (els.regionList ? els.regionList.querySelectorAll("[data-value]") : [])) {
+            const selected = li.dataset.value === value;
+            li.setAttribute("aria-selected", selected);
+            if (selected) label = li.dataset.label || li.dataset.value;
+        }
+        els.regionValue.textContent = label || "Region";
+    }
+
+    function closeMenus() {
+        for (const menu of document.querySelectorAll(".menu")) {
+            const btn = menu.querySelector(".menu-btn");
+            if (btn) btn.setAttribute("aria-expanded", "false");
+            menu.classList.remove("open");
+        }
+    }
+
+    function toggleMenu(list, btn) {
+        const menu = list.closest(".menu");
+        const wasOpen = menu.classList.contains("open");
+        closeMenus();
+        if (!wasOpen) {
+            menu.classList.add("open");
+            btn.setAttribute("aria-expanded", "true");
+        }
+    }
+
+    const device = (navigator.language || "en").slice(0, 2).toLowerCase();
+    if (SUPPORTED_LANGS.includes(device)) {
+        setLang(device);
+    } else if (SUPPORTED_LANGS.includes("en")) {
+        setLang("en", { warn: true });
+    } else {
+        setLang(SUPPORTED_LANGS[0] || "de", { warn: true });
+    }
+
+    if (els.regionList) {
+        const regionItems = els.regionList.querySelectorAll("[data-value]");
+        els.regionNone.hidden = regionItems.length > 0;
+        setRegion(regionItems.length ? regionItems[0].dataset.value : "");
+    }
+
+    if (els.langBtn) {
+        els.langBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleMenu(els.langList, els.langBtn);
+        });
+        els.langList.addEventListener("click", (e) => {
+            const li = e.target.closest(".menu-item[data-value]");
+            if (!li) return;
+            e.stopPropagation();
+            setLang(li.dataset.value);
+            closeMenus();
+        });
+    }
+
+    if (els.regionBtn) {
+        els.regionBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleMenu(els.regionList, els.regionBtn);
+        });
+        els.regionList.addEventListener("click", (e) => {
+            const li = e.target.closest(".menu-item[data-value]");
+            if (!li) return;
+            e.stopPropagation();
+            setRegion(li.dataset.value);
+            closeMenus();
+        });
+    }
+
+    document.addEventListener("click", closeMenus);
+
+    let allFiles = [];
+    let uploadedUrls = [];
+
+    function updateFileCount() {
+        els.fileCount.textContent = allFiles.length
+            ? `${allFiles.length} of ${MAX_IMAGES} file(s) selected`
+            : "";
+    }
+
+    els.files.addEventListener("change", (e) => {
+        const incoming = Array.from(e.target.files || []);
+        const existing = new Map(
+            allFiles.map(f => [f.name + String(f.size) + String(f.lastModified), f])
+        );
+        incoming.forEach(f => existing.set(f.name + String(f.size) + String(f.lastModified), f));
+        allFiles = Array.from(existing.values());
+        if (allFiles.length > MAX_IMAGES) {
+            allFiles = allFiles.slice(0, MAX_IMAGES);
+            alert("You selected more than " + MAX_IMAGES + " files. Only the first " + MAX_IMAGES + " will be used.");
+        }
+        e.target.value = "";
+        const dt = new DataTransfer();
+        allFiles.forEach(f => dt.items.add(f));
+        e.target.files = dt.files;
+        updateFileCount();
+    });
+
+    function resetState() {
+        allFiles = [];
+        uploadedUrls.forEach(url => URL.revokeObjectURL(url));
+        uploadedUrls = [];
+        els.files.value = "";
+        els.results.hidden = true;
+        els.resetBtn.style.display = "none";
+        els.addPageBtn.style.display = "none";
+        els.classification.innerHTML = "";
+        els.counselingBox.innerHTML = "";
+        els.counselingBox.classList.remove("visible");
+        els.originals.innerHTML = "";
+        els.translated.innerHTML = "";
+        els.progress.textContent = "";
+        els.progressBarLabel.hidden = true;
+        updateFileCount();
+        lastRender = null;
+        const placeholder =
+            "<span class='muted'>Looking for a counseling option in your region…</span>";
+        els.counselingBox.innerHTML = placeholder;
+        els.counselingBox.classList.remove("visible");
+    }
+
+    els.resetBtn.addEventListener("click", resetState);
+    els.addPageBtn.addEventListener("click", () => {
+        els.addPageBtn.style.display = "none";
+        els.resetBtn.style.display = "inline-block";
+        els.results.hidden = true;
+        els.files.focus();
+    });
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+        }[c]));
+    }
+
+    function renderClassification(cl) {
+        const badgeClass = cl.type === "unsupported" ? "unsupported" :
+                            (cl.confidence >= 0.7 ? "supported" : "low");
+        const badgeLabel = cl.type === "unsupported"
+            ? "Not a supported type"
+            : "Recognized: " + cl.type;
+        const line = [
+            `<span class="badge ${badgeClass}">${escapeHtml(badgeLabel)}</span>`,
+        ];
+        if (extendedInfo) {
+            line.push(
+                `confidence ${(0.01 * Math.round((cl.confidence || 0) * 100)).toFixed(2)}`
+            );
+        }
+        if (cl.counseling_service) line.push(escapeHtml(cl.counseling_service));
+        if (cl.reason) line.push(`<br><em>${escapeHtml(cl.reason)}</em>`);
+        els.classification.innerHTML = line.join(" · ");
+        els.classification.classList.toggle("bc-classification-hidden", !extendedInfo);
+    }
+
+    function renderCounseling(data) {
+        if (!data || !data.counseling) {
+            if (data && data.reason) {
+                els.counselingBox.innerHTML =
+                    `<span class="muted">${escapeHtml(data.reason)}</span>`;
+                els.counselingBox.classList.add("visible");
+            }
+            return;
+        }
+        const c = data.counseling;
+        const bits = [];
+        if (c.counseling_name) {
+            bits.push(`<span class="badge supported">${escapeHtml(c.counseling_name)}</span>`);
+        }
+        if (c.question && extendedInfo) {
+            bits.push(`<span class="muted">Question: “${escapeHtml(c.question)}”</span>`);
+        }
+        if (c.answer) {
+            bits.push(`<div class="counseling-answer">${c.answer}</div>`);
+        }
+        if (!bits.length) {
+            bits.push("<span class='muted'>No counseling information available.</span>");
+        }
+        els.counselingBox.innerHTML = `Recommended: ${bits.join(" ")}`;
+        els.counselingBox.classList.add("visible");
+    }
+
+    async function renderCounselingPlaceholder() {
+        if (!els.counselingBox.classList.contains("visible")) return;
+        els.counselingBox.innerHTML =
+            "<span class='muted'>Looking for a counseling option in your region…</span>";
+    }
+
+    function renderPage(container, html, original, pageNo) {
+        const div = document.createElement("div");
+        div.className = "bc-page" + (original ? " original" : "");
+        div.dataset.page = pageNo;
+        div.innerHTML = html;
+        container.appendChild(div);
+
+        const paras = div.querySelectorAll("p[data-para-id]");
+        if (!original) {
+            paras.forEach((p, i) => {
+                p.style.cursor = "pointer";
+                p.addEventListener("mouseenter", () => {
+                    const id = p.getAttribute("data-para-id");
+                    const target = document.querySelector(
+                        `.bc-page.original p[data-para-id="${CSS.escape(id)}"]`
+                    );
+                    if (target) {
+                        target.classList.add("pulse");
+                        target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                    }
+                });
+                p.addEventListener("mouseleave", () => {
+                    const id = p.getAttribute("data-para-id");
+                    const target = document.querySelector(
+                        `.bc-page.original p[data-para-id="${CSS.escape(id)}"]`
+                    );
+                    if (target) {
+                        target.classList.remove("pulse");
+                    }
+                });
+            });
+        } else {
+            paras.forEach(p => {
+                p.addEventListener("click", () => {
+                    div.querySelectorAll(".pulse").forEach(n => n.classList.remove("pulse"));
+                    p.classList.add("pulse");
+                });
+            });
+        }
+    }
+
+    function renderPages(pages) {
+        els.originals.innerHTML = "";
+        els.translated.innerHTML = "";
+        pages.forEach((page, i) => {
+            renderPage(els.originals, page.original_html, true, page.page_no || (i + 1));
+            renderPage(els.translated, page.translated_html, false, page.page_no || (i + 1));
+        });
+        els.translated.querySelectorAll("p[data-para-id]").forEach(p => {
+            p.classList.add("failed");
+        });
+    }
+
+    function applyParaTranslation(pageIdx, paraId, translatedHtml) {
+        const pageNo = (pageIdx ?? 0) + 1;
+        scope: {
+            const root = els.translated;
+            const pageDivs = root.querySelectorAll(
+                `.bc-page[data-page="${pageNo}"]`
+            );
+            for (const pageDiv of pageDivs) {
+                const target = pageDiv.querySelector(
+                    `p[data-para-id="${CSS.escape(paraId)}"]`
+                );
+                if (target) {
+                    const tmp = document.createElement("template");
+                    tmp.innerHTML = translatedHtml;
+                    target.innerHTML = tmp.innerHTML;
+                    target.classList.remove("failed");
+                    break scope;
+                }
+            }
+        }
+    }
+
+    async function* readSSE(response) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let sep;
+            while ((sep = buffer.indexOf("\n\n")) !== -1) {
+                const frame = buffer.slice(0, sep);
+                buffer = buffer.slice(sep + 2);
+                const parsed = parseSSEFrame(frame);
+                if (parsed) yield parsed;
+            }
+        }
+        const tail = parseSSEFrame(buffer);
+        if (tail) yield tail;
+    }
+
+    function parseSSEFrame(frame) {
+        let event = "message";
+        let data = "";
+        for (const rawLine of frame.split("\n")) {
+            const line = rawLine.replace(/\r$/, "");
+            if (!line || line.startsWith(":")) continue;
+            if (line.startsWith("event:")) {
+                event = line.slice(6).trim();
+            } else if (line.startsWith("data:")) {
+                const chunk = line.slice(5).replace(/^ /, "");
+                data = data ? data + "\n" + chunk : chunk;
+            }
+        }
+        if (!data) return null;
+        let payload;
+        try {
+            payload = JSON.parse(data);
+        } catch (e) {
+            payload = { reason: data };
+        }
+        return { event, data: payload };
+    }
+
+    const STAGE_NAMES = {
+        ocr: "Reading & OCR",
+        classify: "Classifying",
+        translate: "Translating",
+        counseling: "Finding a counseling option",
+    };
+    const TOTAL_STAGES = 4;
+
+    const translationProgress = { done: 0, total: 0, translated: new Set() };
+
+    function resetTranslationProgress() {
+        translationProgress.done = 0;
+        translationProgress.total = 0;
+        translationProgress.translated = new Set();
+    }
+
+    function updateTranslateTicker() {
+        if (translationProgress.total === 0) return;
+        const label =
+            `Translating…` + " · " +
+            `${translationProgress.done} of ${translationProgress.total} paragraph(s)`;
+        els.progressBarLabel.hidden = false;
+        els.progressBarLabel.textContent = label;
+        els.progress.textContent = label;
+        els.progress.style.display = "block";
+    }
+
+    function setProgress({ index, stage, status, seconds, label }) {
+        const completed = (status === "done" ? index : index - 1);
+        const pct = Math.max(0, Math.min(TOTAL_STAGES, completed)) / TOTAL_STAGES * 100;
+        els.progressBar.hidden = false;
+        els.progressBarFill.style.width = pct + "%";
+        els.progressBar.classList.toggle("indeterminate", status === "started" || status === "progress");
+        els.progressBar.setAttribute("aria-valuenow", String(Math.round(pct)));
+
+        const name = STAGE_NAMES[stage] || stage;
+        const bits = [`${name}…`];
+        if (status === "started" || status === "progress") {
+            bits.push(`stage ${index}/${TOTAL_STAGES}`);
+        } else if (status === "done" && seconds != null) {
+            bits.push(`done in ~${seconds}s`);
+        }
+        if (stage === "translate" && translationProgress.total > 0) {
+            bits.push(
+                `${translationProgress.done} of ${translationProgress.total} paragraph(s)`
+            );
+        }
+        if (label) bits.push(label);
+        els.progressBarLabel.hidden = false;
+        els.progressBarLabel.textContent = bits.join(" · ");
+        els.progress.textContent = bits.join(" · ");
+        els.progress.style.display = "block";
+    }
+
+    function resetProgressUI() {
+        els.progressBarFill.style.width = "0%";
+        els.progressBar.classList.remove("indeterminate");
+        els.progressBar.hidden = true;
+        els.progressBarLabel.hidden = true;
+        els.progress.textContent = "";
+        els.progress.style.display = "none";
+    }
+
+    function reconcileTranslationMarks() {
+        const translated = translationProgress.translated;
+        els.translated.querySelectorAll("p[data-para-id]").forEach(p => {
+            const id = p.getAttribute("data-para-id");
+            if (translated && translated.has(id)) {
+                p.classList.remove("failed");
+            }
+        });
+    }
+
+    function renderResultSubtitle(data) {
+        const secs = data.total_seconds != null
+            ? data.total_seconds
+            : (elapsed != null ? elapsed : 0);
+        let text =
+            `Processed ${data.pages.length} page(s) in ~${secs}s · ` +
+            `${data.source_language} → ${data.target_language}`;
+        if (data.stages && extendedInfo) {
+            text +=
+                " · OCR " + (data.stages.ocr || 0) + "s, " +
+                "classify " + (data.stages.classify || 0) + "s, " +
+                "translate " + (data.stages.translate || 0) + "s, " +
+                "counseling " + (data.stages.counseling || 0) + "s";
+        }
+        els.resultSubtitle.textContent = text;
+    }
+
+    function renderFinalLabel(data) {
+        if (extendedInfo) {
+            const secs = data.total_seconds != null
+                ? data.total_seconds
+                : (elapsed != null ? elapsed : 0);
+            els.progressBarLabel.hidden = false;
+            els.progressBarLabel.textContent = `Done in ~${secs}s`;
+        } else {
+            els.progressBarLabel.hidden = true;
+        }
+    }
+
+    function renderResult(data) {
+        els.resultTitle.textContent = "Result";
+        renderClassification(data.classification);
+        renderCounseling(data);
+        renderPages(data.pages);
+        reconcileTranslationMarks();
+        els.progressBarFill.style.width = "100%";
+        els.progressBar.classList.remove("indeterminate");
+        els.progressBar.setAttribute("aria-valuenow", "100");
+        renderResultSubtitle(data);
+        renderFinalLabel(data);
+        els.resetBtn.style.display = "inline-block";
+        els.addPageBtn.style.display = "inline-block";
+        lastRender = { data, classification: data.classification };
+    }
+
+    async function analyze() {
+        const files = allFiles;
+        if (!files.length) { alert("Please select at least one file."); return; }
+
+        const fd = new FormData();
+        files.forEach(f => fd.append("files", f));
+        fd.append("target_language", langState.value);
+        if (regionValue) fd.append("region", regionValue);
+
+        els.analyzeBtn.disabled = true;
+        els.spinner.style.display = "inline-block";
+        els.analyzeLabel.textContent = "Working…";
+        els.results.hidden = false;
+        els.resultTitle.textContent = "Processing…";
+        els.resultSubtitle.textContent = "";
+        resetProgressUI();
+        resetTranslationProgress();
+        renderCounselingPlaceholder();
+
+        const localUrls = files.map(f => URL.createObjectURL(f));
+        uploadedUrls = localUrls;
+
+        try {
+            const started = performance.now();
+            const res = await fetch("/bescheidcheck/analyze/", { method: "POST", body: fd });
+
+            const ctype = (res.headers.get("content-type") || "").toLowerCase();
+            let isError = !res.ok;
+            if (res.ok && ctype.includes("application/json")) isError = true;
+
+            if (isError) {
+                let data = null;
+                try { data = await res.json(); } catch (e) { }
+                throw new Error((data && data.reason) || `HTTP ${res.status}`);
+            }
+
+            for await (const msg of readSSE(res)) {
+                if (msg.event === "stage" && msg.data) {
+                    elapsed = Math.round((performance.now() - started) / 1000);
+                    setProgress({
+                        index: msg.data.index,
+                        stage: msg.data.stage,
+                        status: msg.data.status,
+                        seconds: msg.data.seconds,
+                    });
+                } else if (msg.event === "pages") {
+                    renderPages(msg.data.pages);
+                    translationProgress.total = (msg.data.pages || []).reduce(
+                        (sum, page) => sum + (page.paragraphs ? page.paragraphs.length : 0),
+                        0,
+                    );
+                } else if (msg.event === "para") {
+                    applyParaTranslation(
+                        msg.data.page,
+                        msg.data.para_id,
+                        msg.data.html,
+                    );
+                    translationProgress.done += 1;
+                    translationProgress.translated.add(msg.data.para_id);
+                    updateTranslateTicker();
+                } else if (msg.event === "result") {
+                    renderResult(msg.data);
+                } else if (msg.event === "error") {
+                    throw new Error((msg.data && msg.data.reason) || "The analysis failed.");
+                }
+            }
+        } catch (e) {
+            els.results.hidden = true;
+            resetProgressUI();
+            alert("Analyze failed: " + e.message);
+        } finally {
+            els.analyzeBtn.disabled = false;
+            els.spinner.style.display = "none";
+            els.analyzeLabel.textContent = "Analyze";
+            els.progress.textContent = "";
+            els.progress.style.display = "none";
+        }
+    }
+
+    els.analyzeBtn.addEventListener("click", analyze);
+})();
+</script>
+</body>
+</html>

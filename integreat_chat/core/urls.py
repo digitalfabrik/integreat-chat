@@ -1,11 +1,11 @@
 """
 URL configuration for integreat_chat project.
 """
-from django.urls import path, include
+from django.urls import include, path
 
+from integreat_chat.core.views import health
 from integreat_chat.search.views import search_documents
 from integreat_chat.translate.views import translate_message
-from integreat_chat.core.views import health
 
 urlpatterns = [
     # Support legacy URLs
@@ -17,4 +17,5 @@ urlpatterns = [
     path('chatanswers/', include('integreat_chat.chatanswers.urls')),
     path('search/', include('integreat_chat.search.urls')),
     path('translate/', include('integreat_chat.translate.urls')),
+    path('bescheidcheck/', include('integreat_chat.bescheidcheck.urls')),
 ]

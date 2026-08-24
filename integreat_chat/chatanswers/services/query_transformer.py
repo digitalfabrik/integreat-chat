@@ -2,12 +2,17 @@
 Service to transform/optimize input queries
 """
 
+import asyncio
 import re
 
-import asyncio
 from django.conf import settings
 
-from integreat_chat.chatanswers.services.llmapi import LlmApiClient, LlmMessage, LlmPrompt, LlmResponse
+from integreat_chat.chatanswers.services.llmapi import (
+    LlmApiClient,
+    LlmMessage,
+    LlmPrompt,
+    LlmResponse,
+)
 
 from ..static.prompts import Prompts
 
@@ -41,13 +46,7 @@ class QueryTransformer:
             for punct, pattern in punctuation_patterns.items()
         }
 
-        if (
-            counts["period"] > max_period
-            or counts["question_mark"] > max_question_mark
-            or counts["comma"] > max_comma
-        ):
-            return True
-        return False
+        return bool(counts["period"] > max_period or counts["question_mark"] > max_question_mark or counts["comma"] > max_comma)
 
     def length_thresh_exceeded(self):
         """
@@ -59,9 +58,7 @@ class QueryTransformer:
         """
         Check if the query requires transformation
         """
-        if self.punctuation_thresh_exceeded() or self.length_thresh_exceeded():
-            return True
-        return False
+        return bool(self.punctuation_thresh_exceeded() or self.length_thresh_exceeded())
 
     def transform_query(self):
         """

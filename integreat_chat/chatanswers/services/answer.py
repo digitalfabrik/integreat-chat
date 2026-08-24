@@ -15,10 +15,10 @@ from integreat_chat.search.utils.search_request import SearchRequest
 from integreat_chat.search.utils.search_response import Document
 from integreat_chat.translate.services.language import LanguageService
 
-from ..static.prompts import Prompts
 from ..static.messages import Messages
-from ..utils.rag_response import RagResponse
+from ..static.prompts import Prompts
 from ..utils.rag_request import RagRequest
+from ..utils.rag_response import RagResponse
 from .llmapi import LlmApiClient, LlmMessage, LlmPrompt, LlmResponse
 
 LOGGER = logging.getLogger("django")
@@ -137,8 +137,21 @@ class AnswerService:
             message = Messages.TALK_TO_HUMAN
         else:
             if accept_message:
-                self.rag_request.search_term = summary
-                LOGGER.debug("Message requires response.")
+                # When the caller fixed a specific search term (e.g. a
+                # bescheidcheck counseling type maps to a canonical phrase
+                # rather than the generated question), keep it. Otherwise
+                # use the LLM's summary of the last message as the search
+                # term (existing behavior).
+                if not getattr(self.rag_request, "pinned_search_term", False):
+                    self.rag_request.search_term = summary
+                    LOGGER.debug("Message requires response. search_term=%r", summary)
+                else:
+                    LOGGER.debug(
+                        "Message requires response. Using pinned search_term=%r "
+                        "(ignoring summary=%r).",
+                        self.rag_request.search_term,
+                        summary,
+                    )
                 return False
             message = Messages.NOT_QUESTION
             LOGGER.debug("Message does not require response.")
@@ -175,7 +188,7 @@ class AnswerService:
         documents = search_response.documents
         batches = ceil(len(documents)/3)
         filtered_documents = []
-        for batch in range(0, batches):
+        for batch in range(batches):
             filtered_documents += await self.filter_documents(
                 session, documents[batch*3:batch*3+3]
             )
