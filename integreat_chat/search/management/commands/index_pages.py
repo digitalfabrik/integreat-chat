@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from ...tasks import update_index
 
+
 class Command(BaseCommand):
     """
     Index pages for region & language

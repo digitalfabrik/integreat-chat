@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from integreat_chat.chatanswers.services.answer import AnswerService
+from integreat_chat.chatanswers.services.llmapi import LlmClientError
 
 from .utils.rag_request import RagRequest
 
@@ -32,6 +33,12 @@ async def chat(request):
             answer_service = AnswerService(rag_request)
             rag_response_obj = await answer_service.extract_answer()
             rag_response = await rag_response_obj.as_dict()
+        except LlmClientError as exc:
+            LOGGER.error("LLM server error during chat: %s", exc)
+            rag_response = {
+                "status": "error",
+                "message": "Language model service unavailable, please try again.",
+            }
         except ValueError as exc:
             rag_response = {"status": "error", "message": str(exc)}
     return JsonResponse(rag_response)

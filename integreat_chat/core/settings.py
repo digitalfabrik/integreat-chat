@@ -12,23 +12,26 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import configparser
 import os
-
 from pathlib import Path
 
 from celery.schedules import crontab
+
 from integreat_chat.core.utils.integreat_cms import get_integreat_region_names
 
 config = configparser.ConfigParser()
 if os.path.isfile('/etc/integreat-chat.ini'):
     config.read('/etc/integreat-chat.ini')
 else:
-    config.read(os.path.join(__file__, "../../integreat-chat.ini"))
+    # ``os.path.join(__file__, "..", ...)`` does not actually walk up
+    # from a *file* the way it does from a directory — use the *directory*
+    # of the file so the relative path resolves correctly on the
+    # filesystem.
+    config.read(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             "..", "..", "integreat-chat.ini"))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-u*mc*mu#()r6qdrotm(1=+kuo!2-*76fav*-m*m3e8v+hutfn('
@@ -36,13 +39,16 @@ SECRET_KEY = 'django-insecure-u*mc*mu#()r6qdrotm(1=+kuo!2-*76fav*-m*m3e8v+hutfn(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-# Django logging configuration
+_LOG_LEVEL = (
+    config["MAIN"].get("LOG_LEVEL", "INFO")
+)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
         'apache': {
-            'level': 'DEBUG' if DEBUG else config["MAIN"]["LOG_LEVEL"],
+            'level': 'DEBUG' if DEBUG else _LOG_LEVEL,
             'class': 'logging.StreamHandler',
             'stream': 'ext://sys.stderr',  # Logs to Apache's error log
         },
@@ -50,7 +56,12 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['apache'],
-            'level': 'DEBUG' if DEBUG else config["MAIN"]["LOG_LEVEL"],
+            'level': 'DEBUG' if DEBUG else _LOG_LEVEL,
+            'propagate': True,
+        },
+        'integreat_chat': {
+            'handlers': ['apache'],
+            'level': 'DEBUG' if DEBUG else _LOG_LEVEL,
             'propagate': True,
         },
     },
@@ -78,7 +89,15 @@ INTEGREAT_REGIONS = {
 # Configuration Variables for answer service
 LANGUAGE_CLASSIFICATION_MODEL = "gpt-oss:120b"
 
-TRANSLATION_MODEL = "gemma3:27b"
+BESCHEID_OCR = {
+    "lang": "de",
+    "scale": 2.0,
+    "backend": "torch",
+    "text_score": 0.5,
+    "rapidocr_params": {},
+}
+
+TRANSLATION_MODEL = "verdigado-translate"
 TRANSLATION_MODEL_SUPPORTED_LANGUAGES = [
     'af','am','ar','az','be','bg','bn','bs','ca','ckb','cs','cy','da','de','de-si','el','en',
     'es','et','eu','fa','fi','fr','ga','gl','gu','he','hi','hr','hu','hy','id','is','it','ja',
@@ -91,12 +110,10 @@ RAG_SCORE_THRESHOLD = 0.1
 RAG_MAX_PAGES = 3
 RAG_MODEL = "gpt-oss:120b"
 RAG_RELEVANCE_CHECK = (
-        config["MAIN"]["RAG_RELEVANCE_CHECK"] if
-        "RAG_RELEVANCE_CHECK" in config["MAIN"] else "True"
+        config["MAIN"].get("RAG_RELEVANCE_CHECK", "True")
     ) == "True"
 RAG_HUMAN_REQUEST_CHECK = (
-        config["MAIN"]["RAG_HUMAN_REQUEST_CHECK"] if
-        "RAG_HUMAN_REQUEST_CHECK" in config["MAIN"] else "True"
+        config["MAIN"].get("RAG_HUMAN_REQUEST_CHECK", "True")
     ) == "True"
 RAG_RELEVANCE_CHECK_MODEL = "gpt-oss:120b"
 RAG_QUERY_OPTIMIZATION = True
@@ -106,8 +123,7 @@ RAG_SUPPORTED_LANGUAGES = ["en", "de"]
 RAG_FALLBACK_LANGUAGE = "en"
 RAG_CONTEXT_LENGTH = 2 # Number of messages passed to LLM if the last message requires context
 RAG_FACT_CHECK = (
-        config["MAIN"]["RAG_FACT_CHECK"] if
-        "RAG_FACT_CHECK" in config["MAIN"] else "True"
+        config["MAIN"].get("RAG_FACT_CHECK", "True")
     ) == "True"
 
 # Limit number of messages processed. The last N messages will be used.
@@ -131,15 +147,25 @@ SEARCH_FALLBACK_LANGUAGE = "en"
 SEARCH_OPENSEARCH_MODEL_ID = config["OPENSEARCH"]["MODEL_ID"]
 SEARCH_OPENSEARCH_MODEL_GROUP_ID = config["OPENSEARCH"]["MODEL_GROUP_ID"]
 OPENSEARCH_USER = (
-    config["OPENSEARCH"]["USER"]
-    if "USER" in config["OPENSEARCH"]
-    else "admin"
+    config["OPENSEARCH"].get("USER", "admin")
 )
 OPENSEARCH_PASSWORD = (
-    config["OPENSEARCH"]["PASSWORD"]
-    if "PASSWORD" in config["OPENSEARCH"]
-    else "changeme"
+    config["OPENSEARCH"].get("PASSWORD", "changeme")
 )
+
+# Bescheidcheck (issue #492-#498)
+BESCHEID_MAX_IMAGES = 10
+BESCHEID_MAX_PDF_PAGES = 10
+BESCHEID_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+BESCHEID_PAGE_ORDERING = "off"
+BESCHEID_CLASSIFICATION_MODEL = "verdigado-think"
+BESCHEID_SUPPORTED_TYPES = [
+    "bamf_simple_rejection",
+    "obviously_unfounded_inadmissible",
+    "dublin_decision",
+    "unsupported",
+]
+BESCHEID_TRANSLATION_CONCURRENCY = 2
 
 VDB_HOST = "localhost"
 VDB_PORT = "9200"
@@ -160,6 +186,7 @@ INSTALLED_APPS = [
     'integreat_chat.translate',
     'integreat_chat.search',
     'integreat_chat.chatanswers',
+    'integreat_chat.bescheidcheck',
 ]
 
 MIDDLEWARE = [
@@ -191,6 +218,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
+ASGI_APPLICATION = 'core.asgi.application'
 
 
 # Database
@@ -262,14 +290,10 @@ CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 60 * 60 * 1
 CELERY_BROKER_URL = (
-    config["MAIN"]["CELERY_REDIS_URL"] if
-    "CELERY_REDIS_URL" in config["MAIN"]
-    else "redis://localhost:6379/0"
+    config["MAIN"].get("CELERY_REDIS_URL", "redis://localhost:6379/0")
 )
 CELERY_RESULT_BACKEND = (
-    config["MAIN"]["CELERY_RESULT_BACKEND"] if
-    "CELERY_RESULT_BACKEND" in config["MAIN"]
-    else "redis://localhost:6379/0"
+    config["MAIN"].get("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
 )
 CELERY_BEAT_SCHEDULE = {
     'update-indexes': {

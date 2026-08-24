@@ -5,6 +5,7 @@ import logging
 import urllib
 
 from django.conf import settings
+
 from integreat_chat.core.utils.integreat_cms import get_page
 
 from .search_request import SearchRequest

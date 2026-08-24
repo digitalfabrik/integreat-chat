@@ -1,9 +1,8 @@
 from celery import shared_task
 from django.conf import settings
 
-from integreat_chat.search.services.opensearch import OpenSearchSetup
 from integreat_chat.core.utils.integreat_cms import get_region_languages
-
+from integreat_chat.search.services.opensearch import OpenSearchSetup
 
 
 @shared_task

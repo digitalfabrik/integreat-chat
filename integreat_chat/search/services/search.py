@@ -3,13 +3,12 @@ A service to search for documents
 """
 import logging
 
+from core.utils.integreat_cms import get_pages
 from django.conf import settings
 
-from core.utils.integreat_cms import get_pages
-
-from .opensearch import OpenSearch
 from ..utils.search_request import SearchRequest
-from ..utils.search_response import SearchResponse, Document
+from ..utils.search_response import Document, SearchResponse
+from .opensearch import OpenSearch
 
 LOGGER = logging.getLogger(__name__)
 

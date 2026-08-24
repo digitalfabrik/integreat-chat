@@ -9,9 +9,10 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
-from .services.search import SearchService
 from .services.opensearch import OpenSearch
+from .services.search import SearchService
 from .utils.search_request import SearchRequest
+
 
 @csrf_exempt
 async def search_documents(request):

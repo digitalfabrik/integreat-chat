@@ -6,9 +6,7 @@ import logging
 import re
 
 import aiohttp
-
 from django.conf import settings
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +27,20 @@ def decode_byte_tokens(text: str) -> str:
         return raw.decode("utf-8", errors="replace")
 
     return _BYTE_TOKEN_RUN.sub(replace, text)
+
+
+class LlmClientError(Exception):
+    """The LLM server answered with an HTTP error status.
+
+    ``status`` is the HTTP status code (or ``None`` if it could not be
+    determined). The message is capped, and the response body is
+    included only in truncated form, so it is safe to log and to
+    surface to end users in a degraded-but-safe reason string.
+    """
+
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
 
 
 class LlmMessage:
@@ -55,10 +67,22 @@ class LlmPrompt:
     """
     Class that represents a prompt to an LLM
     """
-    def __init__(self, model: str, messages: list[LlmMessage], json_schema: None | dict = None):
+    def __init__(
+        self,
+        model: str,
+        messages: list[LlmMessage],
+        json_schema: None | dict = None,
+        extra_body: None | dict = None,
+    ):
         self.messages = messages
         self.json_schema = json_schema
         self.model = model
+        # Optional provider-specific top-level request params (e.g.
+        # ``{"think": False}``) that are appended verbatim to the request
+        # body. None (the default) means nothing extra is sent, so existing
+        # callers are unaffected; only callers that opt in (e.g. translation)
+        # see the extra keys.
+        self.extra_body = extra_body
 
     def as_dict(self) -> dict:
         """
@@ -73,6 +97,15 @@ class LlmPrompt:
                 "type": "json_schema",
                 "json_schema": self.json_schema,
             }
+        if self.extra_body:
+            # Merge provider-specific params at the TOP LEVEL of the
+            # request body. This works for LiteLLM (our LLM_SERVER) and
+            # Ollama/vLLM, which accept unknown top-level params. If
+            # LLM_SERVER ever points at a strict OpenAI-compatible
+            # gateway that rejects unknown params, this must be nested
+            # under the provider-specific key instead (e.g.
+            # "reasoning_effort" inside "options").
+            body.update({k: v for k, v in self.extra_body.items() if v is not None})
         return body
 
 class LlmResponse:
@@ -135,11 +168,33 @@ class LlmApiClient:
         """
         Get RAG answer
         """
+        # ``total`` caps the *whole* request (connect + headers + body).
+        # Translation and other larger generations on a CPU-only backend
+        # routinely need more than the old hard-coded 120s, especially
+        # when several calls queue behind a single model worker. Make the
+        # cap overridable (default raised to 300s) so an operator can give
+        # long generations room to finish instead of hard-failing.
+        timeout = getattr(settings, "LLM_TIMEOUT", 300)
         async with session.post(self.api_url,
                                 json={**prompt.as_dict(), "temperature": 0},
-                                timeout=aiohttp.ClientTimeout(total=120),
+                                timeout=aiohttp.ClientTimeout(total=timeout),
                                 headers={
                                     'Authorization': f'Bearer {settings.LLM_API_KEY}',
                                     'Content-Type': 'application/json',
                                 }) as response:
+            if response.status >= 400:
+                try:
+                    body = await response.text()
+                except (aiohttp.ClientError, OSError, UnicodeDecodeError):
+                    body = ""
+                snippet = " ".join(body.split())[:200]
+                LOGGER.warning(
+                    "LLM server %s returned HTTP %s: %s",
+                    self.api_url, response.status, snippet or "(no body)",
+                )
+                raise LlmClientError(
+                    f"LLM server returned HTTP {response.status}"
+                    + (f": {snippet}" if snippet else ""),
+                    status=response.status,
+                ) from None
             return await response.json()

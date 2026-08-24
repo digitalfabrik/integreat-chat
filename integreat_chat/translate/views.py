@@ -6,8 +6,9 @@ import aiohttp
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from integreat_chat.translate.services.language import LanguageService
+from integreat_chat.chatanswers.services.llmapi import LlmClientError
 from integreat_chat.core.utils.integreat_cms import async_get_region_languages
+from integreat_chat.translate.services.language import LanguageService
 
 LOGGER = logging.getLogger("django")
 
@@ -69,7 +70,11 @@ async def translate_message(request):
                     "status": "success",
                 }
             except (TimeoutError, aiohttp.ClientError):
-                LOGGER.error("LLM request failed in translate_message", exc_info=True)
+                LOGGER.exception("LLM request failed in translate_message")
+                result = {"status": "error", "reason": "Translation service unavailable."}
+                status = 503
+            except LlmClientError:
+                LOGGER.exception("LLM server error in translate_message")
                 result = {"status": "error", "reason": "Translation service unavailable."}
                 status = 503
             except ValueError as exc:
@@ -119,9 +124,11 @@ async def message_to_region_languages(request):
                         "language": language,
                     })
             except (TimeoutError, aiohttp.ClientError):
-                LOGGER.error(
-                    "LLM request failed in message_to_region_languages", exc_info=True
-                )
+                LOGGER.exception("LLM request failed in message_to_region_languages")
+                result = {"status": "error", "reason": "Translation service unavailable."}
+                status = 503
+            except LlmClientError:
+                LOGGER.exception("LLM server error in message_to_region_languages")
                 result = {"status": "error", "reason": "Translation service unavailable."}
                 status = 503
             except ValueError as exc:

@@ -31,10 +31,14 @@ dependencies = [
   "celery",
   "django",
   "django-celery",
+  "docling",
   "gunicorn",
   "langchain-text-splitters",
   "lxml",
   "numpy",
+  "pillow",
+  "pypdf",
+  "rapidocr",
   "redis",
   "torch",
   "uvicorn",
@@ -42,12 +46,22 @@ dependencies = [
 
 
 [project.optional-dependencies]
-dev = []
+dev = [
+  "black",
+  "isort",
+  "pytest",
+  "pytest-django",
+  "ruff",
+]
 
 [project.urls]
 "Homepage" = "https://tuerantuer.de/digitalfabrik"
 "Source Code" = "https://github.com/digitalfabrik/integreat-chat"
 "Issues" = "https://github.com/digitalfabrik/integreat-chat/issues"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "integreat_chat.core.settings"
+python_files = ["tests.py"]
 
 [tool.setuptools]
 script-files = ["integreat_chat/manage.py"]
@@ -55,3 +69,30 @@ license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 include = ["integreat_chat*"]
+
+# Ship non-Python data files (templates, static assets, etc.) that
+# live inside the app directories. ``packages.find`` above only pulls
+# in directories with an ``__init__.py`` — templates/static would be
+# silently dropped, which is exactly what produced the
+# ``TemplateDoesNotExist: bescheidcheck/bescheidcheck.html`` error
+# in production.
+[tool.setuptools.package-data]
+"integreat_chat.bescheidcheck" = [
+  "templates/**/*.html",
+  "templates/**/*.css",
+  "templates/**/*.js",
+  "static/*",
+  "static/**/*",
+]
+"integreat_chat.search" = [
+  "templates/**/*.html",
+  "templates/**/*.css",
+  "templates/**/*.js",
+  "static/*",
+  "static/**/*",
+]
+# Also ensure data files under non-app directories are not dropped,
+# in case an existing deployment relies on a top-level static/ dir.
+"integreat_chat" = [
+  "static/**/*",
+]

@@ -4,7 +4,9 @@ Index pages for region & language
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+
 from integreat_chat.search.services.opensearch import OpenSearch
+
 
 class Command(BaseCommand):
     """
