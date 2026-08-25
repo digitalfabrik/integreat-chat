@@ -86,6 +86,113 @@
             width: 100%;
             box-sizing: border-box;
         }
+        .dropzone {
+            border: 1px dashed transparent;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 16px;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+        .dropzone.dragover {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+        }
+        .file-list {
+            list-style: none;
+            margin: 0 0 16px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #fff;
+            padding: 8px 12px;
+            width: 100%;
+            box-sizing: border-box;
+            min-width: 0;
+        }
+        .file-thumb {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+            background: #fff;
+        }
+        .file-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            font-size: 0.8em;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            flex-shrink: 0;
+        }
+        .file-meta {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            flex: 1;
+        }
+        .file-name {
+            font-size: 0.95em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .file-size {
+            font-size: 0.8em;
+            color: var(--muted);
+        }
+        .file-remove {
+            flex: 0 0 auto;
+            flex-shrink: 0;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--muted);
+            border-radius: 0;
+            width: 32px;
+            height: 32px;
+            box-sizing: border-box;
+            cursor: pointer;
+            font-size: 1.2em;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+        }
+        .file-remove:hover,
+        .file-remove:focus-visible {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-soft);
+            outline: none;
+        }
+        @media (max-width: 480px) {
+            .file-thumb,
+            .file-icon {
+                width: 36px;
+                height: 36px;
+            }
+            .file-icon {
+                font-size: 0.6em;
+            }
+        }
         fieldset { border: 1px solid var(--border); padding: 12px; border-radius: 6px; margin-bottom: 16px; }
         fieldset legend { padding: 0 8px; color: var(--muted); }
         .actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
@@ -380,9 +487,12 @@
             <label for="files">
                 Files (max {{ max_images }}) — PNG, JPEG, HEIC, or a PDF (max {{ max_pdf_pages }} pages)
             </label>
-            <input type="file" id="files" name="files" multiple
-                   accept="image/png,image/jpeg,image/heic,application/pdf">
-            <div class="file-count" id="file-count"></div>
+            <div id="dropzone" class="dropzone" aria-label="File upload area — drop files here">
+                <input type="file" id="files" name="files" multiple
+                       accept="image/png,image/jpeg,image/heic,application/pdf">
+            </div>
+            <ul class="file-list" id="fileList" role="list" hidden></ul>
+            <div class="file-count" id="file-count" aria-live="polite"></div>
 
             <div class="actions">
                 <button type="button" id="analyzeBtn">
@@ -447,6 +557,8 @@
     const els = {
         files: document.getElementById("files"),
         fileCount: document.getElementById("file-count"),
+        fileList: document.getElementById("fileList"),
+        dropzone: document.getElementById("dropzone"),
         langBtn: document.getElementById("langBtn"),
         langValue: document.getElementById("langValue"),
         langList: document.getElementById("langList"),
@@ -599,7 +711,34 @@
     document.addEventListener("click", closeMenus);
 
     let allFiles = [];
-    let uploadedUrls = [];
+    const ALL_FILE_URLS = new Map();
+
+    function isImageFile(f) {
+        const name = f.name || "";
+        const lower = name.toLowerCase();
+        return f.type.startsWith("image/")
+            || /\.(png|jpe?g|heic|heif|webp|gif|bmp)$/.test(lower);
+    }
+
+    function fileKey(f) {
+        return f.name + String(f.size) + String(f.lastModified);
+    }
+
+    function formatSize(bytes) {
+        if (bytes == null) return "";
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function getOrCreateUrl(f) {
+        let url = ALL_FILE_URLS.get(fileKey(f));
+        if (!url) {
+            url = URL.createObjectURL(f);
+            ALL_FILE_URLS.set(fileKey(f), url);
+        }
+        return url;
+    }
 
     function updateFileCount() {
         els.fileCount.textContent = allFiles.length
@@ -607,29 +746,117 @@
             : "";
     }
 
-    els.files.addEventListener("change", (e) => {
-        const incoming = Array.from(e.target.files || []);
+    function renderFileList() {
+        els.fileList.innerHTML = "";
+        if (!allFiles.length) {
+            els.fileList.hidden = true;
+            return;
+        }
+        els.fileList.hidden = false;
+        allFiles.forEach((f, i) => {
+            const li = document.createElement("li");
+            li.className = "file-item";
+
+            if (isImageFile(f)) {
+                const img = document.createElement("img");
+                img.className = "file-thumb";
+                img.src = getOrCreateUrl(f);
+                img.alt = f.name;
+                li.appendChild(img);
+            } else {
+                const icon = document.createElement("span");
+                icon.className = "file-icon";
+                icon.textContent = "PDF";
+                li.appendChild(icon);
+            }
+
+            const meta = document.createElement("div");
+            meta.className = "file-meta";
+            const name = document.createElement("div");
+            name.className = "file-name";
+            name.textContent = f.name;
+            const size = document.createElement("div");
+            size.className = "file-size";
+            size.textContent = formatSize(f.size);
+            meta.appendChild(name);
+            meta.appendChild(size);
+            li.appendChild(meta);
+
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "file-remove";
+            btn.textContent = "\u00d7";
+            btn.setAttribute("aria-label", "Remove " + f.name);
+            btn.addEventListener("click", () => removeFile(i));
+            li.appendChild(btn);
+
+            els.fileList.appendChild(li);
+        });
+    }
+
+    function removeFile(index) {
+        const f = allFiles[index];
+        if (!f) return;
+        allFiles.splice(index, 1);
+        const url = ALL_FILE_URLS.get(fileKey(f));
+        if (url) {
+            URL.revokeObjectURL(url);
+            ALL_FILE_URLS.delete(fileKey(f));
+        }
+        renderFileList();
+        updateFileCount();
+    }
+
+    function addFiles(incoming) {
         const existing = new Map(
-            allFiles.map(f => [f.name + String(f.size) + String(f.lastModified), f])
+            allFiles.map(f => [fileKey(f), f])
         );
-        incoming.forEach(f => existing.set(f.name + String(f.size) + String(f.lastModified), f));
-        allFiles = Array.from(existing.values());
-        if (allFiles.length > MAX_IMAGES) {
-            allFiles = allFiles.slice(0, MAX_IMAGES);
+        incoming.forEach(f => existing.set(fileKey(f), f));
+        const capped = Array.from(existing.values());
+        if (capped.length > MAX_IMAGES) {
+            capped.length = MAX_IMAGES;
             alert("You selected more than " + MAX_IMAGES + " files. Only the first " + MAX_IMAGES + " will be used.");
         }
-        e.target.value = "";
-        const dt = new DataTransfer();
-        allFiles.forEach(f => dt.items.add(f));
-        e.target.files = dt.files;
+        allFiles = capped;
+        renderFileList();
         updateFileCount();
+    }
+
+    els.files.addEventListener("change", (e) => {
+        const incoming = Array.from(e.target.files || []);
+        e.target.value = "";
+        if (incoming.length) addFiles(incoming);
+    });
+
+    let dragDepth = 0;
+    els.dropzone.addEventListener("dragenter", (e) => {
+        e.preventDefault();
+        dragDepth += 1;
+        els.dropzone.classList.add("dragover");
+    });
+    els.dropzone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+    });
+    els.dropzone.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        dragDepth = Math.max(0, dragDepth - 1);
+        if (dragDepth === 0) els.dropzone.classList.remove("dragover");
+    });
+    els.dropzone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dragDepth = 0;
+        els.dropzone.classList.remove("dragover");
+        const dropped = Array.from(e.dataTransfer && e.dataTransfer.files || []);
+        if (dropped.length) addFiles(dropped);
     });
 
     function resetState() {
         allFiles = [];
-        uploadedUrls.forEach(url => URL.revokeObjectURL(url));
-        uploadedUrls = [];
+        ALL_FILE_URLS.forEach(url => URL.revokeObjectURL(url));
+        ALL_FILE_URLS.clear();
         els.files.value = "";
+        renderFileList();
         els.results.hidden = true;
         els.resetBtn.style.display = "none";
         els.addPageBtn.style.display = "none";
@@ -969,9 +1196,6 @@
         resetProgressUI();
         resetTranslationProgress();
         renderCounselingPlaceholder();
-
-        const localUrls = files.map(f => URL.createObjectURL(f));
-        uploadedUrls = localUrls;
 
         try {
             const started = performance.now();
