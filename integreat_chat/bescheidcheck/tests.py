@@ -200,6 +200,7 @@ class InternalPageResolutionTest(unittest.TestCase):
         by 1, every text item provenanced on page 1.
         """
         from types import SimpleNamespace
+
         prov = SimpleNamespace(
             page_no=1,
             bbox=SimpleNamespace(
@@ -803,9 +804,7 @@ class TranslationFaultToleranceTest(unittest.IsolatedAsyncioTestCase):
                 # (``{ValueError, TimeoutError}``) that
                 # ``_translate_one_paragraph`` swallows - it therefore
                 # escapes to the generator.
-                raise LlmClientError(
-                    "LLM server returned HTTP 500", status=500
-                )
+                raise LlmClientError("LLM server returned HTTP 500", status=500)
             return "second-paragraph-translated"
 
         ls = self._language_service(translate_message)
@@ -847,6 +846,15 @@ class AnalyzeEndpointTest(TestCase):
     We mock the OCR + LLM + translation + RAG layers and verify the
     response shape and the validation rules.
     """
+
+    def setUp(self):
+        super().setUp()
+        extraction_patch = mock.patch(
+            "integreat_chat.bescheidcheck.views.extraction.extract_structured_data",
+            new=mock.AsyncMock(return_value={}),
+        )
+        self.mock_extract = extraction_patch.start()
+        self.addCleanup(extraction_patch.stop)
 
     def _upload_helper(self, filename: str = "page1.png", content: bytes = b"x"):
         from django.core.files.uploadedfile import SimpleUploadedFile
@@ -935,17 +943,38 @@ class AnalyzeEndpointTest(TestCase):
 
         mock_find.side_effect = fake_find
 
-        f = self._upload_helper()
-        res = self._post_analyze([f], region="region-slug-1", language="en")
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(res["Content-Type"], "text/event-stream")
-        events = _drain_sse_response(res)
+        extracted_data = {
+            "authority": "BAMF",
+            "document_type": "bamf_simple_rejection",
+        }
+        self.mock_extract.return_value = extracted_data
+        explanation_data = {"html": "<p>Explanation of the decision.</p>"}
+        with mock.patch(
+            "integreat_chat.bescheidcheck.views.explanation.get_explanation",
+            new=mock.AsyncMock(return_value=explanation_data),
+        ):
+            f = self._upload_helper()
+            res = self._post_analyze([f], region="region-slug-1", language="en")
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(res["Content-Type"], "text/event-stream")
+            events = _drain_sse_response(res)
         # The final `result` event must carry the full legacy payload.
         result_events = [e for e in events if e["event"] == "result"]
         self.assertEqual(len(result_events), 1)
         body = result_events[0]["data"]
         self.assertEqual(body["status"], "success")
         self.assertEqual(body["classification"]["type"], "bamf_simple_rejection")
+        self.assertEqual(body["extracted_data"], extracted_data)
+        self.mock_extract.assert_awaited_once()
+        extraction_args = self.mock_extract.await_args.kwargs
+        self.assertEqual(extraction_args["bescheid_type"], "bamf_simple_rejection")
+        self.assertIn(
+            "Ihr Asylantrag wird abgelehnt.", extraction_args["document_text"]
+        )
+        explanation_events = [e for e in events if e["event"] == "explanation"]
+        self.assertEqual(len(explanation_events), 1)
+        self.assertEqual(explanation_events[0]["data"], explanation_data)
+        self.assertEqual(body["explanation"], explanation_data)
         # The question is streamed on its own event so the UI can ask
         # /chatanswers/extract_answer/ for the answer itself.
         counseling_events = [e for e in events if e["event"] == "counseling"]
@@ -967,7 +996,17 @@ class AnalyzeEndpointTest(TestCase):
         self.assertIn("stages", body)
         # Stage progress events must have streamed before the result.
         stage_events = [e for e in events if e["event"] == "stage"]
-        self.assertGreaterEqual(len(stage_events), 6)  # 3 stages x started + done
+        self.assertGreaterEqual(len(stage_events), 8)  # 4 stages x started + done
+        extraction_events = [
+            e["data"] for e in stage_events if e["data"]["stage"] == "extraction"
+        ]
+
+        self.assertEqual(
+            [event["status"] for event in extraction_events],
+            ["started", "done"],
+        )
+
+        self.assertTrue(all(event["index"] == 4 for event in extraction_events))
 
     @mock.patch("integreat_chat.bescheidcheck.services.counselor.counseling_question")
     @mock.patch(
@@ -1008,6 +1047,7 @@ class AnalyzeEndpointTest(TestCase):
         self.assertEqual(len(result_events), 1)
         body = result_events[0]["data"]
         self.assertEqual(body["status"], "success")
+        self.assertEqual(body["extracted_data"], {})
         # Counseling should be None (the pipeline catches the error)
         self.assertIsNone(body["counseling"])
         self.assertEqual([e for e in events if e["event"] == "counseling"], [])
@@ -1720,9 +1760,7 @@ class SanitizeHtmlTest(TestCase):
         # both work after the ``result``-event re-render (see
         # renderPage in bescheidcheck.html).
         out = sanitize_html(
-            '<div class="bc-page" data-page="1">'
-            '<p data-para-id="p-1-1">X</p>'
-            "</div>"
+            '<div class="bc-page" data-page="1"><p data-para-id="p-1-1">X</p></div>'
         )
         self.assertIn("bc-page", out)
         self.assertIn('data-para-id="p-1-1"', out)
@@ -1784,12 +1822,16 @@ class SanitizeHtmlTest(TestCase):
         self.assertNotIn("evil.example", out)
 
     def test_double_nested_script_is_discarded(self) -> None:
-        out = sanitize_html("<figure><figure><script>alert(4)</script></figure></figure>")
+        out = sanitize_html(
+            "<figure><figure><script>alert(4)</script></figure></figure>"
+        )
         self.assertNotIn("script", out)
         self.assertNotIn("alert(4)", out)
 
     def test_script_in_table_cell_is_discarded(self) -> None:
-        out = sanitize_html("<table><tr><td><script>alert(2)</script></td></tr></table>")
+        out = sanitize_html(
+            "<table><tr><td><script>alert(2)</script></td></tr></table>"
+        )
         self.assertNotIn("script", out)
         self.assertNotIn("alert(2)", out)
 
@@ -2230,3 +2272,244 @@ class AnalyzeSseSanitizationTest(TestCase):
             # And the translated paragraph's new text must be present —
             # the front end shows it in black (not grey).
             self.assertIn("Hello", page["translated_html"])
+
+
+class StructuredExtractionTest(unittest.TestCase):
+    """
+    Tests for structured data extraction (issue #504).
+    """
+
+    def test_text_from_html_strips_markup(self):
+        from integreat_chat.bescheidcheck.services.extraction import (
+            _text_from_html,
+        )
+
+        out = _text_from_html(
+            "<p>Hello <strong>world</strong></p><script>evil()</script>"
+        )
+
+        self.assertEqual(out, "Hello world")
+
+    def test_empty_document_returns_empty_dict(self):
+        from integreat_chat.bescheidcheck.services.extraction import (
+            extract_structured_data,
+        )
+
+        out = asyncio.run(
+            extract_structured_data(
+                document_text="",
+                bescheid_type="bamf_simple_rejection",
+                model="test-model",
+            )
+        )
+
+        self.assertEqual(out, {})
+
+    def test_llm_client_error_returns_empty_dict(self):
+        from integreat_chat.bescheidcheck.services.extraction import (
+            extract_structured_data,
+        )
+        from integreat_chat.chatanswers.services.llmapi import (
+            LlmApiClient,
+            LlmClientError,
+        )
+
+        with mock.patch.object(
+            LlmApiClient,
+            "chat_prompt",
+            new=mock.AsyncMock(
+                side_effect=LlmClientError(
+                    "LLM server returned HTTP 500",
+                    status=500,
+                )
+            ),
+        ):
+            out = asyncio.run(
+                extract_structured_data(
+                    document_text="<p>Some OCR text</p>",
+                    bescheid_type="bamf_simple_rejection",
+                    model="test-model",
+                )
+            )
+
+        self.assertEqual(out, {})
+
+    def test_extract_structured_data_returns_structured_result(self):
+        from integreat_chat.bescheidcheck.services import extraction
+
+        raw_llm_result = {
+            "authority": "Bundesamt für Migration und Flüchtlinge",
+            "topic": "Dublin-Verfahren",
+            "required_action": None,
+            "requested_documents": [],
+            "deadline_detected": False,
+            "deadline_date": None,
+            "deadline_text": None,
+            "consequences": [
+                "Die Abschiebung nach Schweden wird angeordnet.",
+            ],
+            "appointment": None,
+            "legal_procedure": None,
+            "risk_level": "high",
+            "confidence": 0.88,
+        }
+
+        expected = {
+            **raw_llm_result,
+            "document_type": "dublin_decision",
+        }
+
+        with mock.patch(
+            "integreat_chat.bescheidcheck.services.extraction._run_extraction_prompt",
+            new=mock.AsyncMock(return_value=raw_llm_result),
+        ):
+            out = asyncio.run(
+                extraction.extract_structured_data(
+                    document_text=(
+                        "<p>Der Asylantrag ist unzulässig. "
+                        "Die Abschiebung nach Schweden wird angeordnet.</p>"
+                    ),
+                    bescheid_type="dublin_decision",
+                    model="test-model",
+                )
+            )
+
+        self.assertEqual(out, expected)
+
+    def test_extract_structured_data_normalizes_llm_output(self):
+        from integreat_chat.bescheidcheck.services import extraction
+
+        raw_llm_result = {
+            "authority": " BAMF ",
+            "document_type": "wrong_type",
+            "topic": " asylum ",
+            "required_action": "",
+            "requested_documents": [
+                " Mietvertrag ",
+                "",
+                123,
+                "Kontoauszüge",
+            ],
+            "deadline_detected": "yes",
+            "deadline_date": "   ",
+            "deadline_text": " innerhalb einer Woche ",
+            "consequences": "benefits may be reduced",
+            "appointment": 123,
+            "legal_procedure": " Klage ",
+            "risk_level": "VERY HIGH",
+            "confidence": 1.4,
+        }
+
+        with mock.patch(
+            "integreat_chat.bescheidcheck.services.extraction._run_extraction_prompt",
+            new=mock.AsyncMock(return_value=raw_llm_result),
+        ):
+            out = asyncio.run(
+                extraction.extract_structured_data(
+                    document_text="<p>Test document</p>",
+                    bescheid_type="bamf_simple_rejection",
+                    model="test-model",
+                )
+            )
+
+        self.assertEqual(
+            out,
+            {
+                "authority": "BAMF",
+                "document_type": "bamf_simple_rejection",
+                "topic": "asylum",
+                "required_action": None,
+                "requested_documents": [
+                    "Mietvertrag",
+                    "Kontoauszüge",
+                ],
+                "deadline_detected": False,
+                "deadline_date": None,
+                "deadline_text": "innerhalb einer Woche",
+                "consequences": [],
+                "appointment": None,
+                "legal_procedure": "Klage",
+                "risk_level": None,
+                "confidence": 1.0,
+            },
+        )
+
+    def test_get_extraction_schema_only_for_supported_types(self):
+        from integreat_chat.bescheidcheck.services.extraction import (
+            get_extraction_schema,
+        )
+
+        self.assertIsNotNone(get_extraction_schema("bamf_simple_rejection"))
+        self.assertIsNotNone(get_extraction_schema("obviously_unfounded_inadmissible"))
+        self.assertIsNotNone(get_extraction_schema("dublin_decision"))
+
+        self.assertIsNone(get_extraction_schema("unsupported"))
+        self.assertIsNone(get_extraction_schema("unknown_type"))
+
+    def test_extract_structured_data_builds_extraction_prompt(self):
+        from integreat_chat.bescheidcheck.services import extraction
+
+        mock_run = mock.AsyncMock(return_value={})
+
+        with mock.patch(
+            "integreat_chat.bescheidcheck.services.extraction._run_extraction_prompt",
+            new=mock_run,
+        ):
+            asyncio.run(
+                extraction.extract_structured_data(
+                    document_text=(
+                        "<p>Gegen diesen Bescheid kann innerhalb einer Woche "
+                        "Klage erhoben werden.</p>"
+                    ),
+                    bescheid_type="dublin_decision",
+                    model="test-model",
+                )
+            )
+
+        mock_run.assert_awaited_once()
+
+        prompt_text = mock_run.await_args.kwargs["prompt_text"]
+
+        self.assertIn(
+            "Classified document type: dublin_decision",
+            prompt_text,
+        )
+        self.assertIn(
+            "Gegen diesen Bescheid kann innerhalb einer Woche",
+            prompt_text,
+        )
+        self.assertIn(
+            "Do not guess, invent, or complete missing facts.",
+            prompt_text,
+        )
+        self.assertIn(
+            "Use null for missing scalar values.",
+            prompt_text,
+        )
+        self.assertIn(
+            "Use [] for missing list values.",
+            prompt_text,
+        )
+
+    def test_unsupported_type_does_not_call_llm(self):
+        from integreat_chat.bescheidcheck.services import extraction
+
+        mock_run = mock.AsyncMock(return_value={"unexpected": "result"})
+
+        with mock.patch(
+            "integreat_chat.bescheidcheck.services.extraction._run_extraction_prompt",
+            new=mock_run,
+        ):
+            for bescheid_type in ("unsupported", "unknown_type"):
+                with self.subTest(bescheid_type=bescheid_type):
+                    out = asyncio.run(
+                        extraction.extract_structured_data(
+                            document_text="<p>Some administrative document</p>",
+                            bescheid_type=bescheid_type,
+                            model="test-model",
+                        )
+                    )
+
+                    self.assertEqual(out, {})
+
+        mock_run.assert_not_awaited()
