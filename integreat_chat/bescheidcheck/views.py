@@ -41,6 +41,7 @@ from .services import (
     classification,
     counselor,
     explanation,
+    extraction,
     ocr,
     page_order,
     translation,
@@ -485,6 +486,32 @@ async def _analyze_stream(
             }
         )
 
+        t0 = time.monotonic()
+        yield _stage_event({"stage": "extraction", "index": 4, "status": "started"})
+
+        extracted_data = await extraction.extract_structured_data(
+            document_text=full_text,
+            bescheid_type=cls_result.get("type", "unsupported"),
+            model=settings.BESCHEID_CLASSIFICATION_MODEL,
+        )
+
+        extraction_elapsed = round(time.monotonic() - t0, 2)
+        stages["extraction"] = extraction_elapsed
+
+        LOGGER.info(
+            "analyze: extraction finished in %.2fs",
+            extraction_elapsed,
+        )
+
+        yield _stage_event(
+            {
+                "stage": "extraction",
+                "index": 4,
+                "status": "done",
+                "seconds": extraction_elapsed,
+            }
+        )
+
         try:
             bescheid_explanation = await explanation.get_explanation(
                 cls_result.get("type", "unsupported"),
@@ -519,6 +546,7 @@ async def _analyze_stream(
         result_payload = {
             "status": "success",
             "classification": cls_result,
+            "extracted_data": extracted_data,
             "source_language": source_language,
             "target_language": target_language,
             "region": region_slug,
