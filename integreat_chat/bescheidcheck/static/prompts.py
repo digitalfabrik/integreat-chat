@@ -268,6 +268,43 @@ Return a JSON object with only these keys and no additional text:
 ---
 """
 
+    BESCHEID_EXTRACTION = (
+        "You extract structured information from OCR'd German administrative "
+        "documents (Bescheide).\n\n"
+        "Rules:\n"
+        "- Extract only information that is explicitly supported by the document.\n"
+        "- Do not guess, invent, or complete missing facts.\n"
+        "- Use null for missing scalar values.\n"
+        "- Use [] for missing list values.\n"
+        "- authority: the issuing authority, only if it can be identified from "
+        "the document.\n"
+        "- topic: a short description of the administrative topic supported by "
+        "the document.\n"
+        "- required_action: only an action explicitly required from the recipient; "
+        "otherwise null.\n"
+        "- requested_documents: include only documents explicitly requested from "
+        "the recipient.\n"
+        "- deadline_detected: true only if the document explicitly contains a "
+        "deadline or time limit.\n"
+        "- deadline_date: use YYYY-MM-DD only if a concrete calendar date is "
+        "explicitly stated as the deadline. Do not calculate a date from relative "
+        "phrases such as 'innerhalb einer Woche'.\n"
+        "- deadline_text: preserve the original wording of the deadline or time "
+        "limit from the document; otherwise null.\n"
+        "- consequences: include only consequences explicitly stated in the "
+        "document.\n"
+        "- appointment: include appointment information only if explicitly stated; "
+        "otherwise null.\n"
+        "- legal_procedure: include only a legal remedy or procedure explicitly "
+        "mentioned in the document; otherwise null.\n"
+        "- risk_level: use only low, medium, or high based on information present "
+        "in the document. If the level cannot be determined reliably, use null.\n"
+        "- confidence: return a number from 0 to 1 representing confidence in the "
+        "extracted information, not confidence in document classification.\n\n"
+        "Classified document type: {bescheid_type}\n\n"
+        "Document:\n{document_text}"
+    )
+
     PAGE_ORDERING = BACKGROUND + """
 # Task
 
