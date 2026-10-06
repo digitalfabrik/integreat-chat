@@ -1,0 +1,35 @@
+{
+  "model": "verdigado-pro",
+  "expected_classification": "dublin_decision",
+  "classification": {
+    "type": "bamf_simple_rejection",
+    "confidence": 0.85,
+    "correct": false
+  },
+  "extracted_data": {
+    "authority": "Bundesamt für Migration und Flüchtlinge",
+    "document_type": "bamf_simple_rejection",
+    "topic": "Asylverfahren – Ablehnung des Antrags und Anordnung der Abschiebung nach Schweden",
+    "required_action": null,
+    "requested_documents": [],
+    "deadline_detected": false,
+    "deadline_date": null,
+    "deadline_text": null,
+    "consequences": [
+      "Der Asylantrag wird als unzulässig abgelehnt",
+      "Die Abschiebung nach Schweden wird angeordnet",
+      "Ein gesetzliches Einreise- und Aufenthaltsverbot nach § 11 Abs. 1 Aufenthaltsgesetz wird für 3 Monate ab dem Tag der Abschiebung befristet"
+    ],
+    "appointment": null,
+    "legal_procedure": null,
+    "risk_level": "high",
+    "confidence": 0.96
+  },
+  "timing": {
+    "ocr": 5.61,
+    "classification": 2.85,
+    "extraction": 4.61,
+    "total": 13.09
+  },
+  "result": "FAIL_CLASSIFICATION"
+}

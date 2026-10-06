@@ -1,0 +1,18 @@
+{
+  "model": "verdigado-translate",
+  "expected_classification": "dublin_decision",
+  "classification": {
+    "type": "unsupported",
+    "confidence": 0.0,
+    "correct": false,
+    "reason": "The classification service could not read the document (the language-model server returned an error). Please try again."
+  },
+  "extracted_data": {},
+  "timing": {
+    "ocr": 5.53,
+    "classification": 0.42,
+    "extraction": 0.0,
+    "total": 5.98
+  },
+  "result": "FAIL_LLM_CLASSIFICATION_ERROR"
+}
