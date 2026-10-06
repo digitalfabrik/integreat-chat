@@ -282,6 +282,74 @@ class ClassificationSanitizationTest(unittest.TestCase):
     Pure-function tests: no Django ORM / network needed.
     """
 
+    def test_rendered_prompt_choices_match_taxonomy_and_schema(self):
+        from integreat_chat.bescheidcheck.services.classification import (
+            classify_bescheid,
+        )
+        from integreat_chat.bescheidcheck.services.taxonomy import (
+            SUPPORTED_BESCHEID_TYPES,
+            render_classification_taxonomy_context,
+        )
+        from integreat_chat.chatanswers.services.llmapi import LlmApiClient
+
+        with mock.patch.object(
+            LlmApiClient,
+            "chat_prompt",
+            new=mock.AsyncMock(
+                return_value={
+                    "choices": [{"message": {"content": '{"type": "unsupported"}'}}],
+                }
+            ),
+        ) as mock_chat:
+            asyncio.run(classify_bescheid("<p>Document {text}</p>"))
+
+        mock_chat.assert_awaited_once()
+        prompt = mock_chat.await_args.args[1]
+        prompt_text = prompt.messages[0].content
+        type_line = next(
+            line.strip()
+            for line in prompt_text.splitlines()
+            if line.strip().startswith('"type":')
+        )
+        rendered_choices = [
+            json.loads(choice.strip())
+            for choice in type_line.removeprefix('"type":').removesuffix(",").split("|")
+        ]
+        schema_choices = prompt.json_schema["schema"]["properties"]["type"]["enum"]
+
+        self.assertEqual(rendered_choices, schema_choices)
+        self.assertEqual(
+            set(rendered_choices), {*SUPPORTED_BESCHEID_TYPES, "unsupported"}
+        )
+        self.assertEqual(
+            SUPPORTED_BESCHEID_TYPES,
+            {
+                "bamf_simple_rejection",
+                "obviously_unfounded_inadmissible",
+                "dublin_decision",
+            },
+        )
+        self.assertIn("Document {text}", prompt_text)
+        self.assertNotIn("{allowed_types}", prompt_text)
+        self.assertNotIn("four values", prompt_text)
+        self.assertIn(render_classification_taxonomy_context(), prompt_text)
+        self.assertNotIn("{taxonomy_context}", prompt_text)
+        self.assertIn('"offensichtlich unzulässig", possibly by BAMF', prompt_text)
+        self.assertIn("Schengen state as responsible", prompt_text)
+        self.assertIn('"Ihr Asylantrag wird abgelehnt"', prompt_text)
+        self.assertIn("do not select a source mapping", prompt_text)
+
+    def test_source_taxonomy_keys_are_not_classification_outputs(self):
+        from integreat_chat.bescheidcheck.services.classification import (
+            _sanitize_classification,
+        )
+
+        for key in ("asyl_ablehnung_einfach", "asyl_ablehnung_ou", "dublin_bescheid"):
+            with self.subTest(key=key):
+                self.assertEqual(
+                    _sanitize_classification({"type": key})["type"], "unsupported"
+                )
+
     def test_sanitize_bad_type_becomes_unsupported(self):
         from integreat_chat.bescheidcheck.services.classification import (
             _sanitize_classification,
@@ -2557,3 +2625,438 @@ class StructuredExtractionTest(unittest.TestCase):
                     self.assertEqual(out, {})
 
         mock_run.assert_not_awaited()
+
+    def test_taxonomy_context_preserves_extraction_contract_for_all_types(self):
+        from integreat_chat.bescheidcheck.services import extraction
+        from integreat_chat.bescheidcheck.services.taxonomy import (
+            render_taxonomy_context,
+        )
+
+        fields = {
+            "authority",
+            "topic",
+            "required_action",
+            "requested_documents",
+            "deadline_detected",
+            "deadline_date",
+            "deadline_text",
+            "consequences",
+            "appointment",
+            "legal_procedure",
+            "risk_level",
+            "confidence",
+        }
+        cases = (
+            ("bamf_simple_rejection", "exact", ["asyl_ablehnung_einfach"], []),
+            ("dublin_decision", "approximate", ["dublin_bescheid"], []),
+            (
+                "obviously_unfounded_inadmissible",
+                "unresolved",
+                [],
+                ["asyl_ablehnung_ou", "dublin_bescheid"],
+            ),
+        )
+        for legacy_type, status, sources, candidates in cases:
+            with self.subTest(key=legacy_type):
+                with mock.patch(
+                    "integreat_chat.bescheidcheck.services.extraction."
+                    "_run_extraction_prompt",
+                    new=mock.AsyncMock(
+                        return_value={"confidence": 0.5, "document_type": "wrong"}
+                    ),
+                ) as mock_run:
+                    result = asyncio.run(
+                        extraction.extract_structured_data(
+                            document_text="<p>Document {text} without facts.</p>",
+                            bescheid_type=legacy_type,
+                            model="test-model",
+                        )
+                    )
+
+                mock_run.assert_awaited_once()
+                kwargs = mock_run.await_args.kwargs
+                schema = kwargs["json_schema"]
+                self.assertIs(schema, extraction.get_extraction_schema(legacy_type))
+                self.assertEqual(set(schema["schema"]["properties"]), fields)
+                self.assertEqual(set(schema["schema"]["required"]), fields)
+                self.assertEqual(set(result), fields | {"document_type"})
+                self.assertEqual(result["document_type"], legacy_type)
+                for field in (
+                    "required_action",
+                    "deadline_date",
+                    "deadline_text",
+                    "legal_procedure",
+                    "risk_level",
+                ):
+                    self.assertIsNone(result[field])
+                self.assertFalse(result["deadline_detected"])
+                self.assertEqual(result["consequences"], [])
+
+                prompt = kwargs["prompt_text"]
+                context_text = render_taxonomy_context(legacy_type)
+                self.assertIn(context_text, prompt)
+                self.assertNotIn("{taxonomy_context}", prompt)
+                self.assertIn("Document {text} without facts.", prompt)
+                self.assertIn("The document text is authoritative", prompt)
+                self.assertIn("Do not copy or derive deadlines, actions", prompt)
+                self.assertIn("select a candidate or resolve the mapping", prompt)
+                self.assertIn("Keep the classified legacy document type", prompt)
+                context = json.loads(context_text)
+                self.assertEqual(len(context), 1)
+                self.assertEqual(context[0]["legacy_type"], legacy_type)
+                self.assertEqual(context[0]["status"], status)
+                self.assertEqual(
+                    [entry["key"] for entry in context[0]["source_keys"]], sources
+                )
+                self.assertEqual(
+                    [entry["key"] for entry in context[0]["candidate_source_keys"]],
+                    candidates,
+                )
+
+
+class BescheidTaxonomyTest(TestCase):
+    def test_selected_taxonomy_context_is_a_subset_of_classification_context(self):
+        from .services.taxonomy import (
+            render_classification_taxonomy_context,
+            render_taxonomy_context,
+        )
+
+        for record in json.loads(render_classification_taxonomy_context()):
+            with self.subTest(key=record["legacy_type"]):
+                self.assertEqual(
+                    json.loads(render_taxonomy_context(record["legacy_type"])),
+                    [record],
+                )
+        for key in ("unsupported", "unknown_type", "dublin_bescheid"):
+            with self.subTest(key=key):
+                self.assertEqual(json.loads(render_taxonomy_context(key)), [])
+
+    def test_classification_context_preserves_mapping_status_and_candidates(self):
+        from .services.taxonomy import (
+            BESCHEID_TAXONOMY,
+            LEGACY_TAXONOMY_MAPPINGS,
+            SUPPORTED_BESCHEID_TYPES,
+            render_classification_taxonomy_context,
+        )
+
+        context = json.loads(render_classification_taxonomy_context())
+        self.assertEqual(
+            [record["legacy_type"] for record in context],
+            sorted(SUPPORTED_BESCHEID_TYPES),
+        )
+        for record in context:
+            with self.subTest(key=record["legacy_type"]):
+                mapping = LEGACY_TAXONOMY_MAPPINGS[record["legacy_type"]]
+                self.assertEqual(record["status"], mapping["status"])
+                self.assertEqual(record["note"], mapping["note"])
+                for field in ("source_keys", "candidate_source_keys"):
+                    self.assertEqual(
+                        [entry["key"] for entry in record[field]],
+                        list(mapping[field]),
+                    )
+                    for entry in record[field]:
+                        source = BESCHEID_TAXONOMY[entry["key"]]
+                        self.assertEqual(entry["kategorie"], source["kategorie"])
+                        self.assertEqual(
+                            entry["verwechslungsgefahr"],
+                            source["verwechslungsgefahr"],
+                        )
+                        self.assertNotIn("erkennungssignale", entry)
+                        self.assertNotIn("rechtsgrundlage", entry)
+
+        unresolved = next(
+            record for record in context if record["status"] == "unresolved"
+        )
+        self.assertEqual(unresolved["source_keys"], [])
+        self.assertEqual(
+            [entry["key"] for entry in unresolved["candidate_source_keys"]],
+            ["asyl_ablehnung_ou", "dublin_bescheid"],
+        )
+
+    def test_classification_context_reads_current_catalog_and_mapping(self):
+        from .services.taxonomy import (
+            BESCHEID_TAXONOMY,
+            LEGACY_TAXONOMY_MAPPINGS,
+            render_classification_taxonomy_context,
+        )
+
+        with (
+            mock.patch.dict(
+                BESCHEID_TAXONOMY["asyl_ablehnung_einfach"],
+                {"verwechslungsgefahr": "Test warning {unchanged}"},
+            ),
+            mock.patch.dict(
+                LEGACY_TAXONOMY_MAPPINGS["bamf_simple_rejection"],
+                {"note": "Test mapping note"},
+            ),
+        ):
+            context = json.loads(render_classification_taxonomy_context())
+
+        exact = next(
+            record
+            for record in context
+            if record["legacy_type"] == "bamf_simple_rejection"
+        )
+        self.assertEqual(exact["note"], "Test mapping note")
+        self.assertEqual(
+            exact["source_keys"][0]["verwechslungsgefahr"],
+            "Test warning {unchanged}",
+        )
+
+    def test_supported_types_are_explicit(self):
+        from .services.taxonomy import SUPPORTED_BESCHEID_TYPES
+
+        self.assertEqual(
+            SUPPORTED_BESCHEID_TYPES,
+            frozenset(
+                {
+                    "bamf_simple_rejection",
+                    "obviously_unfounded_inadmissible",
+                    "dublin_decision",
+                }
+            ),
+        )
+
+    def test_catalog_membership_does_not_imply_support(self):
+        from .services.taxonomy import (
+            BESCHEID_TAXONOMY,
+            SUPPORTED_BESCHEID_TYPES,
+            is_supported_bescheid_type,
+        )
+
+        with mock.patch.dict(
+            BESCHEID_TAXONOMY,
+            {"catalog_only_type": mock.sentinel.taxonomy_entry},
+        ):
+            self.assertIn("catalog_only_type", BESCHEID_TAXONOMY)
+            self.assertNotIn("catalog_only_type", SUPPORTED_BESCHEID_TYPES)
+            self.assertFalse(is_supported_bescheid_type("catalog_only_type"))
+
+    def test_known_type_is_supported(self):
+        from .services.taxonomy import is_supported_bescheid_type
+
+        for key in (
+            "bamf_simple_rejection",
+            "obviously_unfounded_inadmissible",
+            "dublin_decision",
+        ):
+            with self.subTest(key=key):
+                self.assertTrue(is_supported_bescheid_type(key))
+
+    def test_unknown_type_is_not_supported(self):
+        from .services.taxonomy import is_supported_bescheid_type
+
+        self.assertFalse(is_supported_bescheid_type("unknown_document"))
+
+    def test_get_taxonomy_entry(self):
+        from .services.taxonomy import get_taxonomy_entry
+
+        cases = (
+            (
+                "meldebescheinigung",
+                {
+                    "key": "meldebescheinigung",
+                    "kategorie": "NACHWEIS",
+                    "aktion": "Aufbewahren; Basis für alles Weitere",
+                    "verwechslungsgefahr": (
+                        '„Brauche ich als EU-Bürger nicht" — doch, Meldepflicht'
+                    ),
+                    "ebene": "E0",
+                    "schweregrad": "NIEDRIG",
+                },
+            ),
+            (
+                "asyl_ablehnung_einfach",
+                {
+                    "key": "asyl_ablehnung_einfach",
+                    "kategorie": "BESCHEID",
+                    "aktion": "Klage erwägen; sofort Beratung",
+                    "verwechslungsgefahr": (
+                        "Ablehnungsart in Tenor-Ziffer 1 nicht erkannt"
+                    ),
+                    "ebene": "E2",
+                    "schweregrad": "KRITISCH",
+                },
+            ),
+            (
+                "defizitbescheid",
+                {
+                    "key": "defizitbescheid",
+                    "kategorie": "BESCHEID",
+                    "aktion": (
+                        "Benannte Lücken via Qualifizierung/Prüfung schließen"
+                    ),
+                    "verwechslungsgefahr": (
+                        "Als Ablehnung gelesen — ist Etappenziel "
+                        "zur Vollanerkennung"
+                    ),
+                    "ebene": "E3",
+                    "schweregrad": "HOCH",
+                },
+            ),
+        )
+        for key, expected in cases:
+            with self.subTest(key=key):
+                self.assertEqual(get_taxonomy_entry(key), expected)
+
+    def test_catalog_lookup_does_not_map_legacy_keys(self):
+        from .services.taxonomy import get_taxonomy_entry
+
+        for key in (
+            "bamf_simple_rejection",
+            "obviously_unfounded_inadmissible",
+            "dublin_decision",
+        ):
+            with self.subTest(key=key):
+                self.assertIsNone(get_taxonomy_entry(key))
+
+    def test_mapping_registry_covers_only_supported_legacy_types(self):
+        from .services.taxonomy import (
+            LEGACY_TAXONOMY_MAPPINGS,
+            SUPPORTED_BESCHEID_TYPES,
+        )
+
+        self.assertEqual(set(LEGACY_TAXONOMY_MAPPINGS), SUPPORTED_BESCHEID_TYPES)
+
+    def test_mapping_registry_preserves_assessed_relationships(self):
+        from .services.taxonomy import LEGACY_TAXONOMY_MAPPINGS
+
+        expected = {
+            "bamf_simple_rejection": (
+                "exact",
+                ("asyl_ablehnung_einfach",),
+                (),
+            ),
+            "obviously_unfounded_inadmissible": (
+                "unresolved",
+                (),
+                ("asyl_ablehnung_ou", "dublin_bescheid"),
+            ),
+            "dublin_decision": (
+                "approximate",
+                ("dublin_bescheid",),
+                (),
+            ),
+        }
+        for key, relationship in expected.items():
+            with self.subTest(key=key):
+                mapping = LEGACY_TAXONOMY_MAPPINGS[key]
+                self.assertEqual(
+                    (
+                        mapping["status"],
+                        mapping["source_keys"],
+                        mapping["candidate_source_keys"],
+                    ),
+                    relationship,
+                )
+
+    def test_mapping_registry_references_valid_distinct_source_keys(self):
+        from .services.taxonomy import (
+            BESCHEID_TAXONOMY,
+            LEGACY_TAXONOMY_MAPPINGS,
+        )
+
+        for key, mapping in LEGACY_TAXONOMY_MAPPINGS.items():
+            with self.subTest(key=key):
+                targets = mapping["source_keys"]
+                candidates = mapping["candidate_source_keys"]
+                self.assertIsInstance(targets, tuple)
+                self.assertIsInstance(candidates, tuple)
+                self.assertEqual(len(targets), len(set(targets)))
+                self.assertEqual(len(candidates), len(set(candidates)))
+                self.assertTrue(set(targets).isdisjoint(candidates))
+                for source_key in (*targets, *candidates):
+                    self.assertIn(source_key, BESCHEID_TAXONOMY)
+                    self.assertNotEqual(source_key, "asyl_unzulaessig")
+
+    def test_mapping_registry_status_and_notes_are_consistent(self):
+        from .services.taxonomy import LEGACY_TAXONOMY_MAPPINGS
+
+        for key, mapping in LEGACY_TAXONOMY_MAPPINGS.items():
+            with self.subTest(key=key):
+                self.assertIn(
+                    mapping["status"], {"exact", "approximate", "unresolved"}
+                )
+                self.assertIsInstance(mapping["note"], str)
+                self.assertTrue(mapping["note"].strip())
+                if mapping["status"] == "unresolved":
+                    self.assertEqual(mapping["source_keys"], ())
+                else:
+                    self.assertTrue(mapping["source_keys"])
+                if mapping["status"] == "exact":
+                    self.assertEqual(mapping["candidate_source_keys"], ())
+
+        note = LEGACY_TAXONOMY_MAPPINGS["obviously_unfounded_inadmissible"]["note"]
+        self.assertIn("non-Dublin inadmissibility from Dublin", note)
+        self.assertIn("not an asserted second target", note)
+        self.assertIn("asyl_unzulaessig, but it has no catalog record", note)
+
+    def test_catalog_has_42_entries(self):
+        from .services.taxonomy import BESCHEID_TAXONOMY
+
+        self.assertEqual(len(BESCHEID_TAXONOMY), 42)
+
+    def test_catalog_source_keys_are_unique(self):
+        import ast
+        import inspect
+
+        from .services import taxonomy
+
+        module = ast.parse(inspect.getsource(taxonomy))
+        catalog = next(
+            node.value
+            for node in module.body
+            if isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id == "BESCHEID_TAXONOMY"
+        )
+        keys = [ast.literal_eval(key) for key in catalog.keys]
+
+        self.assertEqual(len(keys), 42)
+        self.assertEqual(len(keys), len(set(keys)))
+        for key, entry in taxonomy.BESCHEID_TAXONOMY.items():
+            with self.subTest(key=key):
+                self.assertEqual(entry["key"], key)
+
+    def test_source_catalog_does_not_expand_runtime_support(self):
+        from .services.taxonomy import (
+            BESCHEID_TAXONOMY,
+            SUPPORTED_BESCHEID_TYPES,
+            is_supported_bescheid_type,
+        )
+
+        self.assertEqual(len(BESCHEID_TAXONOMY), 42)
+        self.assertEqual(len(SUPPORTED_BESCHEID_TYPES), 3)
+        self.assertTrue(SUPPORTED_BESCHEID_TYPES.isdisjoint(BESCHEID_TAXONOMY))
+        for key in BESCHEID_TAXONOMY:
+            with self.subTest(key=key):
+                self.assertFalse(is_supported_bescheid_type(key))
+
+    def test_catalog_fields_follow_source_vocabulary(self):
+        from .services.taxonomy import BESCHEID_TAXONOMY
+
+        categories = {"BESCHEID", "NACHWEIS", "FORMULAR", "AKTION"}
+        levels = {"E0", "E1", "E2", "E3", "E4", "E5"}
+        severities = {"KRITISCH", "HOCH", "MITTEL", "NIEDRIG"}
+
+        for key, entry in BESCHEID_TAXONOMY.items():
+            with self.subTest(key=key):
+                self.assertIn(entry["kategorie"], categories)
+                self.assertIn(entry["ebene"], levels)
+                self.assertIn(entry["schweregrad"], severities)
+                self.assertIsInstance(entry["aktion"], str)
+                self.assertIsInstance(entry["verwechslungsgefahr"], str)
+                self.assertTrue(entry["aktion"])
+                self.assertTrue(entry["verwechslungsgefahr"])
+                self.assertNotIn("erkennungssignale", entry)
+                self.assertNotIn("rechtsgrundlage", entry)
+
+    def test_lookup_does_not_infer_legacy_or_missing_source_entries(self):
+        from .services.taxonomy import (
+            SUPPORTED_BESCHEID_TYPES,
+            get_taxonomy_entry,
+        )
+
+        for key in (*SUPPORTED_BESCHEID_TYPES, "asyl_unzulaessig", "unknown_document"):
+            with self.subTest(key=key):
+                self.assertIsNone(get_taxonomy_entry(key))

@@ -30,15 +30,15 @@ from integreat_chat.chatanswers.services.llmapi import (
 
 from ..static.prompts import Prompts
 
+from .taxonomy import (
+    SUPPORTED_BESCHEID_TYPES,
+    render_classification_taxonomy_context,
+)
+
 LOGGER = logging.getLogger(__name__)
 
 # Slugs we always accept in the "type" field of the response.
-_TYPE_ALLOWLIST = {
-    "bamf_simple_rejection",
-    "obviously_unfounded_inadmissible",
-    "dublin_decision",
-    "unsupported",
-}
+_TYPE_ALLOWLIST = {*SUPPORTED_BESCHEID_TYPES, "unsupported"}
 
 
 def _safe_clamp_float(value, default: float = 0.0) -> float:
@@ -137,7 +137,18 @@ async def classify_bescheid(
 
     prompt = LlmPrompt(
         settings.BESCHEID_CLASSIFICATION_MODEL,
-        [LlmMessage(Prompts.BESCHEID_CLASSIFICATION.format(document_text))],
+        [
+            LlmMessage(
+                Prompts.BESCHEID_CLASSIFICATION.format(
+                    document_text,
+                    allowed_types=" | ".join(
+                        f'"{document_type}"'
+                        for document_type in sorted(_TYPE_ALLOWLIST)
+                    ),
+                    taxonomy_context=render_classification_taxonomy_context(),
+                )
+            )
+        ],
         json_schema=_build_json_schema(),
     )
     llm = LlmApiClient()

@@ -75,20 +75,33 @@ one of the supported types. Do not try to guess beyond what the text says.
   (Widerruf / Rücknahme), an exclusion (Ausweisung), or a
   residence-permit refusal (Ablehnung Aufenthaltstitel).
 
+## Supplemental taxonomy context
+
+The following context describes relationships to the source catalog.
+Source keys identify reference entries; they are never classification outputs.
+Keep the supported legacy definitions above as the classification definitions.
+For exact mappings, use the source context to help recognize the legacy type.
+For approximate mappings, use it only as supplemental recognition context.
+For unresolved mappings, candidate entries are disambiguation context only:
+do not select a source mapping or treat candidates as equivalent legacy types.
+Catalog warnings describe typical misunderstandings, not facts established
+about this document. Use only evidence in the document for the classification.
+
+{taxonomy_context}
+
 ## Response format
 
 Return a JSON object with only these keys and no additional text:
 
 {{
-  "type": "bamf_simple_rejection" | "obviously_unfounded_inadmissible"
-          | "dublin_decision" | "unsupported",
+  "type": {allowed_types},
   "confidence": <float between 0.0 and 1.0>,
   "reason": "<one sentence, in the language of the document>"
 }}
 
 ## Rules
 
-1. `type` must be exactly one of the four values listed above.
+1. `type` must be exactly one of the values listed above.
 2. `confidence` is your subjective probability that `type` is correct.
 3. `reason` must be one sentence citing the single most decisive phrase
    from the document.
@@ -134,6 +147,18 @@ Return a JSON object with only these keys and no additional text:
         "- confidence: return a number from 0 to 1 representing confidence in the "
         "extracted information, not confidence in document classification.\n\n"
         "Classified document type: {bescheid_type}\n\n"
+        "Supplemental taxonomy context:\n"
+        "- The document text is authoritative for every extracted field.\n"
+        "- Exact source mappings provide context only. Approximate mappings "
+        "are supplemental context, not equivalent document definitions.\n"
+        "- Unresolved candidate entries describe ambiguity only; do not "
+        "select a candidate or resolve the mapping.\n"
+        "- Do not copy or derive deadlines, actions, legal facts, consequences, "
+        "or risk levels from taxonomy context. Extract them only when "
+        "explicitly supported by the document text.\n"
+        "- Keep the classified legacy document type; do not replace it "
+        "with a source key or reclassify the document.\n\n"
+        "{taxonomy_context}\n\n"
         "Document:\n{document_text}"
     )
 

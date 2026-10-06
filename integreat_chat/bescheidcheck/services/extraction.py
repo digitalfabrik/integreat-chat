@@ -17,6 +17,8 @@ from integreat_chat.chatanswers.services.llmapi import (
 
 from ..static.prompts import Prompts
 
+from .taxonomy import is_supported_bescheid_type, render_taxonomy_context
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -106,18 +108,13 @@ _EXTRACTION_SCHEMA = {
     },
 }
 
-_SUPPORTED_BESCHEID_TYPES = {
-    "bamf_simple_rejection",
-    "obviously_unfounded_inadmissible",
-    "dublin_decision",
-}
 
 
 def get_extraction_schema(bescheid_type: str) -> dict | None:
     """
     Return the MVP extraction schema for supported Bescheid types.
     """
-    if bescheid_type not in _SUPPORTED_BESCHEID_TYPES:
+    if not is_supported_bescheid_type(bescheid_type):
         return None
 
     return _EXTRACTION_SCHEMA
@@ -232,6 +229,7 @@ async def extract_structured_data(
     prompt_text = Prompts.BESCHEID_EXTRACTION.format(
         bescheid_type=bescheid_type,
         document_text=text,
+        taxonomy_context=render_taxonomy_context(bescheid_type),
     )
 
     extracted_data = await _run_extraction_prompt(
