@@ -5,7 +5,7 @@ from typing import Final, Literal, Required, TypedDict
 
 
 class TaxonomyEntry(TypedDict, total=False):
-    """Machine-readable entry from the Bescheidcheck taxonomy."""
+    """Source taxonomy entry."""
 
     key: Required[str]
     kategorie: Required[Literal["BESCHEID", "NACHWEIS", "FORMULAR", "AKTION"]]
@@ -18,9 +18,7 @@ class TaxonomyEntry(TypedDict, total=False):
 
 
 # Source: docs/Klassifikations-Taxonomie_v3.html, master table, August 2026.
-# Text preserves source wording with normalized HTML whitespace.
-# Levels come from section headings; severity uses the source vocabulary.
-# No per-entry recognition signals or legal bases are inferred from prose.
+# Whitespace is normalized; levels and severity come from headings and the legend.
 BESCHEID_TAXONOMY: Final[dict[str, TaxonomyEntry]] = {
     "meldebescheinigung": {
         "key": "meldebescheinigung",
@@ -504,7 +502,7 @@ BESCHEID_TAXONOMY: Final[dict[str, TaxonomyEntry]] = {
 }
 
 
-# Catalog membership does not imply runtime support.
+# Supported legacy types, separate from source catalog keys.
 SUPPORTED_BESCHEID_TYPES: Final[frozenset[str]] = frozenset(
     {
         "bamf_simple_rejection",
@@ -515,7 +513,7 @@ SUPPORTED_BESCHEID_TYPES: Final[frozenset[str]] = frozenset(
 
 
 class LegacyTaxonomyMapping(TypedDict):
-    """Correspondence between a legacy runtime type and source taxonomy."""
+    """Source entries and candidates for a legacy document type."""
 
     status: Literal["exact", "approximate", "unresolved"]
     source_keys: tuple[str, ...]
@@ -563,7 +561,7 @@ LEGACY_TAXONOMY_MAPPINGS: Final[dict[str, LegacyTaxonomyMapping]] = {
 
 
 def render_taxonomy_context(document_type: str | None = None) -> str:
-    """Render source context for supported types without resolving mappings."""
+    """Return JSON context for one supported type, or all types if omitted."""
     context: list[dict[str, object]] = []
     if document_type is None:
         legacy_types = sorted(SUPPORTED_BESCHEID_TYPES)
@@ -601,7 +599,7 @@ def render_taxonomy_context(document_type: str | None = None) -> str:
 
 
 def render_classification_taxonomy_context() -> str:
-    """Render source recognition context without resolving legacy mappings."""
+    """Return taxonomy context for classification."""
     return render_taxonomy_context()
 
 
@@ -611,5 +609,5 @@ def is_supported_bescheid_type(document_type: str) -> bool:
 
 
 def get_taxonomy_entry(document_type: str) -> TaxonomyEntry | None:
-    """Return the taxonomy entry for a document type."""
+    """Look up a source taxonomy key."""
     return BESCHEID_TAXONOMY.get(document_type)

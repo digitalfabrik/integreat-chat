@@ -1,7 +1,4 @@
-"""
-Structured data extraction for the Bescheidcheck pipeline (issue #504).
-
-"""
+"""Extract structured data from Bescheide."""
 
 import logging
 
@@ -16,16 +13,13 @@ from integreat_chat.chatanswers.services.llmapi import (
 )
 
 from ..static.prompts import Prompts
-
 from .taxonomy import is_supported_bescheid_type, render_taxonomy_context
 
 LOGGER = logging.getLogger(__name__)
 
 
 def _text_from_html(html: str, max_chars: int = 20000) -> str:
-    """
-    Convert OCR HTML into plain text before sending it to the LLM.
-    """
+    """Strip HTML, collapse whitespace, and limit the text length."""
     import re
 
     html = re.sub(
@@ -109,11 +103,8 @@ _EXTRACTION_SCHEMA = {
 }
 
 
-
 def get_extraction_schema(bescheid_type: str) -> dict | None:
-    """
-    Return the MVP extraction schema for supported Bescheid types.
-    """
+    """Return the extraction schema, or None for unsupported types."""
     if not is_supported_bescheid_type(bescheid_type):
         return None
 
@@ -121,9 +112,7 @@ def get_extraction_schema(bescheid_type: str) -> dict | None:
 
 
 def _nullable_string(value: object) -> str | None:
-    """
-    Return a stripped string or None for missing/invalid values.
-    """
+    """Return a stripped string, or None for empty or invalid values."""
     if not isinstance(value, str):
         return None
 
@@ -132,9 +121,7 @@ def _nullable_string(value: object) -> str | None:
 
 
 def _string_list(value: object) -> list[str]:
-    """
-    Return only non-empty string items from a list.
-    """
+    """Return non-empty strings from a list."""
     if not isinstance(value, list):
         return []
 
@@ -142,9 +129,7 @@ def _string_list(value: object) -> list[str]:
 
 
 def _normalize_extracted_data(data: dict, bescheid_type: str) -> dict:
-    """
-    Normalize LLM extraction output before exposing it to the frontend.
-    """
+    """Normalize extracted values for the API response."""
     confidence = data.get("confidence")
 
     if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
@@ -182,9 +167,7 @@ async def _run_extraction_prompt(
     model: str,
     session: aiohttp.ClientSession | None = None,
 ) -> dict:
-    """
-    Run a prompt and parse the structured JSON response.
-    """
+    """Run the extraction prompt and parse its JSON response."""
     prompt = LlmPrompt(
         model,
         [LlmMessage(prompt_text)],
@@ -211,12 +194,7 @@ async def extract_structured_data(
     model: str,
     session: aiohttp.ClientSession | None = None,
 ) -> dict:
-    """
-    Extract structured information from an OCR'd Bescheid.
-
-    The extraction schema is selected based on the classified
-    document type.
-    """
+    """Extract structured data from OCR text for a supported document type."""
     text = _text_from_html(document_text)
 
     if not text:

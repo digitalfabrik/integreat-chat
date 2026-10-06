@@ -282,7 +282,7 @@ class ClassificationSanitizationTest(unittest.TestCase):
     Pure-function tests: no Django ORM / network needed.
     """
 
-    def test_rendered_prompt_choices_match_taxonomy_and_schema(self):
+    def test_prompt_choices_match_supported_types_and_schema(self):
         from integreat_chat.bescheidcheck.services.classification import (
             classify_bescheid,
         )
@@ -339,7 +339,7 @@ class ClassificationSanitizationTest(unittest.TestCase):
         self.assertIn('"Ihr Asylantrag wird abgelehnt"', prompt_text)
         self.assertIn("do not select a source mapping", prompt_text)
 
-    def test_source_taxonomy_keys_are_not_classification_outputs(self):
+    def test_source_keys_are_rejected(self):
         from integreat_chat.bescheidcheck.services.classification import (
             _sanitize_classification,
         )
@@ -2626,7 +2626,7 @@ class StructuredExtractionTest(unittest.TestCase):
 
         mock_run.assert_not_awaited()
 
-    def test_taxonomy_context_preserves_extraction_contract_for_all_types(self):
+    def test_taxonomy_context_keeps_extraction_fields_and_document_type(self):
         from integreat_chat.bescheidcheck.services import extraction
         from integreat_chat.bescheidcheck.services.taxonomy import (
             render_taxonomy_context,
@@ -2715,7 +2715,7 @@ class StructuredExtractionTest(unittest.TestCase):
 
 
 class BescheidTaxonomyTest(TestCase):
-    def test_selected_taxonomy_context_is_a_subset_of_classification_context(self):
+    def test_context_for_one_type_matches_classification_context(self):
         from .services.taxonomy import (
             render_classification_taxonomy_context,
             render_taxonomy_context,
@@ -2731,7 +2731,7 @@ class BescheidTaxonomyTest(TestCase):
             with self.subTest(key=key):
                 self.assertEqual(json.loads(render_taxonomy_context(key)), [])
 
-    def test_classification_context_preserves_mapping_status_and_candidates(self):
+    def test_context_contains_mapping_status_and_candidates(self):
         from .services.taxonomy import (
             BESCHEID_TAXONOMY,
             LEGACY_TAXONOMY_MAPPINGS,
@@ -2773,7 +2773,7 @@ class BescheidTaxonomyTest(TestCase):
             ["asyl_ablehnung_ou", "dublin_bescheid"],
         )
 
-    def test_classification_context_reads_current_catalog_and_mapping(self):
+    def test_context_reads_catalog_and_mapping(self):
         from .services.taxonomy import (
             BESCHEID_TAXONOMY,
             LEGACY_TAXONOMY_MAPPINGS,
@@ -2910,7 +2910,7 @@ class BescheidTaxonomyTest(TestCase):
             with self.subTest(key=key):
                 self.assertIsNone(get_taxonomy_entry(key))
 
-    def test_mapping_registry_covers_only_supported_legacy_types(self):
+    def test_mappings_cover_supported_types(self):
         from .services.taxonomy import (
             LEGACY_TAXONOMY_MAPPINGS,
             SUPPORTED_BESCHEID_TYPES,
@@ -2918,7 +2918,7 @@ class BescheidTaxonomyTest(TestCase):
 
         self.assertEqual(set(LEGACY_TAXONOMY_MAPPINGS), SUPPORTED_BESCHEID_TYPES)
 
-    def test_mapping_registry_preserves_assessed_relationships(self):
+    def test_mapping_statuses_and_targets(self):
         from .services.taxonomy import LEGACY_TAXONOMY_MAPPINGS
 
         expected = {
@@ -2950,7 +2950,7 @@ class BescheidTaxonomyTest(TestCase):
                     relationship,
                 )
 
-    def test_mapping_registry_references_valid_distinct_source_keys(self):
+    def test_mapping_targets_exist_and_are_unique(self):
         from .services.taxonomy import (
             BESCHEID_TAXONOMY,
             LEGACY_TAXONOMY_MAPPINGS,
@@ -2969,7 +2969,7 @@ class BescheidTaxonomyTest(TestCase):
                     self.assertIn(source_key, BESCHEID_TAXONOMY)
                     self.assertNotEqual(source_key, "asyl_unzulaessig")
 
-    def test_mapping_registry_status_and_notes_are_consistent(self):
+    def test_mapping_status_rules_and_notes(self):
         from .services.taxonomy import LEGACY_TAXONOMY_MAPPINGS
 
         for key, mapping in LEGACY_TAXONOMY_MAPPINGS.items():
@@ -3018,7 +3018,7 @@ class BescheidTaxonomyTest(TestCase):
             with self.subTest(key=key):
                 self.assertEqual(entry["key"], key)
 
-    def test_source_catalog_does_not_expand_runtime_support(self):
+    def test_catalog_types_are_not_supported(self):
         from .services.taxonomy import (
             BESCHEID_TAXONOMY,
             SUPPORTED_BESCHEID_TYPES,
@@ -3051,7 +3051,7 @@ class BescheidTaxonomyTest(TestCase):
                 self.assertNotIn("erkennungssignale", entry)
                 self.assertNotIn("rechtsgrundlage", entry)
 
-    def test_lookup_does_not_infer_legacy_or_missing_source_entries(self):
+    def test_lookup_returns_none_for_legacy_and_unknown_keys(self):
         from .services.taxonomy import (
             SUPPORTED_BESCHEID_TYPES,
             get_taxonomy_entry,
