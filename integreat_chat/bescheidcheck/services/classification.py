@@ -16,6 +16,7 @@ so the API can still return a useful response to the user.
 
 import logging
 import re
+from contextlib import nullcontext
 
 import aiohttp
 from django.conf import settings
@@ -136,30 +137,31 @@ async def classify_bescheid(
         json_schema=_build_json_schema(),
     )
     llm = LlmApiClient()
-    if session is None:
-        async with aiohttp.ClientSession() as owned_session:
-            session = owned_session
-    try:
-        raw = await llm.chat_prompt(session, prompt)
-    except LlmClientError as exc:
-        LOGGER.warning("Classification failed (LLM server error): %s", exc)
-        return {
-            "type": "unsupported",
-            "confidence": 0.0,
-            "reason": (
-                "The classification service could not read the document "
-                "(the language-model server returned an error). "
-                "Please try again."
-            ),
-        }
-    response = LlmResponse(raw)
-    # ``as_dict`` returns {} on unparseable output; the regex below is
-    # the salvage path for a non-JSON response.
-    parsed = response.as_dict()
-    if not parsed:
-        m = re.search(
-            r"\"?type\"?\s*[:=]\s*\"([a-z_-]+)\"", str(response), flags=re.IGNORECASE
-        )
-        if m:
-            parsed = {"type": m.group(1)}
-    return _sanitize_classification(parsed)
+    session_context = (
+        aiohttp.ClientSession() if session is None else nullcontext(session)
+    )
+    async with session_context as active_session:
+        try:
+            raw = await llm.chat_prompt(active_session, prompt)
+        except LlmClientError as exc:
+            LOGGER.warning("Classification failed (LLM server error): %s", exc)
+            return {
+                "type": "unsupported",
+                "confidence": 0.0,
+                "reason": (
+                    "The classification service could not read the document "
+                    "(the language-model server returned an error). "
+                    "Please try again."
+                ),
+            }
+        response = LlmResponse(raw)
+        # ``as_dict`` returns {} on unparseable output; the regex below is
+        # the salvage path for a non-JSON response.
+        parsed = response.as_dict()
+        if not parsed:
+            m = re.search(
+                r"\"?type\"?\s*[:=]\s*\"([a-z_-]+)\"", str(response), flags=re.IGNORECASE
+            )
+            if m:
+                parsed = {"type": m.group(1)}
+        return _sanitize_classification(parsed)

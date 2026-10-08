@@ -200,6 +200,7 @@ class InternalPageResolutionTest(unittest.TestCase):
         by 1, every text item provenanced on page 1.
         """
         from types import SimpleNamespace
+
         prov = SimpleNamespace(
             page_no=1,
             bbox=SimpleNamespace(
@@ -398,6 +399,141 @@ class ClassificationSanitizationTest(unittest.TestCase):
         self.assertEqual(out["type"], "unsupported")
         self.assertNotIn("<html>", out["reason"].lower())
         self.assertNotIn("Bad gateway", out["reason"])
+
+
+class ClassificationSessionTest(unittest.IsolatedAsyncioTestCase):
+    async def test_owned_session_stays_open_until_response_is_processed(self):
+        from .services import classification
+
+        sessions = []
+        expected = {
+            "type": "zuständigkeitsbestimmungsverfahren-dublin-überstellungsentscheidung",
+            "confidence": 1.0,
+            "reason": "Test",
+        }
+
+        async def reply(session, prompt):
+            self.assertFalse(session.closed)
+            sessions.append(session)
+            return {"choices": [{"message": {"content": json.dumps(expected)}}]}
+
+        response = mock.Mock()
+
+        def parse():
+            self.assertFalse(sessions[0].closed)
+            return expected
+
+        response.as_dict.side_effect = parse
+        with (
+            mock.patch.object(
+                classification.LlmApiClient,
+                "chat_prompt",
+                new=mock.AsyncMock(side_effect=reply),
+            ) as mock_chat,
+            mock.patch.object(classification, "LlmResponse", return_value=response),
+        ):
+            result = await classification.classify_bescheid("Document text")
+
+        mock_chat.assert_awaited_once()
+        response.as_dict.assert_called_once()
+        self.assertEqual(result, expected)
+        self.assertTrue(sessions[0].closed)
+
+    async def test_owned_session_closes_on_request_errors(self):
+        from .services import classification
+
+        for error in (
+            classification.LlmClientError("LLM error", status=500),
+            RuntimeError("Unexpected request error"),
+        ):
+            with self.subTest(error=type(error).__name__):
+                sessions = []
+
+                async def fail(session, prompt, *, sessions=sessions, error=error):
+                    self.assertFalse(session.closed)
+                    sessions.append(session)
+                    raise error
+
+                with mock.patch.object(
+                    classification.LlmApiClient,
+                    "chat_prompt",
+                    new=mock.AsyncMock(side_effect=fail),
+                ) as mock_chat:
+                    if isinstance(error, classification.LlmClientError):
+                        result = await classification.classify_bescheid("Document text")
+                        self.assertEqual(result["type"], "unsupported")
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, "Unexpected request"):
+                            await classification.classify_bescheid("Document text")
+
+                mock_chat.assert_awaited_once()
+                self.assertTrue(sessions[0].closed)
+
+    async def test_owned_session_closes_on_response_errors(self):
+        from .services import classification
+
+        sessions = []
+
+        async def reply(session, prompt):
+            self.assertFalse(session.closed)
+            sessions.append(session)
+            return {}
+
+        response = mock.Mock()
+
+        def fail_parse():
+            self.assertFalse(sessions[0].closed)
+            raise ValueError("Response error")
+
+        response.as_dict.side_effect = fail_parse
+        with (
+            mock.patch.object(
+                classification.LlmApiClient,
+                "chat_prompt",
+                new=mock.AsyncMock(side_effect=reply),
+            ) as mock_chat,
+            mock.patch.object(classification, "LlmResponse", return_value=response),
+            self.assertRaisesRegex(ValueError, "Response error"),
+        ):
+            await classification.classify_bescheid("Document text")
+
+        mock_chat.assert_awaited_once()
+        response.as_dict.assert_called_once()
+        self.assertTrue(sessions[0].closed)
+
+    async def test_external_session_is_reused_and_left_open(self):
+        import aiohttp
+
+        from .services import classification
+
+        expected = {
+            "type": "zuständigkeitsbestimmungsverfahren-dublin-überstellungsentscheidung",
+            "confidence": 1.0,
+            "reason": "Test",
+        }
+        async with aiohttp.ClientSession() as external_session:
+
+            async def reply(session, prompt):
+                self.assertIs(session, external_session)
+                self.assertFalse(session.closed)
+                return {"choices": [{"message": {"content": json.dumps(expected)}}]}
+
+            with (
+                mock.patch.object(
+                    classification.LlmApiClient,
+                    "chat_prompt",
+                    new=mock.AsyncMock(side_effect=reply),
+                ) as mock_chat,
+                mock.patch.object(classification.aiohttp, "ClientSession") as factory,
+            ):
+                result = await classification.classify_bescheid(
+                    "Document text", session=external_session
+                )
+
+            mock_chat.assert_awaited_once()
+            factory.assert_not_called()
+            self.assertEqual(result, expected)
+            self.assertFalse(external_session.closed)
 
 
 class ChatPromptHttpErrorTest(unittest.IsolatedAsyncioTestCase):
@@ -803,9 +939,7 @@ class TranslationFaultToleranceTest(unittest.IsolatedAsyncioTestCase):
                 # (``{ValueError, TimeoutError}``) that
                 # ``_translate_one_paragraph`` swallows - it therefore
                 # escapes to the generator.
-                raise LlmClientError(
-                    "LLM server returned HTTP 500", status=500
-                )
+                raise LlmClientError("LLM server returned HTTP 500", status=500)
             return "second-paragraph-translated"
 
         ls = self._language_service(translate_message)
@@ -1720,9 +1854,7 @@ class SanitizeHtmlTest(TestCase):
         # both work after the ``result``-event re-render (see
         # renderPage in bescheidcheck.html).
         out = sanitize_html(
-            '<div class="bc-page" data-page="1">'
-            '<p data-para-id="p-1-1">X</p>'
-            "</div>"
+            '<div class="bc-page" data-page="1"><p data-para-id="p-1-1">X</p></div>'
         )
         self.assertIn("bc-page", out)
         self.assertIn('data-para-id="p-1-1"', out)
@@ -1784,12 +1916,16 @@ class SanitizeHtmlTest(TestCase):
         self.assertNotIn("evil.example", out)
 
     def test_double_nested_script_is_discarded(self) -> None:
-        out = sanitize_html("<figure><figure><script>alert(4)</script></figure></figure>")
+        out = sanitize_html(
+            "<figure><figure><script>alert(4)</script></figure></figure>"
+        )
         self.assertNotIn("script", out)
         self.assertNotIn("alert(4)", out)
 
     def test_script_in_table_cell_is_discarded(self) -> None:
-        out = sanitize_html("<table><tr><td><script>alert(2)</script></td></tr></table>")
+        out = sanitize_html(
+            "<table><tr><td><script>alert(2)</script></td></tr></table>"
+        )
         self.assertNotIn("script", out)
         self.assertNotIn("alert(2)", out)
 
