@@ -17,7 +17,7 @@ class TaxonomyEntry(TypedDict, total=False):
     rechtsgrundlage: str
 
 
-# Source: docs/Klassifikations-Taxonomie_v3.html, master table, August 2026.
+# Source: Klassifikations-Taxonomie_v3.html, version, August 2026.
 # Whitespace is normalized; levels and severity come from headings and the legend.
 BESCHEID_TAXONOMY: Final[dict[str, TaxonomyEntry]] = {
     "meldebescheinigung": {

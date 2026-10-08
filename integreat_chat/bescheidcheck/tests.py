@@ -279,7 +279,7 @@ class InternalPageResolutionTest(unittest.TestCase):
 
 class ClassificationSanitizationTest(unittest.TestCase):
     """
-    Pure-function tests: no Django ORM / network needed.
+    Classification tests with mocked LLM calls; no ORM or network required.
     """
 
     def test_prompt_choices_match_supported_types_and_schema(self):

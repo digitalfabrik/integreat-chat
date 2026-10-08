@@ -2,7 +2,8 @@
   "model": "verdigado-think",
   "run": {
     "phase": "taxonomy_foundation",
-    "branch": "feat/bescheidcheck-taxonomy"
+    "branch": "feat/bescheidcheck-taxonomy",
+    "capture_method": "manual_transcription"
   },
   "classification": {
     "type": "dublin_decision",
