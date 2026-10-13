@@ -27,6 +27,8 @@ To integrate Zammad, the following configuration has to be set:
    * Name: `automatic_answers`, Display: `Automatic Chatbot Answers`, Format: `Boolean Field`, True as default value
    * Name: `initial_response_sent`, Display: `Initial response sent`, Format: `Boolean field`, False as default value
    * Name: `evaluation_consent`, Display: `User agrees to chat evaluation`, Format: `Boolean field`, False as default value
+   * Name: `language_slug`, Display: `Language`, Format: `Text field`, Type `Text`, Maxlength `20`, no default value. Set by the Integreat CMS when creating the ticket.
+   * Name: `region_slug`, Display: `Region`, Format: `Text field`, Type `Text`, Maxlength `100`, no default value. Set by the Integreat CMS when creating the ticket.
    * Alternatively, use this rails command in `zammad run rails console`:
      ```ruby
      UserInfo.current_user_id = 1
@@ -140,6 +142,78 @@ To integrate Zammad, the following configuration has to be set:
 
      ObjectManager::Attribute.migration_execute
      attr = ObjectManager::Attribute.find_by(name: "evaluation_consent")
+     attr.to_migrate = true
+     attr.to_create  = true
+     attr.save!
+
+     # 4. language_slug - Language (set by the Integreat CMS)
+     ObjectManager::Attribute.add(
+       force:       true,
+       object:      'Ticket',
+       name:        'language_slug',
+       display:     'Language',
+       data_type:   'input',
+       data_option: {
+         type:       'text',
+         maxlength:  20,
+         default:    '',
+         null:       true,
+         translate:  false,
+       },
+       active:        true,
+       screens:       {
+         create_middle: {
+           'ticket.agent'    => { shown: true, required: false },
+           'ticket.customer' => { shown: false, required: false },
+         },
+         edit: {
+           'ticket.agent'    => { shown: true, required: false },
+           'ticket.customer' => { shown: false, required: false },
+         },
+       },
+       position:      1553,
+       editable:      true,
+       to_migrate:    false,
+     )
+
+     ObjectManager::Attribute.migration_execute
+     attr = ObjectManager::Attribute.find_by(name: "language_slug")
+     attr.to_migrate = true
+     attr.to_create  = true
+     attr.save!
+
+     # 5. region_slug - Region (set by the Integreat CMS)
+     ObjectManager::Attribute.add(
+       force:       true,
+       object:      'Ticket',
+       name:        'region_slug',
+       display:     'Region',
+       data_type:   'input',
+       data_option: {
+         type:       'text',
+         maxlength:  100,
+         default:    '',
+         null:       true,
+         translate:  false,
+       },
+       active:        true,
+       screens:       {
+         create_middle: {
+           'ticket.agent'    => { shown: true, required: false },
+           'ticket.customer' => { shown: false, required: false },
+         },
+         edit: {
+           'ticket.agent'    => { shown: true, required: false },
+           'ticket.customer' => { shown: false, required: false },
+         },
+       },
+       position:      1554,
+       editable:      true,
+       to_migrate:    false,
+     )
+
+     ObjectManager::Attribute.migration_execute
+     attr = ObjectManager::Attribute.find_by(name: "region_slug")
      attr.to_migrate = true
      attr.to_create  = true
      attr.save!
