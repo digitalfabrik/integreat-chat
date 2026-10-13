@@ -55,31 +55,85 @@ one of the supported types. Do not try to guess beyond what the text says.
 
 ## Supported types
 
+### BAMF / Asylverfahren
+
+Bei BAMF-Bescheiden, die mehrere Schutzformen nennen, gilt immer der
+höchste zuerkannte Status: Asyl vor Flüchtlingseigenschaft vor
+subsidiärem Schutz vor Abschiebungsverbot.
+
+Bei ablehnenden BAMF-Bescheiden gilt: Wird die Abschiebung in einen
+anderen Dublin-Staat angeordnet, ist es immer
+`dublin-ueberstellungsentscheidung`, auch wenn der Antrag als unzulässig
+abgelehnt wird. Wird ein Antrag teils als offensichtlich unbegründet und
+teils als einfach unbegründet abgelehnt, gilt `ablehnung-offensichtlich-unbegruendet`.
+
+- `ladung-anhoerung`
+  Das Schreiben ist eine Einladung des BAMF zur persönlichen Anhörung im
+  Asylverfahren. Es nennt einen Termin, einen Ort und Hinweise zum Ablauf
+  der Anhörung.
+
+- `anerkennung-asyl`
+  Das Schreiben ist ein BAMF-Bescheid, nach dem die asylsuchende Person
+  als Asylberechtigte anerkannt wird.
+
+- `zuerkennung-fluechtlingseigenschaft`
+  Das Schreiben ist ein BAMF-Bescheid, nach dem der asylsuchenden Person
+  die Flüchtlingseigenschaft zuerkannt wird.
+
+- `zuerkennung-subsidiaerer-schutzstatus`
+  Das Schreiben ist ein BAMF-Bescheid, nach dem der asylsuchenden Person
+  subsidiärer Schutz zuerkannt wird.
+
+- `vorliegen-abschiebungsverbote`
+  Das Schreiben ist ein BAMF-Bescheid, in dem festgestellt wird, dass ein
+  Abschiebungsverbot vorliegt.
+
+- `niederschrift-asylantragstellung`
+  Das Schreiben ist die Niederschrift (das Protokoll) des BAMF über die
+  förmliche Asylantragstellung. Es enthält die Personalien und erste
+  Angaben der asylsuchenden Person, zum Beispiel zu Reiseweg, Familie
+  und Dokumenten.
+
+- `schriftliche-anhoerung`
+  Das Schreiben ist eine Aufforderung des BAMF, sich schriftlich zu den
+  Asylgründen oder zu bestimmten Fragen zu äußern, statt persönlich
+  angehört zu werden. Es enthält meist Fragen oder einen Fragebogen und
+  eine Frist für die Antwort.
+
+- `niederschrift-anhoerung`
+  Das Schreiben ist die Niederschrift (das Protokoll) des BAMF über die
+  persönliche Anhörung im Asylverfahren. Es gibt die Fragen des BAMF und
+  die Antworten der asylsuchenden Person wieder.
+
 - `ablehnung-einfach`
-  Das Schreiben bescheinigt die Ablehnung eines Asylantrags an, wobei
-  der Person keiner der 4 anerkannten Asylgründe zugstanden wird. Die
-  Person wird aufgefordert auszureißen.
+  Das Schreiben ist ein BAMF-Bescheid, nach dem der Asylantrag als
+  (einfach) unbegründet abgelehnt wird. Es enthält eine Abschiebungs-
+  androhung mit einer Ausreisefrist von in der Regel 30 Tagen.
 
-- `anerkennung-subsidiaeer`
-  Das Schreiben beinhaltet, dass der Asylsuchenden Person "Subsidiärer Schutz"
-  zugestanden wird.
+- `ablehnung-offensichtlich-unbegruendet`
+  Das Schreiben ist ein BAMF-Bescheid, nach dem der Asylantrag als
+  offensichtlich unbegründet abgelehnt wird. Es enthält eine Abschiebungs-
+  androhung mit einer verkürzten Ausreisefrist von in der Regel einer Woche.
 
-- `obviously_unfounded_inadmissible`
-  A decision stating the application is "offensichtlich unbegründet" or
-  "offensichtlich unzulässig", possibly by BAMF or another authority.
+- `ablehnung-unzulaessig`
+  Das Schreiben ist ein BAMF-Bescheid, nach dem der Asylantrag als
+  unzulässig abgelehnt wird, ohne dass die Asylgründe inhaltlich geprüft
+  werden, zum Beispiel weil bereits in einem anderen Staat Schutz gewährt
+  wurde oder ein Folgeantrag keine neuen Gründe enthält.
 
-- `dublin_decision`
-  A Dublin-III decision / Zuständigkeitsbestimmungsbescheid /
-  Zuständigkeitsbestimmungsverfahren. The letter identifies another
-  Schengen state as responsible for examining the asylum claim.
+- `dublin-ueberstellungsentscheidung`
+  Das Schreiben ist ein BAMF-Bescheid, nach dem ein anderer Dublin-Staat
+  für das Asylverfahren zuständig ist. Es ordnet die Abschiebung
+  (Überstellung) in diesen Staat an.
 
-- `unsupported`
-  Any other letter that does not match one of the three supported types.
-  Examples: a positive acknowledgment (Anerkennung), a revocation
-  (Widerruf / Rücknahme), an exclusion (Ausweisung), or a
-  residence-permit refusal (Ablehnung Aufenthaltstitel).
-  If the document is not written in German or not an official letter by an
-  official German Agency, then classify it as unsupported.
+- `widerruf-ruecknahme-ladung-befragung`
+  Das Schreiben ist eine Einladung des BAMF zur Befragung oder eine
+  Aufforderung zur Stellungnahme, weil geprüft wird, ob ein bereits
+  zuerkannter Schutzstatus widerrufen oder zurückgenommen wird.
+
+- `widerruf-ruecknahme-entscheidung`
+  Das Schreiben ist ein BAMF-Bescheid, in dem über den Widerruf oder die
+  Rücknahme eines zuvor zuerkannten Schutzstatus entschieden wird.
 
 
 ## Response format
