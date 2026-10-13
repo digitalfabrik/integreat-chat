@@ -126,14 +126,21 @@ teils als einfach unbegründet abgelehnt, gilt `ablehnung-offensichtlich-unbegru
   für das Asylverfahren zuständig ist. Es ordnet die Abschiebung
   (Überstellung) in diesen Staat an.
 
-- `widerruf-ruecknahme-ladung-befragung`
-  Das Schreiben ist eine Einladung des BAMF zur Befragung oder eine
-  Aufforderung zur Stellungnahme, weil geprüft wird, ob ein bereits
-  zuerkannter Schutzstatus widerrufen oder zurückgenommen wird.
+- `entzug-widerruf-ruecknahme-ladung`
+  Das Schreiben ist eine Einladung des BAMF zu einem persönlichen
+  Gespräch, weil das BAMF prüft, ob es einen zuerkannten Schutz entzieht,
+  widerruft oder zurücknimmt. Es nennt einen Termin mit Datum, Uhrzeit
+  und Ort.
 
-- `widerruf-ruecknahme-entscheidung`
-  Das Schreiben ist ein BAMF-Bescheid, in dem über den Widerruf oder die
-  Rücknahme eines zuvor zuerkannten Schutzstatus entschieden wird.
+- `entzug-widerruf-ruecknahme-stellungnahme`
+  Das Schreiben ist eine Aufforderung des BAMF, sich schriftlich zu
+  äußern, weil das BAMF prüft, ob es einen zuerkannten Schutz entzieht,
+  widerruft oder zurücknimmt. Es nennt eine Frist für die schriftliche
+  Antwort, aber keinen Termin.
+
+- `entzug-widerruf-ruecknahme-entscheidung`
+  Das Schreiben ist ein BAMF-Bescheid, in dem ein zuerkannter Schutz
+  entzogen, aberkannt, widerrufen oder zurückgenommen wird.
 
 
 ## Response format
