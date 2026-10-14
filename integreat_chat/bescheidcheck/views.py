@@ -36,7 +36,14 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
-from .services import classification, counselor, ocr, page_order, translation
+from .services import (
+    classification,
+    counselor,
+    extraction,
+    ocr,
+    page_order,
+    translation,
+)
 from .services.sanitizer import sanitize_html
 
 LOGGER = logging.getLogger(__name__)
@@ -476,7 +483,33 @@ async def _analyze_stream(
         )
 
         t0 = time.monotonic()
-        yield _stage_event({"stage": "counseling", "index": 4, "status": "started"})
+        yield _stage_event({"stage": "extraction", "index": 4, "status": "started"})
+
+        extracted_data = await extraction.extract_structured_data(
+            document_text=full_text,
+            bescheid_type=cls_result.get("type", "unsupported"),
+            model=settings.BESCHEID_CLASSIFICATION_MODEL,
+        )
+
+        extraction_elapsed = round(time.monotonic() - t0, 2)
+        stages["extraction"] = extraction_elapsed
+
+        LOGGER.info(
+            "analyze: extraction finished in %.2fs",
+            extraction_elapsed,
+        )
+
+        yield _stage_event(
+            {
+                "stage": "extraction",
+                "index": 4,
+                "status": "done",
+                "seconds": extraction_elapsed,
+            }
+        )
+
+        t0 = time.monotonic()
+        yield _stage_event({"stage": "counseling", "index": 5, "status": "started"})
         counseling = None
         try:
             counseling = await counselor.find_counseling(
@@ -499,7 +532,7 @@ async def _analyze_stream(
         yield _stage_event(
             {
                 "stage": "counseling",
-                "index": 4,
+                "index": 5,
                 "status": "done",
                 "seconds": co_elapsed,
             }
@@ -515,6 +548,7 @@ async def _analyze_stream(
         result_payload = {
             "status": "success",
             "classification": cls_result,
+            "extracted_data": extracted_data,
             "source_language": source_language,
             "target_language": target_language,
             "region": region_slug,
