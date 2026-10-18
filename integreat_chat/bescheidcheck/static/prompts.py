@@ -202,19 +202,25 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
   geworden ist. Es enthält selbst keine neue Entscheidung über den
   Asylantrag.
 
+### Andere Schreiben deutscher Behörden
+
+- `sonstiges-schreiben`
+  Das Schreiben ist ein lesbares, offizielles Schreiben einer deutschen
+  Behörde, dessen Art du erkennst, das aber keinem der oben genannten
+  Typen entspricht, zum Beispiel ein Schreiben der Ausländerbehörde, des
+  Jobcenters, eines Gerichts oder ein anderes BAMF-Schreiben.
+
 ### Nicht erkannt
 
 - `unsupported`
-  Wähle diesen Typ, wenn das Schreiben keinem der oben genannten Typen
-  sicher zugeordnet werden kann. Das gilt zum Beispiel, wenn
-  - das Schreiben eine andere Art von Schreiben ist, zum Beispiel von
-    der Ausländerbehörde, dem Jobcenter, einem Gericht oder einer anderen
-    Behörde,
+  Wähle diesen Typ nur, wenn der Bescheid nicht erkannt werden kann.
+  Das gilt, wenn
   - der Text unvollständig, unleserlich oder durch ein schlechtes Foto
-    stark verfälscht ist, sodass der Typ nicht sicher erkennbar ist,
-  - das Schreiben kein offizielles Schreiben einer deutschen Behörde ist.
-  Rate nicht. Im Zweifel ist `unsupported` richtig.
-
+    stark verfälscht ist,
+  - das Schreiben nicht von einer deutschen Behörde stammt,
+  - du nicht erkennen kannst, was für ein Schreiben es ist.
+  Rate nicht. Wenn du die Art des Schreibens nicht sicher erkennst, ist
+  `unsupported` richtig.
 
 ## Response format
 

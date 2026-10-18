@@ -183,6 +183,7 @@ BESCHEID_SUPPORTED_TYPES = [
     "dublin-ueberstellungsfrist-verlaengert",
     "dublin-ueberstellungsfrist-abgelaufen",
     "abschlussmitteilung",
+    "sonstiges-schreiben",
     "unsupported",
 ]
 BESCHEID_TRANSLATION_CONCURRENCY = 2
