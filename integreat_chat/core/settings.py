@@ -160,9 +160,29 @@ BESCHEID_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 BESCHEID_PAGE_ORDERING = "off"
 BESCHEID_CLASSIFICATION_MODEL = "verdigado-think"
 BESCHEID_SUPPORTED_TYPES = [
-    "bamf_simple_rejection",
-    "obviously_unfounded_inadmissible",
-    "dublin_decision",
+    "anhoerung-zulaessigkeit-termin",
+    "anhoerung-zulaessigkeit-schriftlich",
+    "niederschrift-asylantragstellung",
+    "schriftliche-anhoerung",
+    "aufforderung-betreiben-verfahren",
+    "ladung-anhoerung",
+    "niederschrift-anhoerung",
+    "anerkennung-asyl",
+    "zuerkennung-fluechtlingseigenschaft",
+    "zuerkennung-subsidiaerer-schutzstatus",
+    "vorliegen-abschiebungsverbote",
+    "familienasyl-familienschutz",
+    "ablehnung-einfach",
+    "ablehnung-offensichtlich-unbegruendet",
+    "ablehnung-unzulaessig",
+    "einstellungsbescheid",
+    "entzug-widerruf-ruecknahme-ladung",
+    "entzug-widerruf-ruecknahme-stellungnahme",
+    "entzug-widerruf-ruecknahme-entscheidung",
+    "dublin-ueberstellungsentscheidung",
+    "dublin-ueberstellungsfrist-verlaengert",
+    "dublin-ueberstellungsfrist-abgelaufen",
+    "abschlussmitteilung",
     "unsupported",
 ]
 BESCHEID_TRANSLATION_CONCURRENCY = 2

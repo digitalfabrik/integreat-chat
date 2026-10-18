@@ -59,7 +59,9 @@ one of the supported types. Do not try to guess beyond what the text says.
 
 Bei BAMF-Bescheiden, die mehrere Schutzformen nennen, gilt immer der
 höchste zuerkannte Status: Asyl vor Flüchtlingseigenschaft vor
-subsidiärem Schutz vor Abschiebungsverbot.
+subsidiärem Schutz vor Abschiebungsverbot. Wird der Schutz aber von
+einem Familienmitglied abgeleitet (Familienasyl oder internationaler
+Familienschutz), gilt immer `familienasyl-familienschutz`.
 
 Bei ablehnenden BAMF-Bescheiden gilt: Wird die Abschiebung in einen
 anderen Dublin-Staat angeordnet, ist es immer
@@ -67,10 +69,53 @@ anderen Dublin-Staat angeordnet, ist es immer
 abgelehnt wird. Wird ein Antrag teils als offensichtlich unbegründet und
 teils als einfach unbegründet abgelehnt, gilt `ablehnung-offensichtlich-unbegruendet`.
 
+Schreiben, in denen das BAMF noch nichts entschieden hat (Einladungen,
+Fragen, Aufforderungen, Protokolle), sind nie ein Bescheid mit
+Entscheidung. Ordne sie dem passenden Schreiben-Typ zu, auch wenn darin
+mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
+
+- `anhoerung-zulaessigkeit-termin`
+  Das Schreiben ist eine Einladung des BAMF zu einem persönlichen
+  Gespräch über die Zulässigkeit des Asylantrags. Es geht darum, ob ein
+  anderer Staat zuständig ist, ob bereits in einem anderen Staat Schutz
+  gewährt wurde oder ob ein anderer Staat als sicher gilt, nicht um die
+  Fluchtgründe. Es nennt einen Termin mit Datum, Uhrzeit und Ort.
+
+- `anhoerung-zulaessigkeit-schriftlich`
+  Das Schreiben ist eine Aufforderung des BAMF, sich schriftlich zur
+  Zulässigkeit des Asylantrags zu äußern. Es geht darum, ob ein anderer
+  Staat zuständig ist, ob bereits in einem anderen Staat Schutz gewährt
+  wurde oder ob ein anderer Staat als sicher gilt, nicht um die
+  Fluchtgründe. Es nennt eine Frist für die Antwort, aber keinen Termin.
+
+- `niederschrift-asylantragstellung`
+  Das Schreiben ist die Niederschrift (das Protokoll) des BAMF über die
+  förmliche Asylantragstellung. Es enthält die Personalien und erste
+  Angaben der asylsuchenden Person, zum Beispiel zu Reiseweg, Familie
+  und Dokumenten.
+
+- `schriftliche-anhoerung`
+  Das Schreiben ist eine Aufforderung des BAMF, sich schriftlich zu den
+  Asylgründen oder zu bestimmten Fragen zu äußern, statt persönlich
+  angehört zu werden. Es enthält meist Fragen oder einen Fragebogen und
+  eine Frist für die Antwort.
+
+- `aufforderung-betreiben-verfahren`
+  Das Schreiben ist eine Aufforderung des BAMF, das Asylverfahren zu
+  betreiben (Betreibensaufforderung), zum Beispiel Unterlagen zu schicken,
+  sich zu äußern oder zu einem Termin zu kommen. Es warnt, dass der
+  Asylantrag als zurückgenommen gilt und das Verfahren eingestellt wird,
+  wenn die Person nicht innerhalb der Frist reagiert.
+
 - `ladung-anhoerung`
   Das Schreiben ist eine Einladung des BAMF zur persönlichen Anhörung im
   Asylverfahren. Es nennt einen Termin, einen Ort und Hinweise zum Ablauf
   der Anhörung.
+
+- `niederschrift-anhoerung`
+  Das Schreiben ist die Niederschrift (das Protokoll) des BAMF über die
+  persönliche Anhörung im Asylverfahren. Es gibt die Fragen des BAMF und
+  die Antworten der asylsuchenden Person wieder.
 
 - `anerkennung-asyl`
   Das Schreiben ist ein BAMF-Bescheid, nach dem die asylsuchende Person
@@ -88,22 +133,11 @@ teils als einfach unbegründet abgelehnt, gilt `ablehnung-offensichtlich-unbegru
   Das Schreiben ist ein BAMF-Bescheid, in dem festgestellt wird, dass ein
   Abschiebungsverbot vorliegt.
 
-- `niederschrift-asylantragstellung`
-  Das Schreiben ist die Niederschrift (das Protokoll) des BAMF über die
-  förmliche Asylantragstellung. Es enthält die Personalien und erste
-  Angaben der asylsuchenden Person, zum Beispiel zu Reiseweg, Familie
-  und Dokumenten.
-
-- `schriftliche-anhoerung`
-  Das Schreiben ist eine Aufforderung des BAMF, sich schriftlich zu den
-  Asylgründen oder zu bestimmten Fragen zu äußern, statt persönlich
-  angehört zu werden. Es enthält meist Fragen oder einen Fragebogen und
-  eine Frist für die Antwort.
-
-- `niederschrift-anhoerung`
-  Das Schreiben ist die Niederschrift (das Protokoll) des BAMF über die
-  persönliche Anhörung im Asylverfahren. Es gibt die Fragen des BAMF und
-  die Antworten der asylsuchenden Person wieder.
+- `familienasyl-familienschutz`
+  Das Schreiben ist ein BAMF-Bescheid, nach dem die Person Familienasyl
+  oder internationalen Familienschutz bekommt. Der Schutz wird von einem
+  Familienmitglied abgeleitet, das bereits Schutz bekommen hat, zum
+  Beispiel Ehepartner, Eltern oder minderjährige Kinder.
 
 - `ablehnung-einfach`
   Das Schreiben ist ein BAMF-Bescheid, nach dem der Asylantrag als
@@ -121,10 +155,12 @@ teils als einfach unbegründet abgelehnt, gilt `ablehnung-offensichtlich-unbegru
   werden, zum Beispiel weil bereits in einem anderen Staat Schutz gewährt
   wurde oder ein Folgeantrag keine neuen Gründe enthält.
 
-- `dublin-ueberstellungsentscheidung`
-  Das Schreiben ist ein BAMF-Bescheid, nach dem ein anderer Dublin-Staat
-  für das Asylverfahren zuständig ist. Es ordnet die Abschiebung
-  (Überstellung) in diesen Staat an.
+- `einstellungsbescheid`
+  Das Schreiben ist ein BAMF-Bescheid, nach dem das Asylverfahren
+  eingestellt wird, ohne über die Fluchtgründe zu entscheiden. Der
+  Asylantrag gilt als zurückgenommen, zum Beispiel weil ein Termin
+  verpasst oder eine Aufforderung nicht beantwortet wurde. Meist enthält
+  er eine Abschiebungsandrohung.
 
 - `entzug-widerruf-ruecknahme-ladung`
   Das Schreiben ist eine Einladung des BAMF zu einem persönlichen
@@ -142,21 +178,58 @@ teils als einfach unbegründet abgelehnt, gilt `ablehnung-offensichtlich-unbegru
   Das Schreiben ist ein BAMF-Bescheid, in dem ein zuerkannter Schutz
   entzogen, aberkannt, widerrufen oder zurückgenommen wird.
 
+- `dublin-ueberstellungsentscheidung`
+  Das Schreiben ist ein BAMF-Bescheid, nach dem ein anderer Dublin-Staat
+  für das Asylverfahren zuständig ist. Es ordnet die Abschiebung
+  (Überstellung) in diesen Staat an.
+
+- `dublin-ueberstellungsfrist-verlaengert`
+  Das Schreiben ist eine Mitteilung des BAMF im Dublin-Verfahren, dass
+  die Frist für die Überstellung in den zuständigen Dublin-Staat
+  verlängert wurde, zum Beispiel auf 18 Monate, weil die Person als
+  flüchtig oder untergetaucht gilt.
+
+- `dublin-ueberstellungsfrist-abgelaufen`
+  Das Schreiben ist eine Mitteilung des BAMF im Dublin-Verfahren, dass
+  die Überstellungsfrist abgelaufen ist. Deutschland ist jetzt für den
+  Asylantrag zuständig, und das Asylverfahren wird in Deutschland
+  weitergeführt. Oft wird dabei die frühere Dublin-Entscheidung
+  aufgehoben.
+
+- `abschlussmitteilung`
+  Das Schreiben ist eine Mitteilung des BAMF, dass das Asylverfahren
+  abgeschlossen ist und die Entscheidung unanfechtbar oder bestandskräftig
+  geworden ist. Es enthält selbst keine neue Entscheidung über den
+  Asylantrag.
+
+### Nicht erkannt
+
+- `unsupported`
+  Wähle diesen Typ, wenn das Schreiben keinem der oben genannten Typen
+  sicher zugeordnet werden kann. Das gilt zum Beispiel, wenn
+  - das Schreiben eine andere Art von Schreiben ist, zum Beispiel von
+    der Ausländerbehörde, dem Jobcenter, einem Gericht oder einer anderen
+    Behörde,
+  - der Text unvollständig, unleserlich oder durch ein schlechtes Foto
+    stark verfälscht ist, sodass der Typ nicht sicher erkennbar ist,
+  - das Schreiben kein offizielles Schreiben einer deutschen Behörde ist.
+  Rate nicht. Im Zweifel ist `unsupported` richtig.
+
 
 ## Response format
 
 Return a JSON object with only these keys and no additional text:
 
 {{
-  "type": "bamf_simple_rejection" | "obviously_unfounded_inadmissible"
-          | "dublin_decision" | "unsupported",
+  "type": "<one of the slugs listed under Supported types>",
   "confidence": <float between 0.0 and 1.0>,
   "reason": "<one sentence, in the language of the document>"
 }}
 
 ## Rules
 
-1. `type` must be exactly one of the four values listed above.
+1. `type` must be exactly one of the slugs listed under "Supported
+   types", including `unsupported`.
 2. `confidence` is your subjective probability that `type` is correct.
 3. `reason` must be one sentence citing the single most decisive phrase
    from the document.
