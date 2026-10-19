@@ -289,6 +289,29 @@ class ClassificationSanitizationTest(unittest.TestCase):
         out = _sanitize_classification({"type": "evil"})
         self.assertEqual(out["type"], "unsupported")
 
+    def test_prompt_slugs_match_supported_types(self):
+        """Every slug offered in the prompt must survive sanitization."""
+        import re
+
+        from django.conf import settings
+
+        from integreat_chat.bescheidcheck.services.classification import (
+            _sanitize_classification,
+        )
+        from integreat_chat.bescheidcheck.static.prompts import Prompts
+
+        slugs = re.findall(
+            r"^- `([a-z-]+)`",
+            Prompts.BESCHEID_CLASSIFICATION,
+            re.MULTILINE,
+        )
+        self.assertEqual(slugs, list(settings.BESCHEID_SUPPORTED_TYPES))
+        for slug in slugs:
+            self.assertEqual(
+                _sanitize_classification({"type": slug})["type"],
+                slug,
+            )
+
     def test_sanitize_clamps_confidence(self):
         from integreat_chat.bescheidcheck.services.classification import (
             _sanitize_classification,

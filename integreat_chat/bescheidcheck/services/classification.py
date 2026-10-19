@@ -33,12 +33,7 @@ from ..static.prompts import Prompts
 LOGGER = logging.getLogger(__name__)
 
 # Slugs we always accept in the "type" field of the response.
-_TYPE_ALLOWLIST = {
-    "bamf_simple_rejection",
-    "obviously_unfounded_inadmissible",
-    "dublin_decision",
-    "unsupported",
-}
+_TYPE_ALLOWLIST = set(settings.BESCHEID_SUPPORTED_TYPES)
 
 
 def _safe_clamp_float(value, default: float = 0.0) -> float:
@@ -163,7 +158,7 @@ async def classify_bescheid(
     parsed = response.as_dict()
     if not parsed:
         m = re.search(
-            r"\"?type\"?\s*[:=]\s*\"([a-z_]+)\"", str(response), flags=re.IGNORECASE
+            r"\"?type\"?\s*[:=]\s*\"([a-z_-]+)\"", str(response), flags=re.IGNORECASE
         )
         if m:
             parsed = {"type": m.group(1)}
