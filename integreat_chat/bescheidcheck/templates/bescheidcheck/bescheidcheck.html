@@ -404,6 +404,20 @@
         .ext-info-toggle[aria-checked="true"] { background: var(--accent-soft); border-color: var(--accent); }
         .ext-info-toggle[aria-checked="true"] .dot { background: var(--accent); }
         .bc-classification-hidden { display: none !important; }
+        .explanation {
+            display: none;
+            margin-bottom: 16px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 8px;
+        }
+        .explanation.visible { display: block; }
+        .explanation h3 { margin: 0 0 8px; font-size: 1rem; }
+        .explanation-body > :first-child { margin-top: 0; }
+        .explanation-body > :last-child { margin-bottom: 0; }
+        .explanation-body ul { margin: 8px 0 0; padding-left: 22px; }
+        .explanation-body a { color: var(--accent); word-break: break-all; }
     </style>
 </head>
 <body>
@@ -523,6 +537,8 @@
             <div class="counseling" id="counselingBox"></div>
         </div>
 
+        <div id="explanation" class="explanation"></div>
+
         <div class="columns">
             <div>
                 <h2>Original (OCR)</h2>
@@ -583,6 +599,7 @@
         progressBarLabel: document.getElementById("progressBarLabel"),
         classification: document.getElementById("classification"),
         counselingBox: document.getElementById("counselingBox"),
+        explanation: document.getElementById("explanation"),
         originals: document.getElementById("originals"),
         translated: document.getElementById("translated"),
         extInfoToggle: document.getElementById("extInfoToggle"),
@@ -863,6 +880,8 @@
         els.classification.innerHTML = "";
         els.counselingBox.innerHTML = "";
         els.counselingBox.classList.remove("visible");
+        els.explanation.innerHTML = "";
+        els.explanation.classList.remove("visible");
         els.originals.innerHTML = "";
         els.translated.innerHTML = "";
         els.progress.textContent = "";
@@ -907,6 +926,19 @@
         if (cl.reason) line.push(`<br><em>${escapeHtml(cl.reason)}</em>`);
         els.classification.innerHTML = line.join(" · ");
         els.classification.classList.toggle("bc-classification-hidden", !extendedInfo);
+    }
+
+    function renderExplanation(ex) {
+        if (!ex || !ex.content) {
+            els.explanation.innerHTML = "";
+            els.explanation.classList.remove("visible");
+            return;
+        }
+        const parts = [];
+        if (ex.title) parts.push(`<h3>${escapeHtml(ex.title)}</h3>`);
+        parts.push(`<div class="explanation-body">${ex.content}</div>`);
+        els.explanation.innerHTML = parts.join("");
+        els.explanation.classList.add("visible");
     }
 
     function renderCounseling(data) {
@@ -1166,6 +1198,7 @@
         els.resultTitle.textContent = "Result";
         renderClassification(data.classification);
         renderCounseling(data);
+        renderExplanation(data.explanation);
         renderPages(data.pages);
         reconcileTranslationMarks();
         els.progressBarFill.style.width = "100%";
@@ -1196,6 +1229,7 @@
         resetProgressUI();
         resetTranslationProgress();
         renderCounselingPlaceholder();
+        renderExplanation(null);
 
         try {
             const started = performance.now();
@@ -1235,6 +1269,8 @@
                     translationProgress.done += 1;
                     translationProgress.translated.add(msg.data.para_id);
                     updateTranslateTicker();
+                } else if (msg.event === "explanation") {
+                    renderExplanation(msg.data);
                 } else if (msg.event === "result") {
                     renderResult(msg.data);
                 } else if (msg.event === "error") {

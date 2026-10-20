@@ -36,7 +36,14 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
-from .services import classification, counselor, ocr, page_order, translation
+from .services import (
+    classification,
+    counselor,
+    explanation,
+    ocr,
+    page_order,
+    translation,
+)
 from .services.sanitizer import sanitize_html
 
 LOGGER = logging.getLogger(__name__)
@@ -475,6 +482,17 @@ async def _analyze_stream(
             }
         )
 
+        try:
+            bescheid_explanation = await explanation.get_explanation(
+                cls_result.get("type", "unsupported"),
+                target_language=target_language,
+            )
+        except Exception:
+            LOGGER.exception("Explanation lookup failed")
+            bescheid_explanation = None
+        if bescheid_explanation is not None:
+            yield sse_event("explanation", bescheid_explanation)
+
         t0 = time.monotonic()
         yield _stage_event({"stage": "counseling", "index": 4, "status": "started"})
         counseling = None
@@ -519,6 +537,7 @@ async def _analyze_stream(
             "target_language": target_language,
             "region": region_slug,
             "counseling": counseling,
+            "explanation": bescheid_explanation,
             "pages": [
                 {
                     "page_no": page.page_no,
