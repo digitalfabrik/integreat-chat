@@ -10,4 +10,14 @@ urlpatterns = [
         views.analyze,
         name="bescheidcheck_analyze_language",
     ),
+    path(
+        "generate_question/",
+        views.generate_question,
+        name="bescheidcheck_generate_question",
+    ),
+    path(
+        "generate_question/<str:language>/",
+        views.generate_question,
+        name="bescheidcheck_generate_question_language",
+    ),
 ]

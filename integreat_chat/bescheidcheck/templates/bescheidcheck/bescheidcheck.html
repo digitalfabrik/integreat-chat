@@ -325,6 +325,25 @@
             align-items: center;
             gap: 8px;
         }
+        .age-field {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            height: 38px;
+            padding: 0 10px;
+            color: #1b1f27;
+        }
+        .age-field input {
+            width: 72px;
+            height: 30px;
+            padding: 0 8px;
+            font: inherit;
+            color: inherit;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .age-field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
         .menu-btn {
             position: relative;
             display: inline-flex;
@@ -429,6 +448,12 @@
         </div>
 
         <div class="menu-wrap">
+            <label class="age-field" for="ageInput">
+                <span>Age</span>
+                <input type="number" id="ageInput" name="age" min="0" max="120"
+                       inputmode="numeric" placeholder="e.g. 25">
+            </label>
+
             {% if counseling_regions %}
             <div class="menu" id="regionMenu" aria-label="Region menu">
                 <button type="button" class="menu-btn" id="regionBtn"
@@ -578,6 +603,7 @@
         langBtn: document.getElementById("langBtn"),
         langValue: document.getElementById("langValue"),
         langList: document.getElementById("langList"),
+        ageInput: document.getElementById("ageInput"),
         regionMenu: document.getElementById("regionMenu"),
         regionBtn: document.getElementById("regionBtn"),
         regionValue: document.getElementById("regionValue"),
@@ -967,10 +993,48 @@
         els.counselingBox.classList.add("visible");
     }
 
+    function currentAge() {
+        const raw = els.ageInput ? els.ageInput.value.trim() : "";
+        if (!raw) return null;
+        const age = Number.parseInt(raw, 10);
+        if (!Number.isInteger(age) || age < 0 || age > 120) return null;
+        return age;
+    }
+
+    async function fetchGeneratedQuestion(counseling) {
+        const age = currentAge();
+        if (age === null) return null;
+        try {
+            const res = await fetch(
+                `/bescheidcheck/generate_question/${encodeURIComponent(langState.value)}/`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        bescheid_type: counseling.bescheid_type || "unsupported",
+                        age: age,
+                    }),
+                },
+            );
+            const data = await res.json();
+            if (!res.ok || data.status === "error") return null;
+            return data;
+        } catch (e) {
+            return null;
+        }
+    }
+
     async function fetchCounselingAnswer(counseling) {
         if (!counseling || !counseling.question || !counseling.region) return;
         counselingState.pending = true;
         renderCounseling();
+        const generated = await fetchGeneratedQuestion(counseling);
+        if (generated && generated.question) {
+            counseling.question = generated.question;
+            counselingState.question = generated.question;
+            counselingState.counseling_name = generated.counseling_name;
+            renderCounseling();
+        }
         try {
             const res = await fetch("/chatanswers/extract_answer/", {
                 method: "POST",

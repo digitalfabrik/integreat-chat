@@ -21,10 +21,31 @@ COUNSELING_SERVICE_BY_TYPE: dict[str, str] = {
 }
 
 
+# In Germany, youth counseling services are available up to this age.
+YOUTH_COUNSELING_MAX_AGE = 27
+
+_AUDIENCE_SUFFIX: dict[str, dict[str, str]] = {
+    "de": {"minors": "für Jugendliche", "adults": "für Erwachsene"},
+    "en": {"minors": "for minors", "adults": "for adults"},
+}
+
+
+def audience_for_age(age: int | None) -> str | None:
+    """
+    Map an age to the counseling audience ("minors" or "adults").
+
+    Returns ``None`` when no age is known.
+    """
+    if age is None:
+        return None
+    return "minors" if age <= YOUTH_COUNSELING_MAX_AGE else "adults"
+
+
 def counseling_question_for(
     question_language: str,
     bescheid_type: str,
     counseling_name: str | None = None,
+    age: int | None = None,
 ) -> str:
     """
     Build a generic question asking where the user can find the
@@ -32,11 +53,15 @@ def counseling_question_for(
 
     ``counseling_name`` lets the caller pass in an already-localized
     service name so the final question is coherent in the chosen
-    language.
+    language. ``age`` narrows the question to youth or adult counseling.
     """
     name = counseling_name or COUNSELING_SERVICE_BY_TYPE.get(
         bescheid_type, "Flüchtlingsberatung / Asylberatung"
     )
+    audience = audience_for_age(age)
+    if audience:
+        suffix = _AUDIENCE_SUFFIX.get(question_language, _AUDIENCE_SUFFIX["en"])
+        name = f"{name} {suffix[audience]}"
     if question_language == "de":
         return f"Wo kann ich {name} finden?"
     return f"Where can I find {name}?"

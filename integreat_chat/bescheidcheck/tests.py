@@ -301,7 +301,7 @@ class ClassificationSanitizationTest(unittest.TestCase):
         from integreat_chat.bescheidcheck.static.prompts import Prompts
 
         slugs = re.findall(
-            r"^- `([a-z-]+)`",
+            r"^- `([a-zäöüß0-9-]+)`",
             Prompts.BESCHEID_CLASSIFICATION,
             re.MULTILINE,
         )

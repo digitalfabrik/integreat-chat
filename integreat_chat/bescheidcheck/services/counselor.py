@@ -62,12 +62,14 @@ async def counseling_question(
     bescheid_type: str,
     target_language: str,
     session: aiohttp.ClientSession | None = None,
+    age: int | None = None,
 ) -> dict:
     """
     Build the counseling question for a classified Bescheid type.
 
     param bescheid_type: the classified type (e.g. "bamf_simple_rejection")
     param target_language: BCP-47 tag of the user's target language
+    param age: age of the user, used to ask for youth or adult counseling
     return: dict with keys:
         - question:          the question to ask RAG (in EN or DE)
         - question_language: the language the question is phrased in
@@ -97,7 +99,7 @@ async def counseling_question(
                 translated_name,
             )
     question = counseling_question_for(
-        question_language, bescheid_type, translated_name
+        question_language, bescheid_type, translated_name, age=age
     )
     LOGGER.info("counseling: question for type=%s: %r", bescheid_type, question[:120])
 
@@ -105,4 +107,5 @@ async def counseling_question(
         "question": question,
         "question_language": question_language,
         "counseling_name": translated_name,
+        "bescheid_type": bescheid_type,
     }

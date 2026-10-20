@@ -542,6 +542,74 @@ async def _analyze_stream(
 
 
 @csrf_exempt
+async def generate_question(request, language: str = FALLBACK_LANGUAGE):
+    """
+    Build the counseling question for a Bescheid type and a user age.
+
+    Expects a JSON body with ``bescheid_type`` and ``age``. The age
+    decides whether the question asks for youth or adult counseling; the
+    resulting question is what the UI sends to
+    ``/chatanswers/extract_answer/``.
+    """
+    if request.method != "POST":
+        return JsonResponse(
+            {"status": "error", "reason": "Method not allowed. Use POST."},
+            status=405,
+        )
+
+    try:
+        payload = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"status": "error", "reason": "Invalid JSON body."}, status=422
+        )
+    if not isinstance(payload, dict):
+        return JsonResponse(
+            {"status": "error", "reason": "Invalid JSON body."}, status=422
+        )
+
+    bescheid_type = str(payload.get("bescheid_type") or "")
+    if bescheid_type not in settings.BESCHEID_SUPPORTED_TYPES:
+        bescheid_type = "unsupported"
+    raw_age = payload.get("age")
+    age: int | None = None
+    if raw_age not in (None, ""):
+        try:
+            age = int(raw_age)
+        except (TypeError, ValueError):
+            return JsonResponse(
+                {"status": "error", "reason": "Age must be a whole number."},
+                status=422,
+            )
+        if not 0 <= age <= 120:
+            return JsonResponse(
+                {"status": "error", "reason": "Age must be between 0 and 120."},
+                status=422,
+            )
+
+    target_language = _slug_token(language)
+    if target_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES:
+        target_language = FALLBACK_LANGUAGE
+
+    try:
+        result = await counselor.counseling_question(
+            bescheid_type=bescheid_type,
+            target_language=target_language,
+            age=age,
+        )
+    except Exception:
+        LOGGER.exception("Building the counseling question failed")
+        return JsonResponse(
+            {"status": "error", "reason": "Could not build the question."},
+            status=500,
+        )
+
+    result["status"] = "success"
+    result["age"] = age
+    return JsonResponse(result)
+
+
+@csrf_exempt
 async def analyze(request, language: str = FALLBACK_LANGUAGE):
     """
     Run the bescheidcheck pipeline (OCR, translate, classify) and look
