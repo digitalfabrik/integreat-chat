@@ -529,7 +529,7 @@
             <h2 id="resultTitle">Result</h2>
             <div class="muted" id="resultSubtitle"></div>
             <div id="progressBar" class="progress-bar" role="progressbar"
-                 aria-valuemin="0" aria-valuemax="4" aria-valuenow="0" hidden>
+                 aria-valuemin="0" aria-valuemax="3" aria-valuenow="0" hidden>
                 <div id="progressBarFill" class="progress-bar-fill"></div>
             </div>
             <span id="progressBarLabel" class="progress-bar-label muted" hidden></span>
@@ -621,7 +621,7 @@
         }
         if (lastRender && els.results && !els.results.hidden) {
             renderClassification(lastRender.classification);
-            renderCounseling(lastRender.data);
+            renderCounseling();
             renderResultSubtitle(lastRender.data);
             renderFinalLabel(lastRender.data);
         }
@@ -728,6 +728,7 @@
     document.addEventListener("click", closeMenus);
 
     let allFiles = [];
+    let counselingState = null;
     const ALL_FILE_URLS = new Map();
 
     function isImageFile(f) {
@@ -878,6 +879,7 @@
         els.resetBtn.style.display = "none";
         els.addPageBtn.style.display = "none";
         els.classification.innerHTML = "";
+        counselingState = null;
         els.counselingBox.innerHTML = "";
         els.counselingBox.classList.remove("visible");
         els.explanation.innerHTML = "";
@@ -941,16 +943,9 @@
         els.explanation.classList.add("visible");
     }
 
-    function renderCounseling(data) {
-        if (!data || !data.counseling) {
-            if (data && data.reason) {
-                els.counselingBox.innerHTML =
-                    `<span class="muted">${escapeHtml(data.reason)}</span>`;
-                els.counselingBox.classList.add("visible");
-            }
-            return;
-        }
-        const c = data.counseling;
+    function renderCounseling() {
+        const c = counselingState;
+        if (!c) return;
         const bits = [];
         if (c.counseling_name) {
             bits.push(`<span class="badge supported">${escapeHtml(c.counseling_name)}</span>`);
@@ -960,12 +955,44 @@
         }
         if (c.answer) {
             bits.push(`<div class="counseling-answer">${c.answer}</div>`);
+        } else if (c.pending) {
+            bits.push("<span class='muted'>Looking for an answer in your region…</span>");
+        } else if (c.failed) {
+            bits.push("<span class='muted'>No counseling information available.</span>");
         }
         if (!bits.length) {
             bits.push("<span class='muted'>No counseling information available.</span>");
         }
         els.counselingBox.innerHTML = `Recommended: ${bits.join(" ")}`;
         els.counselingBox.classList.add("visible");
+    }
+
+    async function fetchCounselingAnswer(counseling) {
+        if (!counseling || !counseling.question || !counseling.region) return;
+        counselingState.pending = true;
+        renderCounseling();
+        try {
+            const res = await fetch("/chatanswers/extract_answer/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message: counseling.question,
+                    language: langState.value,
+                    region: counseling.region,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok || data.status === "error") {
+                throw new Error(data.message || `HTTP ${res.status}`);
+            }
+            counselingState.answer = data.answer || "";
+            counselingState.failed = !counselingState.answer;
+        } catch (e) {
+            counselingState.failed = true;
+        } finally {
+            counselingState.pending = false;
+            renderCounseling();
+        }
     }
 
     async function renderCounselingPlaceholder() {
@@ -1096,9 +1123,8 @@
         ocr: "Reading & OCR",
         classify: "Classifying",
         translate: "Translating",
-        counseling: "Finding a counseling option",
     };
-    const TOTAL_STAGES = 4;
+    const TOTAL_STAGES = 3;
 
     const translationProgress = { done: 0, total: 0, translated: new Set() };
 
@@ -1176,8 +1202,7 @@
             text +=
                 " · OCR " + (data.stages.ocr || 0) + "s, " +
                 "classify " + (data.stages.classify || 0) + "s, " +
-                "translate " + (data.stages.translate || 0) + "s, " +
-                "counseling " + (data.stages.counseling || 0) + "s";
+                "translate " + (data.stages.translate || 0) + "s";
         }
         els.resultSubtitle.textContent = text;
     }
@@ -1197,7 +1222,7 @@
     function renderResult(data) {
         els.resultTitle.textContent = "Result";
         renderClassification(data.classification);
-        renderCounseling(data);
+        renderCounseling();
         renderExplanation(data.explanation);
         renderPages(data.pages);
         reconcileTranslationMarks();
@@ -1217,7 +1242,6 @@
 
         const fd = new FormData();
         files.forEach(f => fd.append("files", f));
-        fd.append("target_language", langState.value);
         if (regionValue) fd.append("region", regionValue);
 
         els.analyzeBtn.disabled = true;
@@ -1228,12 +1252,16 @@
         els.resultSubtitle.textContent = "";
         resetProgressUI();
         resetTranslationProgress();
+        counselingState = null;
         renderCounselingPlaceholder();
         renderExplanation(null);
 
         try {
             const started = performance.now();
-            const res = await fetch("/bescheidcheck/analyze/", { method: "POST", body: fd });
+            const res = await fetch(
+                `/bescheidcheck/analyze/${encodeURIComponent(langState.value)}/`,
+                { method: "POST", body: fd },
+            );
 
             const ctype = (res.headers.get("content-type") || "").toLowerCase();
             let isError = !res.ok;
@@ -1260,17 +1288,20 @@
                         (sum, page) => sum + (page.paragraphs ? page.paragraphs.length : 0),
                         0,
                     );
-                } else if (msg.event === "para") {
+                } else if (msg.event === "translation") {
                     applyParaTranslation(
                         msg.data.page,
-                        msg.data.para_id,
+                        msg.data.paragraph_id,
                         msg.data.html,
                     );
                     translationProgress.done += 1;
-                    translationProgress.translated.add(msg.data.para_id);
+                    translationProgress.translated.add(msg.data.paragraph_id);
                     updateTranslateTicker();
                 } else if (msg.event === "explanation") {
                     renderExplanation(msg.data);
+                } else if (msg.event === "counseling") {
+                    counselingState = Object.assign({}, msg.data);
+                    fetchCounselingAnswer(counselingState);
                 } else if (msg.event === "result") {
                     renderResult(msg.data);
                 } else if (msg.event === "error") {
