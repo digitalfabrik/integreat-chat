@@ -301,7 +301,7 @@ class ClassificationSanitizationTest(unittest.TestCase):
         from integreat_chat.bescheidcheck.static.prompts import Prompts
 
         slugs = re.findall(
-            r"^- `([a-z-]+)`",
+            r"^- `([a-zäöüß0-9-]+)`",
             Prompts.BESCHEID_CLASSIFICATION,
             re.MULTILINE,
         )
@@ -859,38 +859,20 @@ class AnalyzeEndpointTest(TestCase):
             ),
         )
 
-    def _post_analyze(self, files, **extra):
+    def _post_analyze(self, files, language="en", **extra):
         data: dict = {}
         for name, value in (extra or {}).items():
             data[name] = value
         files_list = files if isinstance(files, list) else [files]
         for i, f in enumerate(files_list):
             data[f"files{i}" if i else "files"] = f
-        return self.client.post("/bescheidcheck/analyze/", data=data)
+        return self.client.post(f"/bescheidcheck/analyze/{language}/", data=data)
 
     def test_unknown_region_returns_404(self):
         f = self._upload_helper()
-        res = self._post_analyze([f], region="nope", target_language="en")
+        res = self._post_analyze([f], region="nope", language="en")
         self.assertEqual(res.status_code, 404)
 
-    def test_unsupported_target_language_returns_422(self):
-        f = self._upload_helper()
-        res = self._post_analyze(
-            [f], region="region-slug-1", target_language="xx-INVALID"
-        )
-        self.assertEqual(res.status_code, 422)
-
-    def test_unsupported_extension_returns_422(self):
-        f = self._upload_helper("malware.exe", b"\x00\x01")
-        res = self._post_analyze([f], region="region-slug-1", target_language="en")
-        self.assertEqual(res.status_code, 422)
-
-    def test_too_many_files_returns_422(self):
-        files = [self._upload_helper(f"p{i}.png") for i in range(11)]
-        res = self._post_analyze(files, region="region-slug-1", target_language="en")
-        self.assertEqual(res.status_code, 422)
-
-    @mock.patch("integreat_chat.bescheidcheck.services.counselor.find_counseling")
     @mock.patch(
         "integreat_chat.bescheidcheck.services.translation.translate_document_stream"
     )
@@ -898,7 +880,42 @@ class AnalyzeEndpointTest(TestCase):
         "integreat_chat.bescheidcheck.services.classification.classify_bescheid"
     )
     @mock.patch("integreat_chat.bescheidcheck.services.ocr.convert_page")
-    def test_success_flow_with_rag_counseling(
+    def test_unsupported_language_falls_back_to_german(
+        self, mock_convert, mock_classify, mock_translate
+    ):
+        mock_convert.side_effect = lambda *a, **kw: _fake_ocr_page(kw.get("page_no", 1))
+        mock_classify.side_effect = lambda text, session=None: {
+            "type": "bamf_simple_rejection",
+            "confidence": 0.9,
+            "reason": "Test",
+        }
+        mock_translate.side_effect = _fake_paragraph_stream
+
+        f = self._upload_helper()
+        res = self._post_analyze([f], region="region-slug-1", language="xx-INVALID")
+        self.assertEqual(res.status_code, 200)
+        body = next(e for e in _drain_sse_response(res) if e["event"] == "result")
+        self.assertEqual(body["data"]["target_language"], "de")
+
+    def test_unsupported_extension_returns_422(self):
+        f = self._upload_helper("malware.exe", b"\x00\x01")
+        res = self._post_analyze([f], region="region-slug-1", language="en")
+        self.assertEqual(res.status_code, 422)
+
+    def test_too_many_files_returns_422(self):
+        files = [self._upload_helper(f"p{i}.png") for i in range(11)]
+        res = self._post_analyze(files, region="region-slug-1", language="en")
+        self.assertEqual(res.status_code, 422)
+
+    @mock.patch("integreat_chat.bescheidcheck.services.counselor.counseling_question")
+    @mock.patch(
+        "integreat_chat.bescheidcheck.services.translation.translate_document_stream"
+    )
+    @mock.patch(
+        "integreat_chat.bescheidcheck.services.classification.classify_bescheid"
+    )
+    @mock.patch("integreat_chat.bescheidcheck.services.ocr.convert_page")
+    def test_success_flow_with_counseling_question(
         self, mock_convert, mock_classify, mock_translate, mock_find
     ):
         mock_convert.side_effect = lambda *a, **kw: _fake_ocr_page(kw.get("page_no", 1))
@@ -909,20 +926,17 @@ class AnalyzeEndpointTest(TestCase):
         }
         mock_translate.side_effect = _fake_paragraph_stream
 
-        async def fake_find(region_slug, bescheid_type, target_language):
+        async def fake_find(bescheid_type, target_language):
             return {
-                "question": ("Where can I find Asylberatung?"),
-                "answer": f"<p>There are three offices in {region_slug}.</p>",
-                "answer_language": target_language,
+                "question": "Where can I find Asylberatung?",
+                "question_language": target_language,
                 "counseling_name": "Asylberatung",
-                "automatic_answers": True,
-                "details": [],
             }
 
         mock_find.side_effect = fake_find
 
         f = self._upload_helper()
-        res = self._post_analyze([f], region="region-slug-1", target_language="en")
+        res = self._post_analyze([f], region="region-slug-1", language="en")
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res["Content-Type"], "text/event-stream")
         events = _drain_sse_response(res)
@@ -932,17 +946,20 @@ class AnalyzeEndpointTest(TestCase):
         body = result_events[0]["data"]
         self.assertEqual(body["status"], "success")
         self.assertEqual(body["classification"]["type"], "bamf_simple_rejection")
-        # #498: the RAG-based counseling block should be part of the response
-        self.assertIn("counseling", body)
-        self.assertIsNotNone(body["counseling"])
-        self.assertIn("question", body["counseling"])
-        self.assertIn("answer", body["counseling"])
-        self.assertIn("region-slug-1", body["counseling"]["answer"])
-        # The pipeline must pass the classified type to find_counseling
+        # The question is streamed on its own event so the UI can ask
+        # /chatanswers/extract_answer/ for the answer itself.
+        counseling_events = [e for e in events if e["event"] == "counseling"]
+        self.assertEqual(len(counseling_events), 1)
+        counseling = counseling_events[0]["data"]
+        self.assertEqual(counseling["question"], "Where can I find Asylberatung?")
+        self.assertEqual(counseling["region"], "region-slug-1")
+        self.assertNotIn("answer", counseling)
+        self.assertEqual(body["counseling"], counseling)
+        # The pipeline must pass the classified type to the question builder
         mock_find.assert_awaited_once()
         kwargs = mock_find.call_args.kwargs
         self.assertEqual(kwargs["bescheid_type"], "bamf_simple_rejection")
-        self.assertEqual(kwargs["region_slug"], "region-slug-1")
+        self.assertEqual(kwargs["target_language"], "en")
         # Pages
         self.assertEqual(body["pages"][0]["page_no"], 1)
         self.assertIn("original_html", body["pages"][0])
@@ -950,9 +967,9 @@ class AnalyzeEndpointTest(TestCase):
         self.assertIn("stages", body)
         # Stage progress events must have streamed before the result.
         stage_events = [e for e in events if e["event"] == "stage"]
-        self.assertGreaterEqual(len(stage_events), 8)  # 4 stages x started + done
+        self.assertGreaterEqual(len(stage_events), 6)  # 3 stages x started + done
 
-    @mock.patch("integreat_chat.bescheidcheck.services.counselor.find_counseling")
+    @mock.patch("integreat_chat.bescheidcheck.services.counselor.counseling_question")
     @mock.patch(
         "integreat_chat.bescheidcheck.services.translation.translate_document_stream"
     )
@@ -960,11 +977,11 @@ class AnalyzeEndpointTest(TestCase):
         "integreat_chat.bescheidcheck.services.classification.classify_bescheid"
     )
     @mock.patch("integreat_chat.bescheidcheck.services.ocr.convert_page")
-    def test_rag_failure_does_not_break_pipeline(
+    def test_counseling_question_failure_does_not_break_pipeline(
         self, mock_convert, mock_classify, mock_translate, mock_find
     ):
         """
-        If the RAG counseling service raises, the analyze endpoint
+        If building the counseling question raises, the analyze endpoint
         should still return a 200 response with all other stages.
         """
         mock_convert.side_effect = lambda *a, **kw: _fake_ocr_page(1)
@@ -977,13 +994,13 @@ class AnalyzeEndpointTest(TestCase):
         # -- Translation mock -----------------------------------------
         mock_translate.side_effect = _fake_paragraph_stream
 
-        async def boom(region_slug, bescheid_type, target_language):
-            raise RuntimeError("RAG service is down")
+        async def boom(bescheid_type, target_language):
+            raise RuntimeError("Question building is down")
 
         mock_find.side_effect = boom
 
         f = self._upload_helper()
-        res = self._post_analyze([f], region="region-slug-1", target_language="en")
+        res = self._post_analyze([f], region="region-slug-1", language="en")
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res["Content-Type"], "text/event-stream")
         events = _drain_sse_response(res)
@@ -991,8 +1008,9 @@ class AnalyzeEndpointTest(TestCase):
         self.assertEqual(len(result_events), 1)
         body = result_events[0]["data"]
         self.assertEqual(body["status"], "success")
-        # Counseling should be None (the pipeline catches the RAG error)
+        # Counseling should be None (the pipeline catches the error)
         self.assertIsNone(body["counseling"])
+        self.assertEqual([e for e in events if e["event"] == "counseling"], [])
         # But the other stages still succeed
         self.assertEqual(body["classification"]["type"], "dublin_decision")
         self.assertEqual(body["pages"][0]["page_no"], 1)
@@ -1014,7 +1032,7 @@ class AnalyzeEndpointTest(TestCase):
 
         mock_convert.side_effect = boom
         f = self._upload_helper()
-        res = self._post_analyze([f], region="region-slug-1", target_language="en")
+        res = self._post_analyze([f], region="region-slug-1", language="en")
         # Validation passed -> it is a stream (200), even though the
         # pipeline itself failed.
         self.assertEqual(res.status_code, 200)
@@ -1052,12 +1070,12 @@ class AnalyzeEndpointTest(TestCase):
                 new=_fake_paragraph_stream,
             ),
             mock.patch(
-                "integreat_chat.bescheidcheck.services.counselor.find_counseling",
+                "integreat_chat.bescheidcheck.services.counselor.counseling_question",
                 new=mock.AsyncMock(return_value=None),
             ),
         ):
             f = self._upload_helper()
-            res = self._post_analyze([f], region="region-slug-1", target_language="en")
+            res = self._post_analyze([f], region="region-slug-1", language="en")
             self.assertEqual(res["Content-Type"], "text/event-stream")
             # These headers exist so a reverse proxy (nginx) doesn't
             # hold back the event stream.
@@ -1066,7 +1084,7 @@ class AnalyzeEndpointTest(TestCase):
             # Consume (executes) the generator.
             _drain_sse_response(res)
 
-    @mock.patch("integreat_chat.bescheidcheck.services.counselor.find_counseling")
+    @mock.patch("integreat_chat.bescheidcheck.services.counselor.counseling_question")
     @mock.patch(
         "integreat_chat.bescheidcheck.services.translation.translate_document_stream"
     )
@@ -1095,13 +1113,13 @@ class AnalyzeEndpointTest(TestCase):
         }
         mock_translate.side_effect = _fake_paragraph_stream
 
-        async def null_find(region_slug, bescheid_type, target_language):
+        async def null_find(bescheid_type, target_language):
             return None
 
         mock_find.side_effect = null_find
 
         f = self._upload_helper()
-        res = self._post_analyze([f], region="region-slug-1", target_language="en")
+        res = self._post_analyze([f], region="region-slug-1", language="en")
         events = _drain_sse_response(res)
         # (1) pages scaffold
         scaffold_events = [e for e in events if e["event"] == "pages"]
@@ -1117,11 +1135,11 @@ class AnalyzeEndpointTest(TestCase):
         # _fake_ocr_page has two paragraphs.
         self.assertEqual(len(scaffold[0]["paragraphs"]), 2)
         # (2) para events (2 for the single fake page)
-        para_events = [e for e in events if e["event"] == "para"]
+        para_events = [e for e in events if e["event"] == "translation"]
         self.assertEqual(len(para_events), 2)
         for ev in para_events:
             self.assertIn("page", ev["data"])
-            self.assertIn("para_id", ev["data"])
+            self.assertIn("paragraph_id", ev["data"])
             self.assertIn("html", ev["data"])
             self.assertEqual(ev["data"]["page"], 0)
         # (3) result
@@ -1141,7 +1159,7 @@ class AnalyzeEndpointTest(TestCase):
         `res.json()` them without parsing a stream.
         """
         f = self._upload_helper()
-        res = self._post_analyze([f], region="nope", target_language="en")
+        res = self._post_analyze([f], region="nope", language="en")
         self.assertEqual(res.status_code, 404)
         self.assertEqual(res["Content-Type"], "application/json")
         data = json.loads(res.content.decode())
@@ -1494,117 +1512,62 @@ class PinnedSearchTermTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(rag_request.search_term, "finding X")
 
 
-class DublinCounselingSearchTermTest(unittest.IsolatedAsyncioTestCase):
+class CounselingQuestionBuilderTest(unittest.IsolatedAsyncioTestCase):
     """
-    ``find_counseling`` always builds a full, translated question
+    ``counseling_question`` always builds a full, translated question
     ("Wo kann ich {name} finden?" / "Where can I find {name}?") and sends
     BOTH that question and the (translated) service-name badge to the
     front-end. For a type with a canonical search phrase (dublin_decision
-    → "Dublin Verfahren Beratung"), the question is built from that phrase,
-    the search term is pinned, and the badge is the same phrase translated
-    to the user's language.
+    → "Dublin Verfahren Beratung"), the question is built from that
+    phrase. Answering it is the UI's job via /chatanswers/extract_answer/.
     """
 
-    async def _run_find_counseling(
+    async def _run(
         self,
         bescheid_type: str,
         target_language: str,
         *,
         translated_display: str = "Dublin procedure counseling",
-    ) -> tuple[dict, dict]:
-        """
-        Drive ``find_counseling`` to completion by stubbing AnswerService
-        and the LLM translation helper. Returns (response_dict, rag_request).
-
-        The real ``RagRequest.prepare`` is let through — with
-        ``skip_language_detection=True`` (set inside find_counseling) it just
-        sets each message's ``likely_message_language`` to the GUI language
-        without calling any LLM, so no external network is needed.
-
-        ``translated_display`` is what the LLM would return when asked to
-        translate the canonical phrase (or generic name) into the question
-        language. For Dublin we use a Dublin-specific string; for non-Dublin
-        callers we use the generic refugee/asylum one.
-        """
+    ) -> dict:
         from integreat_chat.bescheidcheck.services import counselor
 
-        captured: dict = {}
-
-        class _FakeResponse:
-            automatic_answers = True
-
-            async def as_dict(self_inner):
-                return {"answer": "mocked answer", "rag_language": "en", "details": []}
-
-        class _FakeAnswerService:
-            def __init__(self_inner, rag_request):
-                captured["rag_request"] = rag_request
-                self_inner._response = _FakeResponse()
-
-            async def extract_answer(self_inner):
-                return self_inner._response
-
-        with (
-            mock.patch.object(
-                counselor, "AnswerService", _FakeAnswerService, create=True
-            ),
-            mock.patch.object(
-                counselor,
-                "_translate_counseling_name",
-                new=mock.AsyncMock(
-                    side_effect=lambda name, lang, session=None: (
-                        translated_display
-                        if lang.lower() not in ("de", "deu", "de-de")
-                        else name
-                    )
-                ),
+        with mock.patch.object(
+            counselor,
+            "_translate_counseling_name",
+            new=mock.AsyncMock(
+                side_effect=lambda name, lang, session=None: (
+                    translated_display
+                    if lang.lower() not in ("de", "deu", "de-de")
+                    else name
+                )
             ),
         ):
-            response = await counselor.find_counseling(
-                "region-slug-1", bescheid_type, target_language
-            )
+            return await counselor.counseling_question(bescheid_type, target_language)
 
-        self.assertIn("rag_request", captured)
-        return response, captured["rag_request"]
-
-    async def test_dublin_english_full_question_pinned_and_badge(self):
-        """Dublin + EN: full EN question (from translated phrase), pinned."""
-        response, rag_request = await self._run_find_counseling("dublin_decision", "en")
-        # The RAG search term is the full English question, built from the
-        # Dublin-specific (translated) phrase — not the generic one. Pinned.
-        self.assertEqual(
-            rag_request.search_term, "Where can I find Dublin procedure counseling?"
-        )
-        self.assertFalse(rag_request.pinned_search_term)
-        # The front-end receives the same full question and the badge.
+    async def test_dublin_english_full_question_and_badge(self):
+        """Dublin + EN: full EN question, built from the translated phrase."""
+        response = await self._run("dublin_decision", "en")
         self.assertEqual(
             response["question"], "Where can I find Dublin procedure counseling?"
         )
         self.assertEqual(response["counseling_name"], "Dublin procedure counseling")
+        self.assertEqual(response["question_language"], "en")
 
     async def test_dublin_german_full_question_verbatim(self):
-        """Dublin + DE: full German question, pinned, badge = verbatim phrase."""
-        response, rag_request = await self._run_find_counseling("dublin_decision", "de")
-        self.assertEqual(
-            rag_request.search_term, "Wo kann ich Dublin Verfahren Beratung finden?"
-        )
-        self.assertFalse(rag_request.pinned_search_term)
+        """Dublin + DE: full German question, badge = verbatim phrase."""
+        response = await self._run("dublin_decision", "de")
         self.assertEqual(
             response["question"], "Wo kann ich Dublin Verfahren Beratung finden?"
         )
         self.assertEqual(response["counseling_name"], "Dublin Verfahren Beratung")
+        self.assertEqual(response["question_language"], "de")
 
-    async def test_non_dublin_english_not_pinned_keeps_generic_name(self):
-        """Non-Dublin + EN: question not pinned, badge = generic name."""
-        response, rag_request = await self._run_find_counseling(
+    async def test_non_dublin_english_keeps_generic_name(self):
+        """Non-Dublin + EN: badge = generic name."""
+        response = await self._run(
             "bamf_simple_rejection",
             "en",
             translated_display="Refugee counseling / asylum counseling",
-        )
-        self.assertFalse(rag_request.pinned_search_term)
-        self.assertEqual(
-            rag_request.search_term,
-            "Where can I find Refugee counseling / asylum counseling?",
         )
         self.assertEqual(
             response["question"],
@@ -1614,57 +1577,12 @@ class DublinCounselingSearchTermTest(unittest.IsolatedAsyncioTestCase):
             response["counseling_name"], "Refugee counseling / asylum counseling"
         )
 
-
-class CounselorLlmClientErrorTest(unittest.IsolatedAsyncioTestCase):
-    """
-    When the LLM server is down (``LlmApiClient.chat_prompt`` raises
-    ``LlmClientError``) — most likely via the shallow-search fallback
-    ``AnswerService.get_documents`` for a pinned counseling search term —
-    ``find_counseling`` must NOT let the exception escape. It returns the
-    same dict shape as the normal no-answer path: ``answer == ""``,
-    ``automatic_answers is False``, ``details == []``. The view never sees
-    a ``LlmClientError``.
-    """
-
-    async def test_extract_answer_raising_yields_empty_counseling_dict(self):
-        from integreat_chat.bescheidcheck.services import counselor
-        from integreat_chat.chatanswers.services.llmapi import LlmClientError
-
-        class _FakeAnswerService:
-            def __init__(self_inner, rag_request):
-                self_inner._rag_request = rag_request
-
-            async def extract_answer(self_inner):
-                raise LlmClientError(
-                    "LLM server returned HTTP 500", status=500
-                )
-
-        with (
-            mock.patch.object(
-                counselor, "AnswerService", _FakeAnswerService, create=True
-            ),
-            mock.patch.object(
-                counselor,
-                "_translate_counseling_name",
-                new=mock.AsyncMock(
-                    side_effect=lambda name, lang, session=None: name
-                ),
-            ),
-        ):
-            response = await counselor.find_counseling(
-                "region-slug-1", "dublin_decision", "en"
-            )
-
-        # Same shape as the normal no-answer path.
-        self.assertEqual(response["answer"], "")
-        self.assertFalse(response["automatic_answers"])
-        self.assertEqual(response["details"], [])
-        self.assertEqual(response["answer_language"], "en")
-        # The counseling name is still set (the mock returns the original
-        # German phrase unchanged) and the question is built so the UI can
-        # show the badge even though no answer came back.
-        self.assertEqual(response["counseling_name"], "Dublin Verfahren Beratung")
-        self.assertTrue(response["question"])
+    async def test_language_outside_de_en_asks_in_english(self):
+        """The question itself is only phrased in German or English."""
+        response = await self._run(
+            "bamf_simple_rejection", "ar", translated_display="X"
+        )
+        self.assertEqual(response["question_language"], "en")
 
 
 class SanitizeHtmlTest(TestCase):
@@ -1930,14 +1848,14 @@ class AnalyzeSseSanitizationTest(TestCase):
             ),
         )
 
-    def _post_analyze(self, files, **extra):
+    def _post_analyze(self, files, language="en", **extra):
         data: dict = {}
         for name, value in (extra or {}).items():
             data[name] = value
         files_list = files if isinstance(files, list) else [files]
         for i, f in enumerate(files_list):
             data[f"files{i}" if i else "files"] = f
-        return self.client.post("/bescheidcheck/analyze/", data=data)
+        return self.client.post(f"/bescheidcheck/analyze/{language}/", data=data)
 
     def test_stream_response_does_not_carry_csp_header(self) -> None:
         """
@@ -1954,7 +1872,7 @@ class AnalyzeSseSanitizationTest(TestCase):
                 "integreat_chat.bescheidcheck.services.translation.translate_document_stream"
             ) as mtr,
             mock.patch(
-                "integreat_chat.bescheidcheck.services.counselor.find_counseling"
+                "integreat_chat.bescheidcheck.services.counselor.counseling_question"
             ) as mfind,
         ):
             mc.side_effect = lambda *a, **kw: _fake_ocr_page(kw.get("page_no", 1))
@@ -1967,7 +1885,7 @@ class AnalyzeSseSanitizationTest(TestCase):
             mfind.side_effect = lambda **kw: None
 
             res = self._post_analyze(
-                [self._upload_helper()], region="region-slug-1", target_language="en"
+                [self._upload_helper()], region="region-slug-1", language="en"
             )
             self.assertEqual(res["Content-Type"], "text/event-stream")
             self.assertNotIn("Content-Security-Policy", res)
@@ -2032,7 +1950,7 @@ class AnalyzeSseSanitizationTest(TestCase):
                 "integreat_chat.bescheidcheck.services.translation.translate_document_stream"
             ) as mtr,
             mock.patch(
-                "integreat_chat.bescheidcheck.services.counselor.find_counseling"
+                "integreat_chat.bescheidcheck.services.counselor.counseling_question"
             ) as mfind,
         ):
             mc.side_effect = lambda *a, **kw: _fake_ocr_page(kw.get("page_no", 1))
@@ -2045,10 +1963,10 @@ class AnalyzeSseSanitizationTest(TestCase):
             mfind.side_effect = lambda **kw: None
 
             res = self._post_analyze(
-                [self._upload_helper()], region="region-slug-1", target_language="en"
+                [self._upload_helper()], region="region-slug-1", language="en"
             )
             events = _drain_sse_response(res)
-            para_events = [e for e in events if e["event"] == "para"]
+            para_events = [e for e in events if e["event"] == "translation"]
             self.assertTrue(para_events, f"expected para events, got: {events}")
             for ev in para_events:
                 html = ev["data"]["html"]
@@ -2110,7 +2028,7 @@ class AnalyzeSseSanitizationTest(TestCase):
                 "integreat_chat.bescheidcheck.services.translation.translate_document_stream"
             ) as mtr,
             mock.patch(
-                "integreat_chat.bescheidcheck.services.counselor.find_counseling"
+                "integreat_chat.bescheidcheck.services.counselor.counseling_question"
             ) as mfind,
         ):
             mcls.side_effect = lambda *a, **kw: {
@@ -2122,7 +2040,7 @@ class AnalyzeSseSanitizationTest(TestCase):
             mfind.side_effect = lambda **kw: None
 
             res = self._post_analyze(
-                [self._upload_helper()], region="region-slug-1", target_language="en"
+                [self._upload_helper()], region="region-slug-1", language="en"
             )
             events = _drain_sse_response(res)
             pages_events = [e for e in events if e["event"] == "pages"]
@@ -2183,7 +2101,7 @@ class AnalyzeSseSanitizationTest(TestCase):
                 "integreat_chat.bescheidcheck.services.translation.translate_document_stream"
             ) as mtr,
             mock.patch(
-                "integreat_chat.bescheidcheck.services.counselor.find_counseling"
+                "integreat_chat.bescheidcheck.services.counselor.counseling_question"
             ) as mfind,
         ):
             mcls.side_effect = lambda *a, **kw: {
@@ -2195,7 +2113,7 @@ class AnalyzeSseSanitizationTest(TestCase):
             mfind.side_effect = lambda **kw: None
 
             res = self._post_analyze(
-                [self._upload_helper()], region="region-slug-1", target_language="en"
+                [self._upload_helper()], region="region-slug-1", language="en"
             )
             events = _drain_sse_response(res)
             result_events = [e for e in events if e["event"] == "result"]
@@ -2276,7 +2194,7 @@ class AnalyzeSseSanitizationTest(TestCase):
                 "integreat_chat.bescheidcheck.services.translation.translate_document_stream"
             ) as mtr,
             mock.patch(
-                "integreat_chat.bescheidcheck.services.counselor.find_counseling"
+                "integreat_chat.bescheidcheck.services.counselor.counseling_question"
             ) as mfind,
         ):
             mcls.side_effect = lambda *a, **kw: {
@@ -2288,7 +2206,7 @@ class AnalyzeSseSanitizationTest(TestCase):
             mfind.side_effect = lambda **kw: None
 
             res = self._post_analyze(
-                [self._upload_helper()], region="region-slug-1", target_language="en"
+                [self._upload_helper()], region="region-slug-1", language="en"
             )
             events = _drain_sse_response(res)
             result = next(e for e in events if e["event"] == "result")["data"]

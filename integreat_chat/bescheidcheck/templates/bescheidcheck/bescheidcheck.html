@@ -325,6 +325,25 @@
             align-items: center;
             gap: 8px;
         }
+        .age-field {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            height: 38px;
+            padding: 0 10px;
+            color: #1b1f27;
+        }
+        .age-field input {
+            width: 72px;
+            height: 30px;
+            padding: 0 8px;
+            font: inherit;
+            color: inherit;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .age-field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
         .menu-btn {
             position: relative;
             display: inline-flex;
@@ -404,6 +423,20 @@
         .ext-info-toggle[aria-checked="true"] { background: var(--accent-soft); border-color: var(--accent); }
         .ext-info-toggle[aria-checked="true"] .dot { background: var(--accent); }
         .bc-classification-hidden { display: none !important; }
+        .explanation {
+            display: none;
+            margin-bottom: 16px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 8px;
+        }
+        .explanation.visible { display: block; }
+        .explanation h3 { margin: 0 0 8px; font-size: 1rem; }
+        .explanation-body > :first-child { margin-top: 0; }
+        .explanation-body > :last-child { margin-bottom: 0; }
+        .explanation-body ul { margin: 8px 0 0; padding-left: 22px; }
+        .explanation-body a { color: var(--accent); word-break: break-all; }
     </style>
 </head>
 <body>
@@ -415,6 +448,12 @@
         </div>
 
         <div class="menu-wrap">
+            <label class="age-field" for="ageInput">
+                <span>Age</span>
+                <input type="number" id="ageInput" name="age" min="0" max="120"
+                       inputmode="numeric" placeholder="e.g. 25">
+            </label>
+
             {% if counseling_regions %}
             <div class="menu" id="regionMenu" aria-label="Region menu">
                 <button type="button" class="menu-btn" id="regionBtn"
@@ -515,13 +554,15 @@
             <h2 id="resultTitle">Result</h2>
             <div class="muted" id="resultSubtitle"></div>
             <div id="progressBar" class="progress-bar" role="progressbar"
-                 aria-valuemin="0" aria-valuemax="4" aria-valuenow="0" hidden>
+                 aria-valuemin="0" aria-valuemax="3" aria-valuenow="0" hidden>
                 <div id="progressBarFill" class="progress-bar-fill"></div>
             </div>
             <span id="progressBarLabel" class="progress-bar-label muted" hidden></span>
             <div id="classification" class="counseling visible"></div>
             <div class="counseling" id="counselingBox"></div>
         </div>
+
+        <div id="explanation" class="explanation"></div>
 
         <div class="columns">
             <div>
@@ -562,6 +603,7 @@
         langBtn: document.getElementById("langBtn"),
         langValue: document.getElementById("langValue"),
         langList: document.getElementById("langList"),
+        ageInput: document.getElementById("ageInput"),
         regionMenu: document.getElementById("regionMenu"),
         regionBtn: document.getElementById("regionBtn"),
         regionValue: document.getElementById("regionValue"),
@@ -583,6 +625,7 @@
         progressBarLabel: document.getElementById("progressBarLabel"),
         classification: document.getElementById("classification"),
         counselingBox: document.getElementById("counselingBox"),
+        explanation: document.getElementById("explanation"),
         originals: document.getElementById("originals"),
         translated: document.getElementById("translated"),
         extInfoToggle: document.getElementById("extInfoToggle"),
@@ -604,7 +647,7 @@
         }
         if (lastRender && els.results && !els.results.hidden) {
             renderClassification(lastRender.classification);
-            renderCounseling(lastRender.data);
+            renderCounseling();
             renderResultSubtitle(lastRender.data);
             renderFinalLabel(lastRender.data);
         }
@@ -711,6 +754,7 @@
     document.addEventListener("click", closeMenus);
 
     let allFiles = [];
+    let counselingState = null;
     const ALL_FILE_URLS = new Map();
 
     function isImageFile(f) {
@@ -861,8 +905,11 @@
         els.resetBtn.style.display = "none";
         els.addPageBtn.style.display = "none";
         els.classification.innerHTML = "";
+        counselingState = null;
         els.counselingBox.innerHTML = "";
         els.counselingBox.classList.remove("visible");
+        els.explanation.innerHTML = "";
+        els.explanation.classList.remove("visible");
         els.originals.innerHTML = "";
         els.translated.innerHTML = "";
         els.progress.textContent = "";
@@ -909,16 +956,22 @@
         els.classification.classList.toggle("bc-classification-hidden", !extendedInfo);
     }
 
-    function renderCounseling(data) {
-        if (!data || !data.counseling) {
-            if (data && data.reason) {
-                els.counselingBox.innerHTML =
-                    `<span class="muted">${escapeHtml(data.reason)}</span>`;
-                els.counselingBox.classList.add("visible");
-            }
+    function renderExplanation(ex) {
+        if (!ex || !ex.content) {
+            els.explanation.innerHTML = "";
+            els.explanation.classList.remove("visible");
             return;
         }
-        const c = data.counseling;
+        const parts = [];
+        if (ex.title) parts.push(`<h3>${escapeHtml(ex.title)}</h3>`);
+        parts.push(`<div class="explanation-body">${ex.content}</div>`);
+        els.explanation.innerHTML = parts.join("");
+        els.explanation.classList.add("visible");
+    }
+
+    function renderCounseling() {
+        const c = counselingState;
+        if (!c) return;
         const bits = [];
         if (c.counseling_name) {
             bits.push(`<span class="badge supported">${escapeHtml(c.counseling_name)}</span>`);
@@ -928,12 +981,82 @@
         }
         if (c.answer) {
             bits.push(`<div class="counseling-answer">${c.answer}</div>`);
+        } else if (c.pending) {
+            bits.push("<span class='muted'>Looking for an answer in your region…</span>");
+        } else if (c.failed) {
+            bits.push("<span class='muted'>No counseling information available.</span>");
         }
         if (!bits.length) {
             bits.push("<span class='muted'>No counseling information available.</span>");
         }
         els.counselingBox.innerHTML = `Recommended: ${bits.join(" ")}`;
         els.counselingBox.classList.add("visible");
+    }
+
+    function currentAge() {
+        const raw = els.ageInput ? els.ageInput.value.trim() : "";
+        if (!raw) return null;
+        const age = Number.parseInt(raw, 10);
+        if (!Number.isInteger(age) || age < 0 || age > 120) return null;
+        return age;
+    }
+
+    async function fetchGeneratedQuestion(counseling) {
+        const age = currentAge();
+        if (age === null) return null;
+        try {
+            const res = await fetch(
+                `/bescheidcheck/generate_question/${encodeURIComponent(langState.value)}/`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        bescheid_type: counseling.bescheid_type || "unsupported",
+                        age: age,
+                    }),
+                },
+            );
+            const data = await res.json();
+            if (!res.ok || data.status === "error") return null;
+            return data;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function fetchCounselingAnswer(counseling) {
+        if (!counseling || !counseling.question || !counseling.region) return;
+        counselingState.pending = true;
+        renderCounseling();
+        const generated = await fetchGeneratedQuestion(counseling);
+        if (generated && generated.question) {
+            counseling.question = generated.question;
+            counselingState.question = generated.question;
+            counselingState.counseling_name = generated.counseling_name;
+            renderCounseling();
+        }
+        try {
+            const res = await fetch("/chatanswers/extract_answer/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message: counseling.question,
+                    language: langState.value,
+                    region: counseling.region,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok || data.status === "error") {
+                throw new Error(data.message || `HTTP ${res.status}`);
+            }
+            counselingState.answer = data.answer || "";
+            counselingState.failed = !counselingState.answer;
+        } catch (e) {
+            counselingState.failed = true;
+        } finally {
+            counselingState.pending = false;
+            renderCounseling();
+        }
     }
 
     async function renderCounselingPlaceholder() {
@@ -1064,9 +1187,8 @@
         ocr: "Reading & OCR",
         classify: "Classifying",
         translate: "Translating",
-        counseling: "Finding a counseling option",
     };
-    const TOTAL_STAGES = 4;
+    const TOTAL_STAGES = 3;
 
     const translationProgress = { done: 0, total: 0, translated: new Set() };
 
@@ -1144,8 +1266,7 @@
             text +=
                 " · OCR " + (data.stages.ocr || 0) + "s, " +
                 "classify " + (data.stages.classify || 0) + "s, " +
-                "translate " + (data.stages.translate || 0) + "s, " +
-                "counseling " + (data.stages.counseling || 0) + "s";
+                "translate " + (data.stages.translate || 0) + "s";
         }
         els.resultSubtitle.textContent = text;
     }
@@ -1165,7 +1286,8 @@
     function renderResult(data) {
         els.resultTitle.textContent = "Result";
         renderClassification(data.classification);
-        renderCounseling(data);
+        renderCounseling();
+        renderExplanation(data.explanation);
         renderPages(data.pages);
         reconcileTranslationMarks();
         els.progressBarFill.style.width = "100%";
@@ -1184,7 +1306,6 @@
 
         const fd = new FormData();
         files.forEach(f => fd.append("files", f));
-        fd.append("target_language", langState.value);
         if (regionValue) fd.append("region", regionValue);
 
         els.analyzeBtn.disabled = true;
@@ -1195,11 +1316,16 @@
         els.resultSubtitle.textContent = "";
         resetProgressUI();
         resetTranslationProgress();
+        counselingState = null;
         renderCounselingPlaceholder();
+        renderExplanation(null);
 
         try {
             const started = performance.now();
-            const res = await fetch("/bescheidcheck/analyze/", { method: "POST", body: fd });
+            const res = await fetch(
+                `/bescheidcheck/analyze/${encodeURIComponent(langState.value)}/`,
+                { method: "POST", body: fd },
+            );
 
             const ctype = (res.headers.get("content-type") || "").toLowerCase();
             let isError = !res.ok;
@@ -1226,15 +1352,20 @@
                         (sum, page) => sum + (page.paragraphs ? page.paragraphs.length : 0),
                         0,
                     );
-                } else if (msg.event === "para") {
+                } else if (msg.event === "translation") {
                     applyParaTranslation(
                         msg.data.page,
-                        msg.data.para_id,
+                        msg.data.paragraph_id,
                         msg.data.html,
                     );
                     translationProgress.done += 1;
-                    translationProgress.translated.add(msg.data.para_id);
+                    translationProgress.translated.add(msg.data.paragraph_id);
                     updateTranslateTicker();
+                } else if (msg.event === "explanation") {
+                    renderExplanation(msg.data);
+                } else if (msg.event === "counseling") {
+                    counselingState = Object.assign({}, msg.data);
+                    fetchCounselingAnswer(counselingState);
                 } else if (msg.event === "result") {
                     renderResult(msg.data);
                 } else if (msg.event === "error") {

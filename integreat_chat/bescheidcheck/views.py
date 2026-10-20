@@ -4,20 +4,21 @@ Views for the bescheidcheck app (issues #494, #495, #498).
 Two endpoints under /bescheidcheck/:
 
 - ``GET /bescheidcheck/``          -> the standalone user interface
-- ``POST /bescheidcheck/analyze/`` -> full pipeline (OCR, translate,
-                                        classify, RAG-based counseling
-                                        lookup); stateless
+- ``POST /bescheidcheck/analyze/<language>/`` -> full pipeline (OCR,
+                                        translate, classify, explanation
+                                        lookup); stateless. ``language``
+                                        defaults to German.
 
 The analyze endpoint is a synchronous request/response so the browser can
 show a spinner for the duration it takes, without poll endpoints for
 jobs (chosen during planning).
 
-Counseling (issue #498) is now part of the analyze response:
-the pipeline builds a generic question from the classified Bescheid
-type ("Where can I find [Flüchtlingsberatung]?") and asks the existing
-``AnswerService`` of the ``chatanswers`` app for an answer in the
-user's region, which is then returned in the JSON response
-("counseling" key).
+Counseling (issue #498): the pipeline builds a generic question from
+the classified Bescheid type ("Where can I find [Flüchtlingsberatung]?")
+and streams it in the ``counseling`` event. Answering it is a separate
+round trip — the UI posts the question to the existing
+``/chatanswers/extract_answer/`` endpoint, which is also where the LLM
+summary of the question is produced.
 """
 
 import json
@@ -36,13 +37,22 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
-from .services import classification, counselor, ocr, page_order, translation
+from .services import (
+    classification,
+    counselor,
+    explanation,
+    ocr,
+    page_order,
+    translation,
+)
 from .services.sanitizer import sanitize_html
 
 LOGGER = logging.getLogger(__name__)
 
 ALLOWED_IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".heic")
 ALLOWED_PDF_EXT = ".pdf"
+
+FALLBACK_LANGUAGE = "de"
 
 
 def _content_security_policy(nonce: str) -> str:
@@ -394,10 +404,10 @@ async def _analyze_stream(
                 translations_by_page[page_idx][para_id] = html
                 paragraphs_done += 1
                 yield sse_event(
-                    "para",
+                    "translation",
                     {
                         "page": page_idx,
-                        "para_id": para_id,
+                        "paragraph_id": para_id,
                         "html": html,
                     },
                 )
@@ -475,35 +485,29 @@ async def _analyze_stream(
             }
         )
 
-        t0 = time.monotonic()
-        yield _stage_event({"stage": "counseling", "index": 4, "status": "started"})
+        try:
+            bescheid_explanation = await explanation.get_explanation(
+                cls_result.get("type", "unsupported"),
+                target_language=target_language,
+            )
+        except Exception:
+            LOGGER.exception("Explanation lookup failed")
+            bescheid_explanation = None
+        if bescheid_explanation is not None:
+            yield sse_event("explanation", bescheid_explanation)
+
         counseling = None
         try:
-            counseling = await counselor.find_counseling(
-                region_slug=region_slug,
+            counseling = await counselor.counseling_question(
                 bescheid_type=cls_result.get("type", "unsupported"),
                 target_language=target_language,
             )
         except Exception:
-            LOGGER.exception("Counseling (RAG) failed; returning an empty block")
+            LOGGER.exception("Building the counseling question failed")
             counseling = None
-        else:
-            if counseling is not None:
-                LOGGER.info(
-                    "analyze: counseling ready (automatic_answers=%s)",
-                    counseling.get("automatic_answers"),
-                )
-        co_elapsed = round(time.monotonic() - t0, 2)
-        stages["counseling"] = co_elapsed
-        LOGGER.info("analyze: counseling finished in %.2fs", co_elapsed)
-        yield _stage_event(
-            {
-                "stage": "counseling",
-                "index": 4,
-                "status": "done",
-                "seconds": co_elapsed,
-            }
-        )
+        if counseling is not None:
+            counseling["region"] = region_slug
+            yield sse_event("counseling", counseling)
 
         total_elapsed = round(time.monotonic() - start, 2)
         LOGGER.info(
@@ -519,6 +523,7 @@ async def _analyze_stream(
             "target_language": target_language,
             "region": region_slug,
             "counseling": counseling,
+            "explanation": bescheid_explanation,
             "pages": [
                 {
                     "page_no": page.page_no,
@@ -537,10 +542,83 @@ async def _analyze_stream(
 
 
 @csrf_exempt
-async def analyze(request):
+async def generate_question(request, language: str = FALLBACK_LANGUAGE):
     """
-    Run the full bescheidcheck pipeline (OCR, classify, translate, and
-    RAG-based counseling lookup).
+    Build the counseling question for a Bescheid type and a user age.
+
+    Expects a JSON body with ``bescheid_type`` and ``age``. The age
+    decides whether the question asks for youth or adult counseling; the
+    resulting question is what the UI sends to
+    ``/chatanswers/extract_answer/``.
+    """
+    if request.method != "POST":
+        return JsonResponse(
+            {"status": "error", "reason": "Method not allowed. Use POST."},
+            status=405,
+        )
+
+    try:
+        payload = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"status": "error", "reason": "Invalid JSON body."}, status=422
+        )
+    if not isinstance(payload, dict):
+        return JsonResponse(
+            {"status": "error", "reason": "Invalid JSON body."}, status=422
+        )
+
+    bescheid_type = str(payload.get("bescheid_type") or "")
+    if bescheid_type not in settings.BESCHEID_SUPPORTED_TYPES:
+        bescheid_type = "unsupported"
+    raw_age = payload.get("age")
+    age: int | None = None
+    if raw_age not in (None, ""):
+        try:
+            age = int(raw_age)
+        except (TypeError, ValueError):
+            return JsonResponse(
+                {"status": "error", "reason": "Age must be a whole number."},
+                status=422,
+            )
+        if not 0 <= age <= 120:
+            return JsonResponse(
+                {"status": "error", "reason": "Age must be between 0 and 120."},
+                status=422,
+            )
+
+    target_language = _slug_token(language)
+    if target_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES:
+        target_language = FALLBACK_LANGUAGE
+
+    try:
+        result = await counselor.counseling_question(
+            bescheid_type=bescheid_type,
+            target_language=target_language,
+            age=age,
+        )
+    except Exception:
+        LOGGER.exception("Building the counseling question failed")
+        return JsonResponse(
+            {"status": "error", "reason": "Could not build the question."},
+            status=500,
+        )
+
+    result["status"] = "success"
+    result["age"] = age
+    return JsonResponse(result)
+
+
+@csrf_exempt
+async def analyze(request, language: str = FALLBACK_LANGUAGE):
+    """
+    Run the bescheidcheck pipeline (OCR, translate, classify) and look
+    up the explanation page.
+
+    ``language`` comes from the URL (``/bescheidcheck/analyze/<language>/``)
+    and is the target language for both the translation and the
+    explanation page. Unsupported or missing languages fall back to
+    German.
 
     Input validation failures return plain ``JsonResponse`` (404/422);
     otherwise the pipeline streams ``stage`` / ``result`` / ``error``
@@ -553,7 +631,14 @@ async def analyze(request):
         )
 
     region_slug = _slug_token(request.POST.get("region") or "")
-    target_language = _slug_token(request.POST.get("target_language") or "")
+    target_language = _slug_token(language)
+    if target_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES:
+        LOGGER.info(
+            "analyze: unsupported language %r, falling back to %s",
+            language,
+            FALLBACK_LANGUAGE,
+        )
+        target_language = FALLBACK_LANGUAGE
     files: list = []
     for _key, uploads in request.FILES.lists():
         if isinstance(uploads, (list, tuple)):
@@ -568,20 +653,6 @@ async def analyze(request):
                 "reason": "Unknown region. Please pick a valid region.",
             },
             status=404,
-        )
-    if (
-        not target_language
-        or target_language not in settings.TRANSLATION_MODEL_SUPPORTED_LANGUAGES
-    ):
-        return JsonResponse(
-            {
-                "status": "error",
-                "reason": (
-                    "The selected target language is not supported. "
-                    "Please choose one of the languages in the form."
-                ),
-            },
-            status=422,
         )
     try:
         _validate_files(files)

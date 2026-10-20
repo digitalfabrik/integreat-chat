@@ -21,10 +21,31 @@ COUNSELING_SERVICE_BY_TYPE: dict[str, str] = {
 }
 
 
+# In Germany, youth counseling services are available up to this age.
+YOUTH_COUNSELING_MAX_AGE = 27
+
+_AUDIENCE_SUFFIX: dict[str, dict[str, str]] = {
+    "de": {"minors": "für Jugendliche", "adults": "für Erwachsene"},
+    "en": {"minors": "for minors", "adults": "for adults"},
+}
+
+
+def audience_for_age(age: int | None) -> str | None:
+    """
+    Map an age to the counseling audience ("minors" or "adults").
+
+    Returns ``None`` when no age is known.
+    """
+    if age is None:
+        return None
+    return "minors" if age <= YOUTH_COUNSELING_MAX_AGE else "adults"
+
+
 def counseling_question_for(
     question_language: str,
     bescheid_type: str,
     counseling_name: str | None = None,
+    age: int | None = None,
 ) -> str:
     """
     Build a generic question asking where the user can find the
@@ -32,11 +53,15 @@ def counseling_question_for(
 
     ``counseling_name`` lets the caller pass in an already-localized
     service name so the final question is coherent in the chosen
-    language.
+    language. ``age`` narrows the question to youth or adult counseling.
     """
     name = counseling_name or COUNSELING_SERVICE_BY_TYPE.get(
         bescheid_type, "Flüchtlingsberatung / Asylberatung"
     )
+    audience = audience_for_age(age)
+    if audience:
+        suffix = _AUDIENCE_SUFFIX.get(question_language, _AUDIENCE_SUFFIX["en"])
+        name = f"{name} {suffix[audience]}"
     if question_language == "de":
         return f"Wo kann ich {name} finden?"
     return f"Where can I find {name}?"
@@ -65,54 +90,55 @@ Familienschutz), gilt immer `familienasyl-familienschutz`.
 
 Bei ablehnenden BAMF-Bescheiden gilt: Wird die Abschiebung in einen
 anderen Dublin-Staat angeordnet, ist es immer
-`dublin-ueberstellungsentscheidung`, auch wenn der Antrag als unzulässig
-abgelehnt wird. Wird ein Antrag teils als offensichtlich unbegründet und
-teils als einfach unbegründet abgelehnt, gilt `ablehnung-offensichtlich-unbegruendet`.
+`zuständigkeitsbestimmungsverfahren-dublin-überstellungsentscheidung`,
+auch wenn der Antrag als unzulässig abgelehnt wird. Wird ein Antrag
+teils als offensichtlich unbegründet und teils als einfach unbegründet
+abgelehnt, gilt `ablehnung-offensichtlich-unbegründet-2`.
 
 Schreiben, in denen das BAMF noch nichts entschieden hat (Einladungen,
 Fragen, Aufforderungen, Protokolle), sind nie ein Bescheid mit
 Entscheidung. Ordne sie dem passenden Schreiben-Typ zu, auch wenn darin
 mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
 
-- `anhoerung-zulaessigkeit-termin`
+- `anhörung-zur-zulässigkeit-persönlicher-termin`
   Das Schreiben ist eine Einladung des BAMF zu einem persönlichen
   Gespräch über die Zulässigkeit des Asylantrags. Es geht darum, ob ein
   anderer Staat zuständig ist, ob bereits in einem anderen Staat Schutz
   gewährt wurde oder ob ein anderer Staat als sicher gilt, nicht um die
   Fluchtgründe. Es nennt einen Termin mit Datum, Uhrzeit und Ort.
 
-- `anhoerung-zulaessigkeit-schriftlich`
+- `anhörung-zur-zulässigkeit-schriftliche-antwort`
   Das Schreiben ist eine Aufforderung des BAMF, sich schriftlich zur
   Zulässigkeit des Asylantrags zu äußern. Es geht darum, ob ein anderer
   Staat zuständig ist, ob bereits in einem anderen Staat Schutz gewährt
   wurde oder ob ein anderer Staat als sicher gilt, nicht um die
   Fluchtgründe. Es nennt eine Frist für die Antwort, aber keinen Termin.
 
-- `niederschrift-asylantragstellung`
+- `niederschrift-zur-asylantragstellung`
   Das Schreiben ist die Niederschrift (das Protokoll) des BAMF über die
   förmliche Asylantragstellung. Es enthält die Personalien und erste
   Angaben der asylsuchenden Person, zum Beispiel zu Reiseweg, Familie
   und Dokumenten.
 
-- `schriftliche-anhoerung`
+- `schriftliche-anhörung`
   Das Schreiben ist eine Aufforderung des BAMF, sich schriftlich zu den
   Asylgründen oder zu bestimmten Fragen zu äußern, statt persönlich
   angehört zu werden. Es enthält meist Fragen oder einen Fragebogen und
   eine Frist für die Antwort.
 
-- `aufforderung-betreiben-verfahren`
+- `aufforderung-zum-betreiben-des-verfahrens`
   Das Schreiben ist eine Aufforderung des BAMF, das Asylverfahren zu
   betreiben (Betreibensaufforderung), zum Beispiel Unterlagen zu schicken,
   sich zu äußern oder zu einem Termin zu kommen. Es warnt, dass der
   Asylantrag als zurückgenommen gilt und das Verfahren eingestellt wird,
   wenn die Person nicht innerhalb der Frist reagiert.
 
-- `ladung-anhoerung`
+- `ladung-anhörung`
   Das Schreiben ist eine Einladung des BAMF zur persönlichen Anhörung im
   Asylverfahren. Es nennt einen Termin, einen Ort und Hinweise zum Ablauf
   der Anhörung.
 
-- `niederschrift-anhoerung`
+- `niederschrift-über-die-anhörung`
   Das Schreiben ist die Niederschrift (das Protokoll) des BAMF über die
   persönliche Anhörung im Asylverfahren. Es gibt die Fragen des BAMF und
   die Antworten der asylsuchenden Person wieder.
@@ -121,11 +147,11 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
   Das Schreiben ist ein BAMF-Bescheid, nach dem die asylsuchende Person
   als Asylberechtigte anerkannt wird.
 
-- `zuerkennung-fluechtlingseigenschaft`
+- `zuerkennung-flüchtlingseigenschaft`
   Das Schreiben ist ein BAMF-Bescheid, nach dem der asylsuchenden Person
   die Flüchtlingseigenschaft zuerkannt wird.
 
-- `zuerkennung-subsidiaerer-schutzstatus`
+- `zuerkennung-subsidiärer-schutzstatus`
   Das Schreiben ist ein BAMF-Bescheid, nach dem der asylsuchenden Person
   subsidiärer Schutz zuerkannt wird.
 
@@ -144,12 +170,12 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
   (einfach) unbegründet abgelehnt wird. Es enthält eine Abschiebungs-
   androhung mit einer Ausreisefrist von in der Regel 30 Tagen.
 
-- `ablehnung-offensichtlich-unbegruendet`
+- `ablehnung-offensichtlich-unbegründet-2`
   Das Schreiben ist ein BAMF-Bescheid, nach dem der Asylantrag als
   offensichtlich unbegründet abgelehnt wird. Es enthält eine Abschiebungs-
   androhung mit einer verkürzten Ausreisefrist von in der Regel einer Woche.
 
-- `ablehnung-unzulaessig`
+- `ablehnung-unzulässig`
   Das Schreiben ist ein BAMF-Bescheid, nach dem der Asylantrag als
   unzulässig abgelehnt wird, ohne dass die Asylgründe inhaltlich geprüft
   werden, zum Beispiel weil bereits in einem anderen Staat Schutz gewährt
@@ -162,41 +188,41 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
   verpasst oder eine Aufforderung nicht beantwortet wurde. Meist enthält
   er eine Abschiebungsandrohung.
 
-- `entzug-widerruf-ruecknahme-ladung`
+- `entzug-widerruf-rücknahme-ladung-zum-termin`
   Das Schreiben ist eine Einladung des BAMF zu einem persönlichen
   Gespräch, weil das BAMF prüft, ob es einen zuerkannten Schutz entzieht,
   widerruft oder zurücknimmt. Es nennt einen Termin mit Datum, Uhrzeit
   und Ort.
 
-- `entzug-widerruf-ruecknahme-stellungnahme`
+- `entzug-widerruf-rücknahme-aufforderung-zur-stellungnahme`
   Das Schreiben ist eine Aufforderung des BAMF, sich schriftlich zu
   äußern, weil das BAMF prüft, ob es einen zuerkannten Schutz entzieht,
   widerruft oder zurücknimmt. Es nennt eine Frist für die schriftliche
   Antwort, aber keinen Termin.
 
-- `entzug-widerruf-ruecknahme-entscheidung`
+- `entzug-widerruf-rücknahme-entscheidung`
   Das Schreiben ist ein BAMF-Bescheid, in dem ein zuerkannter Schutz
   entzogen, aberkannt, widerrufen oder zurückgenommen wird.
 
-- `dublin-ueberstellungsentscheidung`
+- `zuständigkeitsbestimmungsverfahren-dublin-überstellungsentscheidung`
   Das Schreiben ist ein BAMF-Bescheid, nach dem ein anderer Dublin-Staat
   für das Asylverfahren zuständig ist. Es ordnet die Abschiebung
   (Überstellung) in diesen Staat an.
 
-- `dublin-ueberstellungsfrist-verlaengert`
+- `zuständigkeitsbestimmungsverfahren-dublin-überstellungsfrist-verlängert`
   Das Schreiben ist eine Mitteilung des BAMF im Dublin-Verfahren, dass
   die Frist für die Überstellung in den zuständigen Dublin-Staat
   verlängert wurde, zum Beispiel auf 18 Monate, weil die Person als
   flüchtig oder untergetaucht gilt.
 
-- `dublin-ueberstellungsfrist-abgelaufen`
+- `zuständigkeitsbestimmungsverfahren-dublin-überstellungsfrist-abgelaufen`
   Das Schreiben ist eine Mitteilung des BAMF im Dublin-Verfahren, dass
   die Überstellungsfrist abgelaufen ist. Deutschland ist jetzt für den
   Asylantrag zuständig, und das Asylverfahren wird in Deutschland
   weitergeführt. Oft wird dabei die frühere Dublin-Entscheidung
   aufgehoben.
 
-- `abschlussmitteilung`
+- `bamf-abschlussmitteilung`
   Das Schreiben ist eine Mitteilung des BAMF, dass das Asylverfahren
   abgeschlossen ist und die Entscheidung unanfechtbar oder bestandskräftig
   geworden ist. Es enthält selbst keine neue Entscheidung über den
