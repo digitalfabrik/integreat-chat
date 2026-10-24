@@ -574,6 +574,19 @@
                 <div id="translated"></div>
             </div>
         </div>
+
+        <div class="panel" id="extractionPanel" hidden>
+            <h2>Extraction Results</h2>
+            <table id="extractionTable">
+                <thead>
+                    <tr>
+                        <th scope="col">Field</th>
+                        <th scope="col">Extracted Value</th>
+                    </tr>
+                </thead>
+                <tbody id="extractionBody"></tbody>
+            </table>
+        </div>
     </div>
 
     <div class="panel" style="margin-top:16px">
@@ -629,6 +642,8 @@
         originals: document.getElementById("originals"),
         translated: document.getElementById("translated"),
         extInfoToggle: document.getElementById("extInfoToggle"),
+        extractionPanel: document.getElementById("extractionPanel"),
+        extractionBody: document.getElementById("extractionBody"),
     };
 
     const EXTENDED_INFO_KEY = "bcExtendedInfo";
@@ -651,6 +666,7 @@
             renderResultSubtitle(lastRender.data);
             renderFinalLabel(lastRender.data);
         }
+        els.extractionPanel.hidden = !(extendedInfo && lastRender && !els.results.hidden);
     }
 
     let lastRender = null;
@@ -912,6 +928,8 @@
         els.explanation.classList.remove("visible");
         els.originals.innerHTML = "";
         els.translated.innerHTML = "";
+        els.extractionPanel.hidden = true;
+        els.extractionBody.replaceChildren();
         els.progress.textContent = "";
         els.progressBarLabel.hidden = true;
         updateFileCount();
@@ -1283,12 +1301,65 @@
         }
     }
 
+    function formatExtractionValue(value) {
+        if (value === null || value === undefined || value === "") {
+            return "—";
+        }
+        if (typeof value === "boolean") {
+            return value ? "Yes" : "No";
+        }
+        if (Array.isArray(value)) {
+            return value.length
+                ? value.map(formatExtractionValue).join("; ")
+                : "—";
+        }
+        if (typeof value === "object") {
+            return JSON.stringify(value);
+        }
+        return String(value);
+    }
+
+    function renderExtraction(extractedData) {
+        els.extractionBody.replaceChildren();
+
+        const entries = extractedData &&
+            typeof extractedData === "object" &&
+            !Array.isArray(extractedData)
+            ? Object.entries(extractedData)
+            : [];
+
+        if (!entries.length) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+            cell.colSpan = 2;
+            cell.textContent = "No extraction data available.";
+            row.appendChild(cell);
+            els.extractionBody.appendChild(row);
+        } else {
+            for (const [key, value] of entries) {
+                const row = document.createElement("tr");
+                const label = document.createElement("th");
+                const cell = document.createElement("td");
+
+                label.scope = "row";
+                label.textContent = key.replace(/_/g, " ");
+                cell.textContent = formatExtractionValue(value);
+
+                row.append(label, cell);
+                els.extractionBody.appendChild(row);
+            }
+        }
+
+        els.extractionPanel.hidden = !extendedInfo;
+    }
+
     function renderResult(data) {
         els.resultTitle.textContent = "Result";
         renderClassification(data.classification);
         renderCounseling();
         renderExplanation(data.explanation);
         renderPages(data.pages);
+        renderExtraction(data.extracted_data);
         reconcileTranslationMarks();
         els.progressBarFill.style.width = "100%";
         els.progressBar.classList.remove("indeterminate");
@@ -1314,6 +1385,9 @@
         els.results.hidden = false;
         els.resultTitle.textContent = "Processing…";
         els.resultSubtitle.textContent = "";
+        lastRender = null;
+        els.extractionPanel.hidden = true;
+        els.extractionBody.replaceChildren();
         resetProgressUI();
         resetTranslationProgress();
         counselingState = null;
