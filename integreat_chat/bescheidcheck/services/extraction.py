@@ -110,6 +110,7 @@ _SUPPORTED_BESCHEID_TYPES = {
     "bamf_simple_rejection",
     "obviously_unfounded_inadmissible",
     "dublin_decision",
+    "zuständigkeitsbestimmungsverfahren-dublin-überstellungsentscheidung",
 }
 
 

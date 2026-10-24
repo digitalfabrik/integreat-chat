@@ -2513,3 +2513,28 @@ class StructuredExtractionTest(unittest.TestCase):
                     self.assertEqual(out, {})
 
         mock_run.assert_not_awaited()
+
+    def test_current_dublin_identifier_reaches_extraction_llm(self):
+        from integreat_chat.bescheidcheck.services import extraction
+
+        bescheid_type = (
+            "zuständigkeitsbestimmungsverfahren-dublin-überstellungsentscheidung"
+        )
+        mock_run = mock.AsyncMock(return_value={"authority": "BAMF"})
+        with mock.patch(
+            "integreat_chat.bescheidcheck.services.extraction._run_extraction_prompt",
+            new=mock_run,
+        ):
+            out = asyncio.run(
+                extraction.extract_structured_data(
+                    document_text=(
+                        "<p>Die Abschiebung nach Schweden wird angeordnet.</p>"
+                    ),
+                    bescheid_type=bescheid_type,
+                    model="test-model",
+                )
+            )
+
+        mock_run.assert_awaited_once()
+        self.assertEqual(out["authority"], "BAMF")
+        self.assertEqual(out["document_type"], bescheid_type)
