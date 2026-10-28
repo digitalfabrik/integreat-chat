@@ -1,0 +1,226 @@
+"""Extract structured data from Bescheide."""
+
+import logging
+
+import aiohttp
+
+from integreat_chat.chatanswers.services.llmapi import (
+    LlmApiClient,
+    LlmClientError,
+    LlmMessage,
+    LlmPrompt,
+    LlmResponse,
+)
+
+from ..static.prompts import Prompts
+from .taxonomy import is_supported_bescheid_type, render_taxonomy_context
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _text_from_html(html: str, max_chars: int = 20000) -> str:
+    """Strip HTML, collapse whitespace, and limit the text length."""
+    import re
+
+    html = re.sub(
+        r"<(script|style)\b.*?</\1>",
+        " ",
+        html,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+    text = re.sub(r"<[^>]+>", " ", html)
+    text = " ".join(text.split())
+
+    if len(text) > max_chars:
+        text = text[:max_chars] + " …"
+
+    return text
+
+
+_EXTRACTION_SCHEMA = {
+    "type": "object",
+    "name": "bescheid_structured_extraction",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "authority": {
+                "type": ["string", "null"],
+            },
+            "topic": {
+                "type": ["string", "null"],
+            },
+            "required_action": {
+                "type": ["string", "null"],
+            },
+            "requested_documents": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+            "deadline_detected": {
+                "type": "boolean",
+            },
+            "deadline_date": {
+                "type": ["string", "null"],
+            },
+            "deadline_text": {
+                "type": ["string", "null"],
+            },
+            "consequences": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+            "appointment": {
+                "type": ["string", "null"],
+            },
+            "legal_procedure": {
+                "type": ["string", "null"],
+            },
+            "risk_level": {
+                "type": ["string", "null"],
+                "enum": ["low", "medium", "high", None],
+            },
+            "confidence": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+            },
+        },
+        "required": [
+            "authority",
+            "topic",
+            "required_action",
+            "requested_documents",
+            "deadline_detected",
+            "deadline_date",
+            "deadline_text",
+            "consequences",
+            "appointment",
+            "legal_procedure",
+            "risk_level",
+            "confidence",
+        ],
+    },
+}
+
+
+def get_extraction_schema(bescheid_type: str) -> dict | None:
+    """Return the extraction schema, or None for unsupported types."""
+    if not is_supported_bescheid_type(bescheid_type):
+        return None
+
+    return _EXTRACTION_SCHEMA
+
+
+def _nullable_string(value: object) -> str | None:
+    """Return a stripped string, or None for empty or invalid values."""
+    if not isinstance(value, str):
+        return None
+
+    value = value.strip()
+    return value or None
+
+
+def _string_list(value: object) -> list[str]:
+    """Return non-empty strings from a list."""
+    if not isinstance(value, list):
+        return []
+
+    return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+
+
+def _normalize_extracted_data(data: dict, bescheid_type: str) -> dict:
+    """Normalize extracted values for the API response."""
+    confidence = data.get("confidence")
+
+    if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
+        confidence = 0.0
+
+    confidence = max(0.0, min(1.0, float(confidence)))
+
+    risk_level = _nullable_string(data.get("risk_level"))
+    if risk_level is not None:
+        risk_level = risk_level.lower()
+
+    if risk_level not in {"low", "medium", "high"}:
+        risk_level = None
+
+    return {
+        "authority": _nullable_string(data.get("authority")),
+        "document_type": bescheid_type,
+        "topic": _nullable_string(data.get("topic")),
+        "required_action": _nullable_string(data.get("required_action")),
+        "requested_documents": _string_list(data.get("requested_documents")),
+        "deadline_detected": data.get("deadline_detected") is True,
+        "deadline_date": _nullable_string(data.get("deadline_date")),
+        "deadline_text": _nullable_string(data.get("deadline_text")),
+        "consequences": _string_list(data.get("consequences")),
+        "appointment": _nullable_string(data.get("appointment")),
+        "legal_procedure": _nullable_string(data.get("legal_procedure")),
+        "risk_level": risk_level,
+        "confidence": confidence,
+    }
+
+
+async def _run_extraction_prompt(
+    prompt_text: str,
+    json_schema: dict,
+    model: str,
+    session: aiohttp.ClientSession | None = None,
+) -> dict:
+    """Run the extraction prompt and parse its JSON response."""
+    prompt = LlmPrompt(
+        model,
+        [LlmMessage(prompt_text)],
+        json_schema=json_schema,
+    )
+    llm = LlmApiClient()
+
+    try:
+        if session is None:
+            async with aiohttp.ClientSession() as owned_session:
+                raw = await llm.chat_prompt(owned_session, prompt)
+        else:
+            raw = await llm.chat_prompt(session, prompt)
+    except LlmClientError as exc:
+        LOGGER.warning("Structured extraction failed: %s", exc)
+        return {}
+
+    return LlmResponse(raw).as_dict()
+
+
+async def extract_structured_data(
+    document_text: str,
+    bescheid_type: str,
+    model: str,
+    session: aiohttp.ClientSession | None = None,
+) -> dict:
+    """Extract structured data from OCR text for a supported document type."""
+    text = _text_from_html(document_text)
+
+    if not text:
+        return {}
+
+    json_schema = get_extraction_schema(bescheid_type)
+    if json_schema is None:
+        return {}
+
+    prompt_text = Prompts.BESCHEID_EXTRACTION.format(
+        bescheid_type=bescheid_type,
+        document_text=text,
+        taxonomy_context=render_taxonomy_context(bescheid_type),
+    )
+
+    extracted_data = await _run_extraction_prompt(
+        prompt_text=prompt_text,
+        json_schema=json_schema,
+        model=model,
+        session=session,
+    )
+
+    if not extracted_data:
+        return {}
+
+    return _normalize_extracted_data(
+        extracted_data,
+        bescheid_type,
+    )

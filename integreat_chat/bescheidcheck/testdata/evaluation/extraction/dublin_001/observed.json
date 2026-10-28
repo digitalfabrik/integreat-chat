@@ -1,0 +1,40 @@
+{
+  "model": "verdigado-think",
+  "run": {
+    "phase": "taxonomy_foundation",
+    "branch": "feat/bescheidcheck-taxonomy",
+    "capture_method": "manual_transcription"
+  },
+  "classification": {
+    "type": "dublin_decision",
+    "confidence": 1.0,
+    "reason": "Der Bescheid ordnet die Abschiebung nach Schweden an, da Anhaltspunkte für die Zuständigkeit eines anderen Staates gemäß der Dublin III-VO vorliegen."
+  },
+  "extracted_data": {
+    "authority": "Bundesamt für Migration und Flüchtlinge",
+    "document_type": "dublin_decision",
+    "topic": "Ablehnung des Asylantrags als unzulässig und Anordnung der Abschiebung nach Schweden aufgrund der Dublin III-VO",
+    "required_action": null,
+    "requested_documents": [],
+    "deadline_detected": false,
+    "deadline_date": null,
+    "deadline_text": null,
+    "consequences": [
+      "Der Antrag wird als unzulässig abgelehnt",
+      "Die Abschiebung nach Schweden wird angeordnet",
+      "Das gesetzliche Einreise- und Aufenthaltsverbot gemäß § 11 Abs. 1 des Aufenthaltsgesetzes wird auf 3 Monate ab dem Tag der Abschiebung befristet"
+    ],
+    "appointment": null,
+    "legal_procedure": null,
+    "risk_level": "high",
+    "confidence": 1.0
+  },
+  "timing": {
+    "ocr": 2.39,
+    "translate": 0.01,
+    "classification": 25.99,
+    "extraction": 60.93,
+    "counseling": 0.01,
+    "total": 89.32
+  }
+}

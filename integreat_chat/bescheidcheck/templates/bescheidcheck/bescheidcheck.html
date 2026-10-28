@@ -437,6 +437,34 @@
         .explanation-body > :last-child { margin-bottom: 0; }
         .explanation-body ul { margin: 8px 0 0; padding-left: 22px; }
         .explanation-body a { color: var(--accent); word-break: break-all; }
+        .extracted {
+            display: none;
+            margin-bottom: 16px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .extracted.visible { display: block; }
+        .extracted h3 { margin: 0 0 8px; font-size: 1rem; }
+        .extracted table { width: 100%; border-collapse: collapse; }
+        .extracted th, .extracted td {
+            text-align: left;
+            vertical-align: top;
+            padding: 6px 8px;
+            border-top: 1px solid var(--border);
+        }
+        .extracted tr:first-child th, .extracted tr:first-child td { border-top: 0; }
+        .extracted th { width: 38%; font-weight: 600; }
+        .extracted ul { margin: 0; padding-left: 18px; }
+        .extracted .risk {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+        }
+        .extracted .risk-high { border-color: #b3261e; color: #b3261e; }
+        .extracted .risk-medium { border-color: #9a6700; color: #9a6700; }
+        .extracted .risk-low { border-color: #1a7f37; color: #1a7f37; }
     </style>
 </head>
 <body>
@@ -564,6 +592,8 @@
 
         <div id="explanation" class="explanation"></div>
 
+        <div id="extractedData" class="extracted"></div>
+
         <div class="columns">
             <div>
                 <h2>Original (OCR)</h2>
@@ -626,6 +656,7 @@
         classification: document.getElementById("classification"),
         counselingBox: document.getElementById("counselingBox"),
         explanation: document.getElementById("explanation"),
+        extractedData: document.getElementById("extractedData"),
         originals: document.getElementById("originals"),
         translated: document.getElementById("translated"),
         extInfoToggle: document.getElementById("extInfoToggle"),
@@ -910,6 +941,8 @@
         els.counselingBox.classList.remove("visible");
         els.explanation.innerHTML = "";
         els.explanation.classList.remove("visible");
+        els.extractedData.innerHTML = "";
+        els.extractedData.classList.remove("visible");
         els.originals.innerHTML = "";
         els.translated.innerHTML = "";
         els.progress.textContent = "";
@@ -967,6 +1000,61 @@
         parts.push(`<div class="explanation-body">${ex.content}</div>`);
         els.explanation.innerHTML = parts.join("");
         els.explanation.classList.add("visible");
+    }
+
+    const EXTRACTED_FIELDS = [
+        ["authority", "Authority"],
+        ["topic", "Topic"],
+        ["required_action", "What you need to do"],
+        ["requested_documents", "Requested documents"],
+        ["deadline_text", "Deadline"],
+        ["deadline_date", "Deadline date"],
+        ["appointment", "Appointment"],
+        ["consequences", "Consequences"],
+        ["legal_procedure", "Legal remedy"],
+        ["risk_level", "Risk"],
+    ];
+
+    function extractedValueHtml(key, value) {
+        if (Array.isArray(value)) {
+            return "<ul>" + value.map(
+                item => `<li>${escapeHtml(String(item))}</li>`
+            ).join("") + "</ul>";
+        }
+        if (key === "risk_level") {
+            return `<span class="risk risk-${escapeHtml(value)}">`
+                + `${escapeHtml(value)}</span>`;
+        }
+        return escapeHtml(String(value));
+    }
+
+    function renderExtractedData(data) {
+        const rows = [];
+        if (data) {
+            for (const [key, label] of EXTRACTED_FIELDS) {
+                const value = data[key];
+                if (value == null || value === "") continue;
+                if (Array.isArray(value) && !value.length) continue;
+                rows.push(
+                    `<tr><th scope="row">${escapeHtml(label)}</th>`
+                    + `<td>${extractedValueHtml(key, value)}</td></tr>`
+                );
+            }
+            if (data.deadline_detected && !data.deadline_text && !data.deadline_date) {
+                rows.push(
+                    '<tr><th scope="row">Deadline</th>'
+                    + "<td>A deadline was detected, but no date was given.</td></tr>"
+                );
+            }
+        }
+        if (!rows.length) {
+            els.extractedData.innerHTML = "";
+            els.extractedData.classList.remove("visible");
+            return;
+        }
+        els.extractedData.innerHTML =
+            "<h3>Key details</h3><table><tbody>" + rows.join("") + "</tbody></table>";
+        els.extractedData.classList.add("visible");
     }
 
     function renderCounseling() {
@@ -1187,8 +1275,9 @@
         ocr: "Reading & OCR",
         classify: "Classifying",
         translate: "Translating",
+        extraction: "Extracting details",
     };
-    const TOTAL_STAGES = 3;
+    const TOTAL_STAGES = 4;
 
     const translationProgress = { done: 0, total: 0, translated: new Set() };
 
@@ -1266,7 +1355,8 @@
             text +=
                 " · OCR " + (data.stages.ocr || 0) + "s, " +
                 "classify " + (data.stages.classify || 0) + "s, " +
-                "translate " + (data.stages.translate || 0) + "s";
+                "translate " + (data.stages.translate || 0) + "s, " +
+                "extraction " + (data.stages.extraction || 0) + "s";
         }
         els.resultSubtitle.textContent = text;
     }
@@ -1288,6 +1378,7 @@
         renderClassification(data.classification);
         renderCounseling();
         renderExplanation(data.explanation);
+        renderExtractedData(data.extracted_data);
         renderPages(data.pages);
         reconcileTranslationMarks();
         els.progressBarFill.style.width = "100%";

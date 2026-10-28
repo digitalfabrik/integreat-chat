@@ -1,18 +1,4 @@
-"""
-Bescheid classification for the bescheidcheck pipeline (issues #496, #497).
-
-Uses the LLM with a json_schema response_format to get a structured
-classification for the document as a whole:
-
-    {
-      "type": "<one of the supported slugs or 'unsupported'>",
-      "confidence": <float 0..1>,
-      "reason": "<one sentence>"
-    }
-
-If the response cannot be parsed, we return a safe default classification
-so the API can still return a useful response to the user.
-"""
+"""Classify Bescheide using structured LLM responses."""
 
 import logging
 import re
@@ -30,17 +16,15 @@ from integreat_chat.chatanswers.services.llmapi import (
 )
 
 from ..static.prompts import Prompts
+from .taxonomy import render_classification_taxonomy_context
 
 LOGGER = logging.getLogger(__name__)
 
-# Slugs we always accept in the "type" field of the response.
 _TYPE_ALLOWLIST = set(settings.BESCHEID_SUPPORTED_TYPES)
 
 
 def _safe_clamp_float(value, default: float = 0.0) -> float:
-    """
-    Coerce a JSON-able value into a float in [0, 1].
-    """
+    """Convert a value to a float and clamp it to [0, 1]."""
     try:
         out = float(value)
     except (TypeError, ValueError):
@@ -53,9 +37,7 @@ def _safe_clamp_float(value, default: float = 0.0) -> float:
 
 
 def _sanitize_classification(raw: dict) -> dict:
-    """
-    Force the response into the safe shape we promise to callers.
-    """
+    """Normalize the response type, confidence, and reason."""
     raw = raw if isinstance(raw, dict) else {}
     raw_type = (raw.get("type") or "").strip()
     if raw_type not in _TYPE_ALLOWLIST:
@@ -71,10 +53,7 @@ def _sanitize_classification(raw: dict) -> dict:
 
 
 def _text_from_html(html: str, max_chars: int = 20000) -> str:
-    """
-    Strip HTML tags and collapse whitespace. Cap the length so we don't
-    send unreasonably long prompts to the LLM.
-    """
+    """Strip HTML, collapse whitespace, and limit the text length."""
     html = re.sub(
         r"<(script|style)\b.*?</\1>", " ", html, flags=re.DOTALL | re.IGNORECASE
     )
@@ -86,9 +65,7 @@ def _text_from_html(html: str, max_chars: int = 20000) -> str:
 
 
 def _build_json_schema() -> dict:
-    """
-    Build the OpenAI compatible json_schema for classification.
-    """
+    """Build the classification response schema."""
     return {
         "type": "object",
         "name": "bescheid_classification",
@@ -115,13 +92,11 @@ async def classify_bescheid(
     document_text: str,
     session: aiohttp.ClientSession | None = None,
 ) -> dict:
-    """
-    Classify a Bescheid by running the LLM prompt with the json_schema.
+    """Classify OCR text and return type, confidence, and reason.
 
-    param document_text: full OCR'd text of the document (any HTML is
-        stripped by the LLM-side prompt)
-    param session: optional shared aiohttp session
-    return: sanitized dict with keys type/confidence/reason
+    Args:
+        document_text: Document text, optionally containing HTML.
+        session: Optional shared HTTP session.
     """
     document_text = _text_from_html(document_text)
     if not document_text:
@@ -133,7 +108,18 @@ async def classify_bescheid(
 
     prompt = LlmPrompt(
         settings.BESCHEID_CLASSIFICATION_MODEL,
-        [LlmMessage(Prompts.BESCHEID_CLASSIFICATION.format(document_text))],
+        [
+            LlmMessage(
+                Prompts.BESCHEID_CLASSIFICATION.format(
+                    document_text,
+                    allowed_types=" | ".join(
+                        f'"{document_type}"'
+                        for document_type in sorted(_TYPE_ALLOWLIST)
+                    ),
+                    taxonomy_context=render_classification_taxonomy_context(),
+                )
+            )
+        ],
         json_schema=_build_json_schema(),
     )
     llm = LlmApiClient()
