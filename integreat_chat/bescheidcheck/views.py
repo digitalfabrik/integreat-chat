@@ -485,6 +485,8 @@ async def _analyze_stream(
             }
         )
 
+        t0 = time.monotonic()
+        yield _stage_event({"stage": "counseling", "index": 4, "status": "started"})
         try:
             bescheid_explanation = await explanation.get_explanation(
                 cls_result.get("type", "unsupported"),
@@ -508,6 +510,17 @@ async def _analyze_stream(
         if counseling is not None:
             counseling["region"] = region_slug
             yield sse_event("counseling", counseling)
+
+        counseling_elapsed = round(time.monotonic() - t0, 2)
+        stages["counseling"] = counseling_elapsed
+        yield _stage_event(
+            {
+                "stage": "counseling",
+                "index": 4,
+                "status": "done",
+                "seconds": counseling_elapsed,
+            }
+        )
 
         total_elapsed = round(time.monotonic() - start, 2)
         LOGGER.info(

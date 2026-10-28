@@ -1101,7 +1101,7 @@ class AnalyzeEndpointTest(TestCase):
         self.assertIn("stages", body)
         # Stage progress events must have streamed before the result.
         stage_events = [e for e in events if e["event"] == "stage"]
-        self.assertGreaterEqual(len(stage_events), 6)  # 3 stages x started + done
+        self.assertGreaterEqual(len(stage_events), 8)  # 4 stages x started + done
 
     @mock.patch("integreat_chat.bescheidcheck.services.counselor.counseling_question")
     @mock.patch(

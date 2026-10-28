@@ -1187,8 +1187,9 @@
         ocr: "Reading & OCR",
         classify: "Classifying",
         translate: "Translating",
+        counseling: "Finding counseling",
     };
-    const TOTAL_STAGES = 3;
+    const TOTAL_STAGES = 4;
 
     const translationProgress = { done: 0, total: 0, translated: new Set() };
 
@@ -1266,7 +1267,8 @@
             text +=
                 " · OCR " + (data.stages.ocr || 0) + "s, " +
                 "classify " + (data.stages.classify || 0) + "s, " +
-                "translate " + (data.stages.translate || 0) + "s";
+                "translate " + (data.stages.translate || 0) + "s, " +
+                "counseling " + (data.stages.counseling || 0) + "s";
         }
         els.resultSubtitle.textContent = text;
     }
