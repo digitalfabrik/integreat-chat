@@ -230,31 +230,61 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
 
   ### Verwaltungsgericht / Rechtsmittel
 
-- Ist der Absender ein Gericht (zum Beispiel „Verwaltungsgericht“,
-  „Oberverwaltungsgericht“, „Verwaltungsgerichtshof“), gilt immer ein Typ
-  aus diesem Abschnitt, auch wenn das Schreiben einen BAMF-Bescheid zitiert.
-- Asyl oder Aufenthaltsrecht: Ist die Beklagte bzw. Antragsgegnerin die
-  „Bundesrepublik Deutschland, vertreten durch … Bundesamt für Migration
-  und Flüchtlinge“ oder geht es um das Asylgesetz (AsylG), gilt ein
-  Asyl-Typ. Ist die Gegenseite ein Land, ein Landkreis, eine Stadt, eine
-  Ausländerbehörde oder das Auswärtige Amt (Visum), gilt ein
-  Aufenthalts-Typ.
-- Die Art der Entscheidung ergibt sich aus der Überschrift: „Urteil“,
-  „Gerichtsbescheid“ oder „Beschluss“ (Eilverfahren, Parteien heißen
-  „Antragsteller“ und „Antragsgegner“).
-- Der Ausgang ergibt sich aus dem Tenor (dem ersten Absatz nach der
-  Nennung der Beteiligten).
-- Steht im Asyl-Urteil, dass die Klage als „offensichtlich unbegründet“
-  oder „offensichtlich unzulässig“ abgewiesen wird, oder dass das Urteil
-  „unanfechtbar“ ist, gilt immer
-  `urteil-asyl-offensichtlich-unbegruendet-unzulaessig`.
-- Wird der Klage teilweise stattgegeben und steht „Im Übrigen wird die
-  Klage abgewiesen“, gilt der Typ „teilweise gewonnen“.
-- Wird bei einem Eilbeschluss die aufschiebende Wirkung angeordnet oder
-  eine einstweilige Anordnung erlassen, gilt „stattgegeben“, auch wenn der
-  Antrag im Übrigen abgelehnt wird.
+Dieser Abschnitt gilt für Schreiben eines Verwaltungsgerichts (zum
+Beispiel „Verwaltungsgericht Augsburg“), auch wenn das Schreiben einen
+BAMF-Bescheid zitiert. Schreiben anderer Gerichte (zum Beispiel
+Sozialgericht, Amtsgericht, Oberverwaltungsgericht,
+Verwaltungsgerichtshof) sind immer `unsupported`. Schreiben eines
+Verwaltungsgerichts, die zu keinem Typ unten passen, sind ebenfalls
+`unsupported`. Das gilt zum Beispiel für Beschlüsse über
+Prozesskostenhilfe, Einstellungsbeschlüsse („Das Verfahren wird
+eingestellt“), Gerichtsbescheide im Aufenthaltsrecht, Hinweise auf ein
+schriftliches Verfahren, Anhörungen vor einem Gerichtsbescheid,
+Eingangsbestätigungen und Zwischenverfügungen („bis zur Entscheidung
+über den Eilantrag“).
 
-- `ladung-zur-muendlichen-verhandlung`
+Asyl oder Aufenthaltsrecht: Entscheidend ist die Gegenseite (Beklagte
+bzw. Antragsgegnerin). Ist es die „Bundesrepublik Deutschland,
+vertreten durch … Bundesamt für Migration und Flüchtlinge“, gilt ein
+Asyl-Typ. Ist es ein Land (auch „Freistaat“), ein Landkreis, eine Stadt
+oder eine Ausländerbehörde, gilt ein Aufenthalts-Typ. Klagen gegen das
+Auswärtige Amt (Visum) sind `unsupported`. Nur wenn die Gegenseite
+nicht erkennbar ist, gilt: Geht es um das Asylgesetz (AsylG), ist es
+ein Asyl-Typ.
+
+Die Art der Entscheidung ergibt sich aus der Überschrift: „Urteil“,
+„Gerichtsbescheid“ oder „Beschluss“. Ein Eilbeschluss ist ein
+Beschluss, in dem die Parteien „Antragsteller“ und „Antragsgegner“
+heißen und in dem es um die aufschiebende Wirkung oder eine
+einstweilige Anordnung geht.
+
+Der Ausgang ergibt sich aus dem Tenor. Das sind die (oft nummerierten)
+Sätze nach „für Recht erkannt:“, „entschieden:“ oder „beschlossen:“ und
+vor „Tatbestand“ oder „Gründe“. Argumente in den Gründen ändern den
+Ausgang nicht.
+
+Steht irgendwo in einem Asyl-Urteil (im Tenor, in den Gründen oder in
+der Belehrung), dass die Klage „offensichtlich unbegründet“ oder
+„offensichtlich unzulässig“ ist oder dass das Urteil „unanfechtbar“
+ist, gilt `urteil-asyl-offensichtlich-unbegründet-unzulässig`. Das gilt
+nur für Urteile, nicht für Beschlüsse. Wird der Klage im selben Urteil
+zugleich teilweise stattgegeben, ist das Schreiben `unsupported`.
+
+Wird einer Asyl-Klage zum Teil stattgegeben und wird sie „im Übrigen“
+abgewiesen, gilt `urteil-asyl-teilweise-gewonnen` bzw.
+`gerichtsbescheid-asyl-teilweise-gewonnen`. Wurde ein Teil der Klage
+nur zurückgenommen („Soweit die Klage zurückgenommen wurde, wird das
+Verfahren eingestellt“) und der Rest gewonnen, gilt
+`urteil-asyl-gewonnen` bzw. `gerichtsbescheid-asyl-gewonnen`. Wird
+einer Klage im Aufenthaltsrecht zum Teil stattgegeben, gilt
+`urteil-aufenthalt-gewonnen`.
+
+Wird bei einem Eilbeschluss die aufschiebende Wirkung angeordnet oder
+wiederhergestellt oder wird die Behörde „im Wege der einstweiligen
+Anordnung verpflichtet“, gilt „stattgegeben“, auch wenn der Antrag im
+Übrigen abgelehnt wird.
+
+- `ladung-zur-mündlichen-verhandlung`
   Das Schreiben ist eine Ladung des Verwaltungsgerichts zu einem Termin
   zur mündlichen Verhandlung über eine Klage. Es nennt Datum, Uhrzeit
   und Sitzungssaal und weist meist darauf hin, dass auch ohne die
@@ -285,7 +315,7 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
   „offensichtlich“ unbegründet oder unzulässig bezeichnet wird. Es enthält
   eine Belehrung über den Antrag auf Zulassung der Berufung.
 
-- `urteil-asyl-offensichtlich-unbegruendet-unzulaessig`
+- `urteil-asyl-offensichtlich-unbegründet-unzulässig`
   Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
   Asylverfahren, in dem die Klage als „offensichtlich unbegründet“ oder
   „offensichtlich unzulässig“ abgewiesen wird. Es enthält den Satz, dass
@@ -320,11 +350,11 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
 
 - `urteil-aufenthalt-gewonnen`
   Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
-  Verfahren zum Aufenthaltsrecht (gegen eine Ausländerbehörde, ein Land,
-  eine Kommune oder das Auswärtige Amt), in dem der Klage stattgegeben
-  wird. Die Behörde wird zum Beispiel verpflichtet, einen Aufenthaltstitel
-  oder ein Visum zu erteilen oder neu zu entscheiden, oder ihr Bescheid
-  wird aufgehoben.
+  Verfahren zum Aufenthaltsrecht (gegen eine Ausländerbehörde, ein Land
+  oder eine Kommune), in dem der Klage ganz oder zum Teil stattgegeben
+  wird. Die Behörde wird zum Beispiel verpflichtet, einen
+  Aufenthaltstitel zu erteilen oder neu zu entscheiden, oder ihr
+  Bescheid wird ganz oder teilweise aufgehoben.
 
 - `urteil-aufenthalt-klage-abgewiesen`
   Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
@@ -354,7 +384,7 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
   - das Schreiben nicht von einer deutschen Behörde stammt,
   - das Schreiben zwar erkennbar ist, aber keinem der oben genannten
     Typen entspricht, zum Beispiel ein Schreiben der Ausländerbehörde,
-    des Jobcenters, eines Gerichts oder ein anderes BAMF-Schreiben,
+    des Jobcenters, eines anderen Gerichts als des Verwaltungsgerichts oder ein anderes BAMF-Schreiben,
   - du nicht erkennen kannst, was für ein Schreiben es ist.
   Rate nicht. Ordne ein Schreiben nie einem ähnlichen Typ zu, nur weil
   es keinen passenden gibt. Im Zweifel ist `unsupported` richtig.
