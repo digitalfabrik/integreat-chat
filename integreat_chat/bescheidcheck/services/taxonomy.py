@@ -750,6 +750,156 @@ LEGACY_TAXONOMY_MAPPINGS: Final[dict[str, LegacyTaxonomyMapping]] = {
             "its own and has no catalog record."
         ),
     },
+    "ladung-zur-mündlichen-verhandlung": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("anhoerung_ladung",),
+        "note": (
+            "The source catalog records no court documents. anhoerung_ladung "
+            "is an overlap candidate because it is also a summons, but it is "
+            "issued by the BAMF in the administrative procedure."
+        ),
+    },
+    "aufforderung-zum-betreiben-des-verfahrens-gericht": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("asyl_einstellung",),
+        "note": (
+            "The court's request to pursue the proceedings has no catalog "
+            "record. asyl_einstellung is an overlap candidate because the "
+            "BAMF variant of the request precedes that decision."
+        ),
+    },
+    "urteil-asyl-gewonnen": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("asyl_ablehnung_einfach", "asyl_ablehnung_ou"),
+        "note": (
+            "Court judgments have no catalog record. The rejection entries "
+            "are overlap candidates because the judgment decides the action "
+            "against one of them."
+        ),
+    },
+    "urteil-asyl-teilweise-gewonnen": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("asyl_ablehnung_einfach", "asyl_ablehnung_ou"),
+        "note": (
+            "Court judgments have no catalog record. The rejection entries "
+            "are overlap candidates because the judgment decides the action "
+            "against one of them."
+        ),
+    },
+    "urteil-asyl-klage-abgewiesen": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("asyl_ablehnung_einfach", "asyl_ablehnung_ou"),
+        "note": (
+            "Court judgments have no catalog record. The rejection entries "
+            "are overlap candidates because the judgment confirms one of "
+            "them."
+        ),
+    },
+    "urteil-asyl-offensichtlich-unbegründet-unzulässig": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("asyl_ablehnung_ou", "dublin_bescheid"),
+        "note": (
+            "Court judgments have no catalog record. asyl_ablehnung_ou and "
+            "dublin_bescheid are overlap candidates because they carry the "
+            "shortened deadlines that this judgment confirms."
+        ),
+    },
+    "gerichtsbescheid-asyl-gewonnen": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("asyl_ablehnung_einfach", "asyl_ablehnung_ou"),
+        "note": (
+            "The Gerichtsbescheid decides without an oral hearing and has no "
+            "catalog record. The rejection entries are overlap candidates "
+            "because the decision resolves the action against one of them."
+        ),
+    },
+    "gerichtsbescheid-asyl-teilweise-gewonnen": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("asyl_ablehnung_einfach", "asyl_ablehnung_ou"),
+        "note": (
+            "The Gerichtsbescheid decides without an oral hearing and has no "
+            "catalog record. The rejection entries are overlap candidates "
+            "because the decision resolves the action against one of them."
+        ),
+    },
+    "gerichtsbescheid-asyl-klage-abgewiesen": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("asyl_ablehnung_einfach", "asyl_ablehnung_ou"),
+        "note": (
+            "The Gerichtsbescheid decides without an oral hearing and has no "
+            "catalog record. The rejection entries are overlap candidates "
+            "because the decision confirms one of them."
+        ),
+    },
+    "eilbeschluss-asyl-stattgegeben": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("asyl_ablehnung_ou", "dublin_bescheid"),
+        "note": (
+            "Interim relief decisions have no catalog record. The entries "
+            "are overlap candidates because they order the removal that the "
+            "interim decision suspends."
+        ),
+    },
+    "eilbeschluss-asyl-abgelehnt": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("asyl_ablehnung_ou", "dublin_bescheid"),
+        "note": (
+            "Interim relief decisions have no catalog record. The entries "
+            "are overlap candidates because refusing interim relief leaves "
+            "their removal order enforceable."
+        ),
+    },
+    "urteil-aufenthalt-gewonnen": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("aufenthaltstitel_ablehnung",),
+        "note": (
+            "Court judgments have no catalog record. "
+            "aufenthaltstitel_ablehnung is an overlap candidate because the "
+            "judgment decides the action against that refusal."
+        ),
+    },
+    "urteil-aufenthalt-klage-abgewiesen": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("aufenthaltstitel_ablehnung",),
+        "note": (
+            "Court judgments have no catalog record. "
+            "aufenthaltstitel_ablehnung is an overlap candidate because the "
+            "judgment confirms that refusal."
+        ),
+    },
+    "eilbeschluss-aufenthalt-stattgegeben": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("aufenthaltstitel_ablehnung",),
+        "note": (
+            "Interim relief decisions have no catalog record. "
+            "aufenthaltstitel_ablehnung is an overlap candidate because the "
+            "interim decision suspends its consequences."
+        ),
+    },
+    "eilbeschluss-aufenthalt-abgelehnt": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("aufenthaltstitel_ablehnung",),
+        "note": (
+            "Interim relief decisions have no catalog record. "
+            "aufenthaltstitel_ablehnung is an overlap candidate because "
+            "refusing interim relief leaves it enforceable."
+        ),
+    },
 }
 
 
