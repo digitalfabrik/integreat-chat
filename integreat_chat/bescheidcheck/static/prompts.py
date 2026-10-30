@@ -228,6 +228,122 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
   geworden ist. Es enthält selbst keine neue Entscheidung über den
   Asylantrag.
 
+  ### Verwaltungsgericht / Rechtsmittel
+
+- Ist der Absender ein Gericht (zum Beispiel „Verwaltungsgericht“,
+  „Oberverwaltungsgericht“, „Verwaltungsgerichtshof“), gilt immer ein Typ
+  aus diesem Abschnitt, auch wenn das Schreiben einen BAMF-Bescheid zitiert.
+- Asyl oder Aufenthaltsrecht: Ist die Beklagte bzw. Antragsgegnerin die
+  „Bundesrepublik Deutschland, vertreten durch … Bundesamt für Migration
+  und Flüchtlinge“ oder geht es um das Asylgesetz (AsylG), gilt ein
+  Asyl-Typ. Ist die Gegenseite ein Land, ein Landkreis, eine Stadt, eine
+  Ausländerbehörde oder das Auswärtige Amt (Visum), gilt ein
+  Aufenthalts-Typ.
+- Die Art der Entscheidung ergibt sich aus der Überschrift: „Urteil“,
+  „Gerichtsbescheid“ oder „Beschluss“ (Eilverfahren, Parteien heißen
+  „Antragsteller“ und „Antragsgegner“).
+- Der Ausgang ergibt sich aus dem Tenor (dem ersten Absatz nach der
+  Nennung der Beteiligten).
+- Steht im Asyl-Urteil, dass die Klage als „offensichtlich unbegründet“
+  oder „offensichtlich unzulässig“ abgewiesen wird, oder dass das Urteil
+  „unanfechtbar“ ist, gilt immer
+  `urteil-asyl-offensichtlich-unbegruendet-unzulaessig`.
+- Wird der Klage teilweise stattgegeben und steht „Im Übrigen wird die
+  Klage abgewiesen“, gilt der Typ „teilweise gewonnen“.
+- Wird bei einem Eilbeschluss die aufschiebende Wirkung angeordnet oder
+  eine einstweilige Anordnung erlassen, gilt „stattgegeben“, auch wenn der
+  Antrag im Übrigen abgelehnt wird.
+
+- `ladung-zur-muendlichen-verhandlung`
+  Das Schreiben ist eine Ladung des Verwaltungsgerichts zu einem Termin
+  zur mündlichen Verhandlung über eine Klage. Es nennt Datum, Uhrzeit
+  und Sitzungssaal und weist meist darauf hin, dass auch ohne die
+  geladene Person verhandelt und entschieden werden kann.
+
+- `aufforderung-zum-betreiben-des-verfahrens-gericht`
+  Das Schreiben ist eine Aufforderung des Verwaltungsgerichts in einem
+  Asyl-Klageverfahren, das Verfahren zu betreiben, zum Beispiel Fragen zu
+  beantworten oder etwas vorzulegen. Es weist darauf hin, dass die Klage
+  sonst als zurückgenommen gilt.
+
+- `urteil-asyl-gewonnen`
+  Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
+  Asylverfahren, in dem der Klage vollständig stattgegeben wird. Das
+  Gericht verpflichtet das BAMF, Schutz zuzuerkennen oder neu zu
+  entscheiden, oder hebt den BAMF-Bescheid auf. Die Klage wird nicht
+  „im Übrigen abgewiesen“.
+
+- `urteil-asyl-teilweise-gewonnen`
+  Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
+  Asylverfahren, in dem der Klage nur zum Teil stattgegeben wird. Ein
+  Teil des BAMF-Bescheids wird aufgehoben oder das BAMF wird zu etwas
+  verpflichtet; „im Übrigen“ wird die Klage abgewiesen.
+
+- `urteil-asyl-klage-abgewiesen`
+  Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
+  Asylverfahren, in dem die Klage abgewiesen wird, ohne dass sie als
+  „offensichtlich“ unbegründet oder unzulässig bezeichnet wird. Es enthält
+  eine Belehrung über den Antrag auf Zulassung der Berufung.
+
+- `urteil-asyl-offensichtlich-unbegruendet-unzulaessig`
+  Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
+  Asylverfahren, in dem die Klage als „offensichtlich unbegründet“ oder
+  „offensichtlich unzulässig“ abgewiesen wird. Es enthält den Satz, dass
+  das Urteil unanfechtbar ist.
+
+- `gerichtsbescheid-asyl-gewonnen`
+  Das Schreiben ist ein Gerichtsbescheid des Verwaltungsgerichts in
+  einem Asylverfahren (eine Entscheidung ohne mündliche Verhandlung), in
+  dem der Klage vollständig stattgegeben wird.
+
+- `gerichtsbescheid-asyl-teilweise-gewonnen`
+  Das Schreiben ist ein Gerichtsbescheid des Verwaltungsgerichts in
+  einem Asylverfahren, in dem der Klage nur zum Teil stattgegeben wird;
+  „im Übrigen“ wird die Klage abgewiesen.
+
+- `gerichtsbescheid-asyl-klage-abgewiesen`
+  Das Schreiben ist ein Gerichtsbescheid des Verwaltungsgerichts in
+  einem Asylverfahren, in dem die Klage abgewiesen wird. Es enthält eine
+  Belehrung, dass mündliche Verhandlung oder die Zulassung der Berufung
+  beantragt werden kann.
+
+- `eilbeschluss-asyl-stattgegeben`
+  Das Schreiben ist ein Beschluss des Verwaltungsgerichts in einem
+  Asyl-Eilverfahren, in dem dem Antrag stattgegeben wird, zum Beispiel
+  indem die aufschiebende Wirkung der Klage gegen die
+  Abschiebungsandrohung oder Abschiebungsanordnung angeordnet wird.
+
+- `eilbeschluss-asyl-abgelehnt`
+  Das Schreiben ist ein Beschluss des Verwaltungsgerichts in einem
+  Asyl-Eilverfahren, in dem der Antrag abgelehnt wird. Es enthält meist
+  den Satz, dass der Beschluss unanfechtbar ist.
+
+- `urteil-aufenthalt-gewonnen`
+  Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
+  Verfahren zum Aufenthaltsrecht (gegen eine Ausländerbehörde, ein Land,
+  eine Kommune oder das Auswärtige Amt), in dem der Klage stattgegeben
+  wird. Die Behörde wird zum Beispiel verpflichtet, einen Aufenthaltstitel
+  oder ein Visum zu erteilen oder neu zu entscheiden, oder ihr Bescheid
+  wird aufgehoben.
+
+- `urteil-aufenthalt-klage-abgewiesen`
+  Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
+  Verfahren zum Aufenthaltsrecht, in dem die Klage abgewiesen wird. Es
+  enthält eine Belehrung über den Antrag auf Zulassung der Berufung oder
+  über die Berufung.
+
+- `eilbeschluss-aufenthalt-stattgegeben`
+  Das Schreiben ist ein Beschluss des Verwaltungsgerichts in einem
+  Eilverfahren zum Aufenthaltsrecht, in dem dem Antrag stattgegeben wird,
+  zum Beispiel indem die aufschiebende Wirkung angeordnet oder
+  wiederhergestellt wird oder die Behörde im Wege der einstweiligen
+  Anordnung zu etwas verpflichtet wird.
+
+- `eilbeschluss-aufenthalt-abgelehnt`
+  Das Schreiben ist ein Beschluss des Verwaltungsgerichts in einem
+  Eilverfahren zum Aufenthaltsrecht, in dem der Antrag abgelehnt wird. Es
+  enthält eine Belehrung über die Beschwerde.
+
 ### Nicht erkannt
 
 - `unsupported`
