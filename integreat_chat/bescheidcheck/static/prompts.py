@@ -228,6 +228,152 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
   geworden ist. Es enthält selbst keine neue Entscheidung über den
   Asylantrag.
 
+  ### Verwaltungsgericht / Rechtsmittel
+
+Dieser Abschnitt gilt für Schreiben eines Verwaltungsgerichts (zum
+Beispiel „Verwaltungsgericht Augsburg“), auch wenn das Schreiben einen
+BAMF-Bescheid zitiert. Schreiben anderer Gerichte (zum Beispiel
+Sozialgericht, Amtsgericht, Oberverwaltungsgericht,
+Verwaltungsgerichtshof) sind immer `unsupported`. Schreiben eines
+Verwaltungsgerichts, die zu keinem Typ unten passen, sind ebenfalls
+`unsupported`. Das gilt zum Beispiel für Beschlüsse über
+Prozesskostenhilfe, Einstellungsbeschlüsse („Das Verfahren wird
+eingestellt“), Gerichtsbescheide im Aufenthaltsrecht, Hinweise auf ein
+schriftliches Verfahren, Anhörungen vor einem Gerichtsbescheid,
+Eingangsbestätigungen und Zwischenverfügungen („bis zur Entscheidung
+über den Eilantrag“).
+
+Asyl oder Aufenthaltsrecht: Entscheidend ist die Gegenseite (Beklagte
+bzw. Antragsgegnerin). Ist es die „Bundesrepublik Deutschland,
+vertreten durch … Bundesamt für Migration und Flüchtlinge“, gilt ein
+Asyl-Typ. Ist es ein Land (auch „Freistaat“), ein Landkreis, eine Stadt
+oder eine Ausländerbehörde, gilt ein Aufenthalts-Typ. Klagen gegen das
+Auswärtige Amt (Visum) sind `unsupported`. Nur wenn die Gegenseite
+nicht erkennbar ist, gilt: Geht es um das Asylgesetz (AsylG), ist es
+ein Asyl-Typ.
+
+Die Art der Entscheidung ergibt sich aus der Überschrift: „Urteil“,
+„Gerichtsbescheid“ oder „Beschluss“. Ein Eilbeschluss ist ein
+Beschluss, in dem die Parteien „Antragsteller“ und „Antragsgegner“
+heißen und in dem es um die aufschiebende Wirkung oder eine
+einstweilige Anordnung geht.
+
+Der Ausgang ergibt sich aus dem Tenor. Das sind die (oft nummerierten)
+Sätze nach „für Recht erkannt:“, „entschieden:“ oder „beschlossen:“ und
+vor „Tatbestand“ oder „Gründe“. Argumente in den Gründen ändern den
+Ausgang nicht.
+
+Steht irgendwo in einem Asyl-Urteil (im Tenor, in den Gründen oder in
+der Belehrung), dass die Klage „offensichtlich unbegründet“ oder
+„offensichtlich unzulässig“ ist oder dass das Urteil „unanfechtbar“
+ist, gilt `urteil-asyl-offensichtlich-unbegründet-unzulässig`. Das gilt
+nur für Urteile, nicht für Beschlüsse. Wird der Klage im selben Urteil
+zugleich teilweise stattgegeben, ist das Schreiben `unsupported`.
+
+Wird einer Asyl-Klage zum Teil stattgegeben und wird sie „im Übrigen“
+abgewiesen, gilt `urteil-asyl-teilweise-gewonnen` bzw.
+`gerichtsbescheid-asyl-teilweise-gewonnen`. Wurde ein Teil der Klage
+nur zurückgenommen („Soweit die Klage zurückgenommen wurde, wird das
+Verfahren eingestellt“) und der Rest gewonnen, gilt
+`urteil-asyl-gewonnen` bzw. `gerichtsbescheid-asyl-gewonnen`. Wird
+einer Klage im Aufenthaltsrecht zum Teil stattgegeben, gilt
+`urteil-aufenthalt-gewonnen`.
+
+Wird bei einem Eilbeschluss die aufschiebende Wirkung angeordnet oder
+wiederhergestellt oder wird die Behörde „im Wege der einstweiligen
+Anordnung verpflichtet“, gilt „stattgegeben“, auch wenn der Antrag im
+Übrigen abgelehnt wird.
+
+- `ladung-zur-mündlichen-verhandlung`
+  Das Schreiben ist eine Ladung des Verwaltungsgerichts zu einem Termin
+  zur mündlichen Verhandlung über eine Klage. Es nennt Datum, Uhrzeit
+  und Sitzungssaal und weist meist darauf hin, dass auch ohne die
+  geladene Person verhandelt und entschieden werden kann.
+
+- `aufforderung-zum-betreiben-des-verfahrens-gericht`
+  Das Schreiben ist eine Aufforderung des Verwaltungsgerichts in einem
+  Asyl-Klageverfahren, das Verfahren zu betreiben, zum Beispiel Fragen zu
+  beantworten oder etwas vorzulegen. Es weist darauf hin, dass die Klage
+  sonst als zurückgenommen gilt.
+
+- `urteil-asyl-gewonnen`
+  Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
+  Asylverfahren, in dem der Klage vollständig stattgegeben wird. Das
+  Gericht verpflichtet das BAMF, Schutz zuzuerkennen oder neu zu
+  entscheiden, oder hebt den BAMF-Bescheid auf. Die Klage wird nicht
+  „im Übrigen abgewiesen“.
+
+- `urteil-asyl-teilweise-gewonnen`
+  Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
+  Asylverfahren, in dem der Klage nur zum Teil stattgegeben wird. Ein
+  Teil des BAMF-Bescheids wird aufgehoben oder das BAMF wird zu etwas
+  verpflichtet; „im Übrigen“ wird die Klage abgewiesen.
+
+- `urteil-asyl-klage-abgewiesen`
+  Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
+  Asylverfahren, in dem die Klage abgewiesen wird, ohne dass sie als
+  „offensichtlich“ unbegründet oder unzulässig bezeichnet wird. Es enthält
+  eine Belehrung über den Antrag auf Zulassung der Berufung.
+
+- `urteil-asyl-offensichtlich-unbegründet-unzulässig`
+  Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
+  Asylverfahren, in dem die Klage als „offensichtlich unbegründet“ oder
+  „offensichtlich unzulässig“ abgewiesen wird. Es enthält den Satz, dass
+  das Urteil unanfechtbar ist.
+
+- `gerichtsbescheid-asyl-gewonnen`
+  Das Schreiben ist ein Gerichtsbescheid des Verwaltungsgerichts in
+  einem Asylverfahren (eine Entscheidung ohne mündliche Verhandlung), in
+  dem der Klage vollständig stattgegeben wird.
+
+- `gerichtsbescheid-asyl-teilweise-gewonnen`
+  Das Schreiben ist ein Gerichtsbescheid des Verwaltungsgerichts in
+  einem Asylverfahren, in dem der Klage nur zum Teil stattgegeben wird;
+  „im Übrigen“ wird die Klage abgewiesen.
+
+- `gerichtsbescheid-asyl-klage-abgewiesen`
+  Das Schreiben ist ein Gerichtsbescheid des Verwaltungsgerichts in
+  einem Asylverfahren, in dem die Klage abgewiesen wird. Es enthält eine
+  Belehrung, dass mündliche Verhandlung oder die Zulassung der Berufung
+  beantragt werden kann.
+
+- `eilbeschluss-asyl-stattgegeben`
+  Das Schreiben ist ein Beschluss des Verwaltungsgerichts in einem
+  Asyl-Eilverfahren, in dem dem Antrag stattgegeben wird, zum Beispiel
+  indem die aufschiebende Wirkung der Klage gegen die
+  Abschiebungsandrohung oder Abschiebungsanordnung angeordnet wird.
+
+- `eilbeschluss-asyl-abgelehnt`
+  Das Schreiben ist ein Beschluss des Verwaltungsgerichts in einem
+  Asyl-Eilverfahren, in dem der Antrag abgelehnt wird. Es enthält meist
+  den Satz, dass der Beschluss unanfechtbar ist.
+
+- `urteil-aufenthalt-gewonnen`
+  Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
+  Verfahren zum Aufenthaltsrecht (gegen eine Ausländerbehörde, ein Land
+  oder eine Kommune), in dem der Klage ganz oder zum Teil stattgegeben
+  wird. Die Behörde wird zum Beispiel verpflichtet, einen
+  Aufenthaltstitel zu erteilen oder neu zu entscheiden, oder ihr
+  Bescheid wird ganz oder teilweise aufgehoben.
+
+- `urteil-aufenthalt-klage-abgewiesen`
+  Das Schreiben ist ein Urteil des Verwaltungsgerichts in einem
+  Verfahren zum Aufenthaltsrecht, in dem die Klage abgewiesen wird. Es
+  enthält eine Belehrung über den Antrag auf Zulassung der Berufung oder
+  über die Berufung.
+
+- `eilbeschluss-aufenthalt-stattgegeben`
+  Das Schreiben ist ein Beschluss des Verwaltungsgerichts in einem
+  Eilverfahren zum Aufenthaltsrecht, in dem dem Antrag stattgegeben wird,
+  zum Beispiel indem die aufschiebende Wirkung angeordnet oder
+  wiederhergestellt wird oder die Behörde im Wege der einstweiligen
+  Anordnung zu etwas verpflichtet wird.
+
+- `eilbeschluss-aufenthalt-abgelehnt`
+  Das Schreiben ist ein Beschluss des Verwaltungsgerichts in einem
+  Eilverfahren zum Aufenthaltsrecht, in dem der Antrag abgelehnt wird. Es
+  enthält eine Belehrung über die Beschwerde.
+
 ### Nicht erkannt
 
 - `unsupported`
@@ -238,7 +384,7 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
   - das Schreiben nicht von einer deutschen Behörde stammt,
   - das Schreiben zwar erkennbar ist, aber keinem der oben genannten
     Typen entspricht, zum Beispiel ein Schreiben der Ausländerbehörde,
-    des Jobcenters, eines Gerichts oder ein anderes BAMF-Schreiben,
+    des Jobcenters, eines anderen Gerichts als des Verwaltungsgerichts oder ein anderes BAMF-Schreiben,
   - du nicht erkennen kannst, was für ein Schreiben es ist.
   Rate nicht. Ordne ein Schreiben nie einem ähnlichen Typ zu, nur weil
   es keinen passenden gibt. Im Zweifel ist `unsupported` richtig.
