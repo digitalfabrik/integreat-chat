@@ -22,6 +22,7 @@ from integreat_chat.chatanswers.services.llmapi import (
 from integreat_chat.core.utils.integreat_cms import async_get_page
 
 from ..static.language_classification_map import LANGUAGE_CLASSIFICATION_MAP
+from ..static.language_names import language_for_prompt
 from ..static.prompts import Prompts
 
 LOGGER = logging.getLogger("django")
@@ -222,8 +223,8 @@ class LanguageService:
             settings.TRANSLATION_MODEL,
             [
                 LlmMessage(Prompts.TRANSLATE_PROMPT.format(
-                    source_language,
-                    target_language
+                    language_for_prompt(source_language),
+                    language_for_prompt(target_language)
                 ), role="system"),
                 LlmMessage(message, role="user")
             ],
