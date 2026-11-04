@@ -1047,6 +1047,15 @@ class AnalyzeEndpointTest(TestCase):
     response shape and the validation rules.
     """
 
+    def setUp(self):
+        super().setUp()
+        extraction_patcher = mock.patch(
+            "integreat_chat.bescheidcheck.views.extraction.extract_structured_data",
+            new=mock.AsyncMock(return_value={}),
+        )
+        extraction_patcher.start()
+        self.addCleanup(extraction_patcher.stop)
+
     def _upload_helper(self, filename: str = "page1.png", content: bytes = b"x"):
         from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -1238,6 +1247,70 @@ class AnalyzeEndpointTest(TestCase):
         # But the other stages still succeed
         self.assertEqual(body["classification"]["type"], "dublin_decision")
         self.assertEqual(body["pages"][0]["page_no"], 1)
+
+    @mock.patch("integreat_chat.bescheidcheck.services.ocr.convert_page")
+    def test_unsupported_extraction_in_result_payload(self, mock_convert):
+        mock_convert.side_effect = (
+            lambda *a, **kw: _fake_ocr_page(kw.get("page_no", 1))
+        )
+
+        extracted_data = {
+            "document_type": "unsupported",
+            "authority": "Stadt Musterstadt",
+            "topic": "Abholung eines Fundgegenstands",
+            "deadline_detected": True,
+            "deadline_date": "2026-11-20",
+        }
+
+        with (
+            mock.patch(
+                "integreat_chat.bescheidcheck.services.classification.classify_bescheid",
+                new=mock.AsyncMock(
+                    return_value={
+                        "type": "unsupported",
+                        "confidence": 0.2,
+                        "reason": "Unsupported document type",
+                    }
+                ),
+            ),
+            mock.patch(
+                "integreat_chat.bescheidcheck.services.translation.translate_document_stream",
+                new=_fake_paragraph_stream,
+            ),
+            mock.patch(
+                "integreat_chat.bescheidcheck.views.extraction.extract_structured_data",
+                new=mock.AsyncMock(return_value=extracted_data),
+            ) as mock_extract,
+            mock.patch(
+                "integreat_chat.bescheidcheck.services.counselor.counseling_question",
+                new=mock.AsyncMock(return_value=None),
+            ),
+            mock.patch(
+                "integreat_chat.bescheidcheck.services.explanation.get_explanation",
+                new=mock.AsyncMock(return_value=None),
+            ),
+        ):
+            response = self._post_analyze(
+                [self._upload_helper()],
+                region="region-slug-1",
+                language="en",
+            )
+            events = _drain_sse_response(response)
+
+        result = next(
+            event["data"]
+            for event in events
+            if event["event"] == "result"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(result["classification"]["type"], "unsupported")
+        self.assertEqual(result["extracted_data"], extracted_data)
+        mock_extract.assert_awaited_once()
+        self.assertEqual(
+            mock_extract.await_args.kwargs["bescheid_type"],
+            "unsupported",
+        )
 
     def test_get_not_allowed(self):
         res = self.client.get("/bescheidcheck/analyze/")
@@ -2063,6 +2136,15 @@ class AnalyzeSseSanitizationTest(TestCase):
     header on the streaming response as defense in depth.
     """
 
+    def setUp(self):
+        super().setUp()
+        extraction_patcher = mock.patch(
+            "integreat_chat.bescheidcheck.views.extraction.extract_structured_data",
+            new=mock.AsyncMock(return_value={}),
+        )
+        extraction_patcher.start()
+        self.addCleanup(extraction_patcher.stop)
+
     def _upload_helper(self, filename: str = "page1.png", content: bytes = b"x"):
         from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -2618,17 +2700,27 @@ class StructuredExtractionTest(unittest.TestCase):
             },
         )
 
-    def test_get_extraction_schema_only_for_supported_types(self):
+    def test_get_extraction_schema_for_all_document_types(self):
         from integreat_chat.bescheidcheck.services.extraction import (
             get_extraction_schema,
         )
 
-        self.assertIsNotNone(get_extraction_schema("ablehnung-einfach"))
-        self.assertIsNotNone(get_extraction_schema("ablehnung-unzulässig"))
-        self.assertIsNotNone(get_extraction_schema("zuständigkeitsbestimmungsverfahren-dublin-überstellungsentscheidung"))
+        document_types = (
+            "ablehnung-einfach",
+            "ablehnung-unzulässig",
+            "zuständigkeitsbestimmungsverfahren-dublin-überstellungsentscheidung",
+            "unsupported",
+            "unknown_type",
+        )
 
-        self.assertIsNone(get_extraction_schema("unsupported"))
-        self.assertIsNone(get_extraction_schema("unknown_type"))
+        for bescheid_type in document_types:
+            with self.subTest(bescheid_type=bescheid_type):
+                schema = get_extraction_schema(bescheid_type)
+                self.assertIsNotNone(schema)
+                self.assertEqual(
+                    schema["name"],
+                    "bescheid_structured_extraction",
+                )
 
     def test_extract_structured_data_builds_extraction_prompt(self):
         from integreat_chat.bescheidcheck.services import extraction
@@ -2675,18 +2767,25 @@ class StructuredExtractionTest(unittest.TestCase):
             prompt_text,
         )
 
-    def test_unsupported_type_does_not_call_llm(self):
+    def test_unsupported_type_calls_llm(self):
         from integreat_chat.bescheidcheck.services import extraction
 
-        mock_run = mock.AsyncMock(return_value={"unexpected": "result"})
+        raw_result = {
+            "authority": "Test Authority",
+            "topic": "Administrative notice",
+            "confidence": 0.8,
+        }
 
-        with mock.patch(
-            "integreat_chat.bescheidcheck.services.extraction._run_extraction_prompt",
-            new=mock_run,
-        ):
-            for bescheid_type in ("unsupported", "unknown_type"):
-                with self.subTest(bescheid_type=bescheid_type):
-                    out = asyncio.run(
+        for bescheid_type in ("unsupported", "unknown_type"):
+            with self.subTest(bescheid_type=bescheid_type):
+                mock_run = mock.AsyncMock(return_value=raw_result)
+
+                with mock.patch(
+                    "integreat_chat.bescheidcheck.services.extraction."
+                    "_run_extraction_prompt",
+                    new=mock_run,
+                ):
+                    result = asyncio.run(
                         extraction.extract_structured_data(
                             document_text="<p>Some administrative document</p>",
                             bescheid_type=bescheid_type,
@@ -2694,8 +2793,46 @@ class StructuredExtractionTest(unittest.TestCase):
                         )
                     )
 
-                    self.assertEqual(out, {})
+                mock_run.assert_awaited_once()
 
+                self.assertEqual(result["document_type"], bescheid_type)
+                self.assertEqual(result["authority"], "Test Authority")
+                self.assertEqual(result["topic"], "Administrative notice")
+                self.assertEqual(result["confidence"], 0.8)
+
+                kwargs = mock_run.await_args.kwargs
+                self.assertIs(
+                    kwargs["json_schema"],
+                    extraction.get_extraction_schema(bescheid_type),
+                )
+                self.assertIn(
+                    f"Classified document type: {bescheid_type}",
+                    kwargs["prompt_text"],
+                )
+                self.assertIn(
+                    "\n[]\n\nDocument:",
+                    kwargs["prompt_text"],
+                )
+
+    def test_empty_unsupported_document_skips_llm(self):
+        from integreat_chat.bescheidcheck.services import extraction
+
+        mock_run = mock.AsyncMock()
+
+        with mock.patch(
+            "integreat_chat.bescheidcheck.services.extraction."
+            "_run_extraction_prompt",
+            new=mock_run,
+        ):
+            result = asyncio.run(
+                extraction.extract_structured_data(
+                    document_text="",
+                    bescheid_type="unsupported",
+                    model="test-model",
+                )
+            )
+
+        self.assertEqual(result, {})
         mock_run.assert_not_awaited()
 
     def test_taxonomy_context_keeps_extraction_fields_and_document_type(self):
