@@ -84,21 +84,38 @@ one of the supported types. Do not try to guess beyond what the text says.
 
 Bei BAMF-Bescheiden, die mehrere Schutzformen nennen, gilt immer der
 höchste zuerkannte Status: Asyl vor Flüchtlingseigenschaft vor
-subsidiärem Schutz vor Abschiebungsverbot. Wird der Schutz aber von
-einem Familienmitglied abgeleitet (Familienasyl oder internationaler
-Familienschutz), gilt immer `familienasyl-familienschutz`.
+subsidiärem Schutz vor Abschiebungsverbot. Wird der Schutz nach altem
+Recht von einem Familienmitglied abgeleitet (der Bescheid nennt § 26
+AsylG), gilt immer `familienasyl-familienschutz`. Sonst gilt der
+zuerkannte Schutzstatus.
+
+Wird in einem Bescheid ein Schutzstatus entzogen, widerrufen oder
+zurückgenommen, gilt immer `entzug-widerruf-rücknahme-entscheidung`,
+auch wenn gleichzeitig ein anderer Schutz zuerkannt oder ein
+Abschiebungsverbot festgestellt wird.
 
 Bei ablehnenden BAMF-Bescheiden gilt: Wird die Abschiebung in einen
 anderen Dublin-Staat angeordnet, ist es immer
 `zuständigkeitsbestimmungsverfahren-dublin-überstellungsentscheidung`,
-auch wenn der Antrag als unzulässig abgelehnt wird. Wird ein Antrag
-teils als offensichtlich unbegründet und teils als einfach unbegründet
-abgelehnt, gilt `ablehnung-offensichtlich-unbegründet-2`.
+auch wenn der Antrag als unzulässig abgelehnt wird. Wird der Antrag als
+unzulässig abgelehnt, weil die Person bereits in einem anderen EU-Staat
+Schutz bekommen hat, und wird die Abschiebung dorthin nur angedroht
+(Abschiebungsandrohung), gilt `ablehnung-unzulässig`. Wird ein
+Folgeantrag (zweiter oder weiterer Asylantrag) als unzulässig abgelehnt,
+gilt immer `ablehnung-folgeantrag-unzulässig`. Wird ein Antrag teils als
+offensichtlich unbegründet und teils als einfach unbegründet abgelehnt,
+gilt `ablehnung-offensichtlich-unbegründet-2`.
 
 Schreiben, in denen das BAMF noch nichts entschieden hat (Einladungen,
 Fragen, Aufforderungen, Protokolle), sind nie ein Bescheid mit
 Entscheidung. Ordne sie dem passenden Schreiben-Typ zu, auch wenn darin
 mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
+
+Betrifft eine Einladung oder Aufforderung des BAMF einen Folgeantrag
+(zweiter oder weiterer Asylantrag), gilt
+`anhörung-zum-folgeantrag-persönlicher-termin` oder
+`anhörung-zum-folgeantrag-schriftliche-antwort`, nicht die Typen zur
+Zulässigkeit.
 
 - `anhörung-zur-zulässigkeit-persönlicher-termin`
   Das Schreiben ist eine Einladung des BAMF zu einem persönlichen
@@ -113,6 +130,18 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
   Staat zuständig ist, ob bereits in einem anderen Staat Schutz gewährt
   wurde oder ob ein anderer Staat als sicher gilt, nicht um die
   Fluchtgründe. Es nennt eine Frist für die Antwort, aber keinen Termin.
+
+  - `anhörung-zum-folgeantrag-persönlicher-termin`
+  Das Schreiben ist eine Einladung des BAMF zu einem persönlichen
+  Gespräch über einen Folgeantrag (zweiter oder weiterer Asylantrag).
+  Die Person soll erklären, welche neuen Gründe oder Beweise es gibt.
+  Es nennt einen Termin mit Datum, Uhrzeit und Ort.
+
+- `anhörung-zum-folgeantrag-schriftliche-antwort`
+  Das Schreiben ist eine Aufforderung des BAMF, sich schriftlich zu
+  einem Folgeantrag (zweiter oder weiterer Asylantrag) zu äußern. Die
+  Person soll erklären, welche neuen Gründe oder Beweise es gibt. Es
+  nennt eine Frist für die Antwort, aber keinen Termin.
 
 - `niederschrift-zur-asylantragstellung`
   Das Schreiben ist die Niederschrift (das Protokoll) des BAMF über die
@@ -160,7 +189,8 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
   Abschiebungsverbot vorliegt.
 
 - `familienasyl-familienschutz`
-  Das Schreiben ist ein BAMF-Bescheid, nach dem die Person Familienasyl
+    Das Schreiben ist ein BAMF-Bescheid nach altem Recht (§ 26 AsylG),
+  nach dem die Person Familienasyl
   oder internationalen Familienschutz bekommt. Der Schutz wird von einem
   Familienmitglied abgeleitet, das bereits Schutz bekommen hat, zum
   Beispiel Ehepartner, Eltern oder minderjährige Kinder.
@@ -178,9 +208,15 @@ mögliche Folgen wie eine Ablehnung oder Einstellung erwähnt werden.
 - `ablehnung-unzulässig`
   Das Schreiben ist ein BAMF-Bescheid, nach dem der Asylantrag als
   unzulässig abgelehnt wird, ohne dass die Asylgründe inhaltlich geprüft
-  werden, zum Beispiel weil bereits in einem anderen Staat Schutz gewährt
-  wurde oder ein Folgeantrag keine neuen Gründe enthält.
+    werden, zum Beispiel weil bereits in einem anderen Staat Schutz gewährt
+  wurde.
 
+- `ablehnung-folgeantrag-unzulässig`
+  Das Schreiben ist ein BAMF-Bescheid, nach dem ein Folgeantrag (zweiter
+  oder weiterer Asylantrag) als unzulässig abgelehnt wird, weil keine
+  neuen Gründe oder Beweise vorliegen, die eine neue Prüfung
+  rechtfertigen. Es wird kein weiteres Asylverfahren durchgeführt.
+  
 - `einstellungsbescheid`
   Das Schreiben ist ein BAMF-Bescheid, nach dem das Asylverfahren
   eingestellt wird, ohne über die Fluchtgründe zu entscheiden. Der
