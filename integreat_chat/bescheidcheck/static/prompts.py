@@ -216,7 +216,6 @@ Zulässigkeit.
   oder weiterer Asylantrag) als unzulässig abgelehnt wird, weil keine
   neuen Gründe oder Beweise vorliegen, die eine neue Prüfung
   rechtfertigen. Es wird kein weiteres Asylverfahren durchgeführt.
-  
 - `einstellungsbescheid`
   Das Schreiben ist ein BAMF-Bescheid, nach dem das Asylverfahren
   eingestellt wird, ohne über die Fluchtgründe zu entscheiden. Der
