@@ -131,7 +131,7 @@ Zulässigkeit.
   wurde oder ob ein anderer Staat als sicher gilt, nicht um die
   Fluchtgründe. Es nennt eine Frist für die Antwort, aber keinen Termin.
 
-  - `anhörung-zum-folgeantrag-persönlicher-termin`
+- `anhörung-zum-folgeantrag-persönlicher-termin`
   Das Schreiben ist eine Einladung des BAMF zu einem persönlichen
   Gespräch über einen Folgeantrag (zweiter oder weiterer Asylantrag).
   Die Person soll erklären, welche neuen Gründe oder Beweise es gibt.
@@ -189,7 +189,7 @@ Zulässigkeit.
   Abschiebungsverbot vorliegt.
 
 - `familienasyl-familienschutz`
-    Das Schreiben ist ein BAMF-Bescheid nach altem Recht (§ 26 AsylG),
+  Das Schreiben ist ein BAMF-Bescheid nach altem Recht (§ 26 AsylG),
   nach dem die Person Familienasyl
   oder internationalen Familienschutz bekommt. Der Schutz wird von einem
   Familienmitglied abgeleitet, das bereits Schutz bekommen hat, zum
@@ -208,7 +208,7 @@ Zulässigkeit.
 - `ablehnung-unzulässig`
   Das Schreiben ist ein BAMF-Bescheid, nach dem der Asylantrag als
   unzulässig abgelehnt wird, ohne dass die Asylgründe inhaltlich geprüft
-    werden, zum Beispiel weil bereits in einem anderen Staat Schutz gewährt
+  werden, zum Beispiel weil bereits in einem anderen Staat Schutz gewährt
   wurde.
 
 - `ablehnung-folgeantrag-unzulässig`
