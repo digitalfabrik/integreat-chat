@@ -541,6 +541,27 @@ LEGACY_TAXONOMY_MAPPINGS: Final[dict[str, LegacyTaxonomyMapping]] = {
             "because both belong to the same procedural step."
         ),
     },
+    "anhörung-zum-folgeantrag-persönlicher-termin": {
+        "status": "approximate",
+        "source_keys": ("anhoerung_ladung",),
+        "candidate_source_keys": (),
+        "note": (
+            "Both describe a BAMF summons to a personal hearing. The source "
+            "entry does not separate the hearing on a Folgeantrag from the "
+            "hearing in the first procedure."
+        ),
+    },
+    "anhörung-zum-folgeantrag-schriftliche-antwort": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("anhoerung_ladung",),
+        "note": (
+            "The source catalog only records the summons to a personal "
+            "hearing. A written request for a statement on a Folgeantrag "
+            "has no catalog record; anhoerung_ladung is an overlap "
+            "candidate because both belong to the same procedural step."
+        ),
+    },
     "niederschrift-zur-asylantragstellung": {
         "status": "unresolved",
         "source_keys": (),
@@ -669,6 +690,18 @@ LEGACY_TAXONOMY_MAPPINGS: Final[dict[str, LegacyTaxonomyMapping]] = {
             "record, so no complete mapping can be selected. "
             "dublin_bescheid is an overlap candidate, not an asserted "
             "second target."
+        ),
+    },
+    "ablehnung-folgeantrag-unzulässig": {
+        "status": "unresolved",
+        "source_keys": (),
+        "candidate_source_keys": ("asyl_ablehnung_ou",),
+        "note": (
+            "The rejection of a Folgeantrag as inadmissible has no catalog "
+            "record; the source only names the inadmissibility sub-case "
+            "asyl_unzulaessig without recording it. asyl_ablehnung_ou is an "
+            "overlap candidate because it carries the same shortened "
+            "deadline, not an asserted target."
         ),
     },
     "einstellungsbescheid": {
