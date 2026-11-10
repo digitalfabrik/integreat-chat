@@ -2845,8 +2845,11 @@ class BescheidTaxonomyTest(TestCase):
                         self.assertNotIn("rechtsgrundlage", entry)
 
         unresolved = next(
-            record for record in context if record["status"] == "unresolved"
+            record
+            for record in context
+            if record["legacy_type"] == "ablehnung-unzulässig"
         )
+        self.assertEqual(unresolved["status"], "unresolved")
         self.assertEqual(unresolved["source_keys"], [])
         self.assertEqual(
             [entry["key"] for entry in unresolved["candidate_source_keys"]],

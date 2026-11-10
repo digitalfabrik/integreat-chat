@@ -164,6 +164,8 @@ BESCHEID_CLASSIFICATION_MODEL = "verdigado-think"
 BESCHEID_SUPPORTED_TYPES = [
     "anhörung-zur-zulässigkeit-persönlicher-termin",
     "anhörung-zur-zulässigkeit-schriftliche-antwort",
+    "anhörung-zum-folgeantrag-persönlicher-termin",
+    "anhörung-zum-folgeantrag-schriftliche-antwort",
     "niederschrift-zur-asylantragstellung",
     "schriftliche-anhörung",
     "aufforderung-zum-betreiben-des-verfahrens",
@@ -177,6 +179,7 @@ BESCHEID_SUPPORTED_TYPES = [
     "ablehnung-einfach",
     "ablehnung-offensichtlich-unbegründet-2",
     "ablehnung-unzulässig",
+    "ablehnung-folgeantrag-unzulässig",
     "einstellungsbescheid",
     "entzug-widerruf-rücknahme-ladung-zum-termin",
     "entzug-widerruf-rücknahme-aufforderung-zur-stellungnahme",
