@@ -13,7 +13,7 @@ from integreat_chat.chatanswers.services.llmapi import (
 )
 
 from ..static.prompts import Prompts
-from .taxonomy import is_supported_bescheid_type, render_taxonomy_context
+from .taxonomy import render_taxonomy_context
 
 LOGGER = logging.getLogger(__name__)
 
@@ -103,11 +103,8 @@ _EXTRACTION_SCHEMA = {
 }
 
 
-def get_extraction_schema(bescheid_type: str) -> dict | None:
-    """Return the extraction schema, or None for unsupported types."""
-    if not is_supported_bescheid_type(bescheid_type):
-        return None
-
+def get_extraction_schema(bescheid_type: str) -> dict:
+    """Return the extraction schema for any document type."""
     return _EXTRACTION_SCHEMA
 
 
@@ -194,15 +191,13 @@ async def extract_structured_data(
     model: str,
     session: aiohttp.ClientSession | None = None,
 ) -> dict:
-    """Extract structured data from OCR text for a supported document type."""
+    """Extract structured data from OCR text for any document type."""
     text = _text_from_html(document_text)
 
     if not text:
         return {}
 
     json_schema = get_extraction_schema(bescheid_type)
-    if json_schema is None:
-        return {}
 
     prompt_text = Prompts.BESCHEID_EXTRACTION.format(
         bescheid_type=bescheid_type,
