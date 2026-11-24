@@ -149,6 +149,41 @@ Zulässigkeit.
   Angaben der asylsuchenden Person, zum Beispiel zu Reiseweg, Familie
   und Dokumenten.
 
+- `belehrung-termin-für-den-asylantrag`
+  Das Schreiben ist eine Belehrung einer Aufnahmeeinrichtung oder des
+  BAMF (oft „Wichtige Mitteilung“, „Belehrung nach § 14 Abs. 1 und § 23
+  Abs. 2 AsylG“). Es fordert die Person auf, sich an einem Datum und zu
+  einer Uhrzeit persönlich bei einer Außenstelle des BAMF zu melden, um
+  den Asylantrag zu stellen oder einzureichen. Es weist darauf hin, dass
+  das Asylgesuch sonst als zurückgenommen gilt. Ein Termin zur Anhörung
+  über die Fluchtgründe ist `ladung-anhörung`.
+
+- `asylantrag-für-ein-kind-unterlagen-fehlen`
+  Das Schreiben ist ein Schreiben des BAMF zu einem Asylantrag für ein
+  minderjähriges Kind. Es teilt mit, dass der Antrag nicht wirksam ist
+  oder nicht weiterbearbeitet wird, weil etwas fehlt, zum Beispiel die
+  Unterschrift beider Elternteile, ein Nachweis der alleinigen
+  Vertretungsbefugnis oder ein Nachweis der Elternschaft
+  (Geburtsurkunde).
+
+- `asylantrag-für-ein-kind-mitteilung`
+  Das Schreiben ist eine Mitteilung des BAMF, dass für ein minderjähriges
+  Kind ein Asylantrag als gestellt oder eingereicht gilt, weil es in
+  Deutschland geboren oder nach den Eltern eingereist ist (§ 14a AsylG
+  alte Fassung bzw. § 14 AsylG neue Fassung). Es nennt das Datum, ab dem
+  der Antrag gilt, und kann auf einen Verzicht hinweisen. Es fordert
+  nicht innerhalb einer Frist zu einer Stellungnahme auf.
+
+- `asylantrag-für-ein-kind-aufforderung-zur-stellungnahme`
+  Das Schreiben ist ein Schreiben des BAMF zum Asylverfahren eines
+  minderjährigen Kindes, für das ein Asylantrag als gestellt oder
+  eingereicht gilt (§ 14a AsylG alte Fassung bzw. § 14 AsylG neue
+  Fassung). Es fordert die Eltern auf, innerhalb einer Frist schriftlich
+  die Gründe des Kindes darzulegen, oft mit Formular und Hinweis auf ein
+  Einreise- und Aufenthaltsverbot. Fordert ein solches Schreiben zu einer
+  Stellungnahme mit Frist auf, gilt dieser Typ und nicht
+  `asylantrag-für-ein-kind-mitteilung` oder `schriftliche-anhörung`.
+
 - `schriftliche-anhörung`
   Das Schreiben ist eine Aufforderung des BAMF, sich schriftlich zu den
   Asylgründen oder zu bestimmten Fragen zu äußern, statt persönlich
@@ -314,6 +349,11 @@ Verfahren eingestellt“) und der Rest gewonnen, gilt
 `urteil-asyl-gewonnen` bzw. `gerichtsbescheid-asyl-gewonnen`. Wird
 einer Klage im Aufenthaltsrecht zum Teil stattgegeben, gilt
 `urteil-aufenthalt-gewonnen`.
+
+Enthält ein Schreiben sowohl einen Beschluss, mit dem das Verfahren
+eingestellt wird, als auch ein Urteil oder einen Gerichtsbescheid, gilt
+der Typ des Urteils bzw. des Gerichtsbescheids. Der Einstellungsbeschluss
+betrifft dann nur den zurückgenommenen Teil.
 
 Wird bei einem Eilbeschluss die aufschiebende Wirkung angeordnet oder
 wiederhergestellt oder wird die Behörde „im Wege der einstweiligen
