@@ -96,3 +96,8 @@ include = ["integreat_chat*"]
 "integreat_chat" = [
   "static/**/*",
 ]
+
+# The ``static/**/*`` globs above would otherwise also match bytecode
+# caches (e.g. ``static/__pycache__/prompts.cpython-313.pyc``).
+[tool.setuptools.exclude-package-data]
+"*" = ["__pycache__/*", "*.pyc", "*.pyo"]
