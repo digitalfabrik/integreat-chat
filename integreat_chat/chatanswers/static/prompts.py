@@ -125,13 +125,16 @@ User message: {0}
 """
 
     SHALLOW_SEARCH = """# Task
-""" + BACKGROUND + """In a previous search no relevant pages were found for a search term. We now want to run a more abstract search. Extract the general topic (one or two words) for a new search. Only return the best search term without any additional text. Use the language '{0}' for the search term.
+""" + BACKGROUND + """In a previous search no relevant pages were found for a search term. We now want to run a more abstract search. Extract the general topic (one or two words) for a new search. Only return the best search term without any additional text. Phrase the abstract searches with a tendency towards counseling or legal support. Use the language '{0}' for the search term.
 ## Examples
 - "Finding a job as a medical doctor" to "Finding jobs"
 - "medical treatment for flu" to "medical consultation"
 - "Bus from city hall to arena" to "public transport"  
 - "asylum request was denied after 2 years" to "asylum process"
 - "Homeschooling in Germany" to "schooling"
+- "problem with kitchen" to "consumer protection"
+- "I was abducted" to "human trafficking support"
+
 ## Search Term
 {1}
 """
